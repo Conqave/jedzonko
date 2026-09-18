@@ -1,0 +1,223 @@
+{
+ "brand": {
+  "id": 23,
+  "thumbnail": "https://imgproxy.blix.pl/image/brand/thumbnail_23.jpg",
+  "name": "Biedronka",
+  "slug": "biedronka",
+  "logo_uri": "https://imgproxy.blix.pl/image/brand/thumbnail_23.jpg"
+ },
+ "brandUrl": "https://blix.pl/sklep/biedronka/",
+ "id": 524175,
+ "productOffers": [
+  {
+   "hash": "662b5414b",
+   "name": "Twaróg półtłusty wiejski Piątnica",
+   "image": "https://imgproxy.blix.pl/product_occurrence//d1099d8b-70bd-4899-851c-5acc44808848.jpg",
+   "manufacturerName": null,
+   "manufacturerUuid": null,
+   "brandName": "Piątnica",
+   "brandUuid": null,
+   "subBrandName": null,
+   "subBrandUuid": null,
+   "hiperCategoryId": null,
+   "offerSubcategoryId": null,
+   "productLeafletPageUuid": "01a0b35c-4770-7588-b948-3beb7ee1d3ba",
+   "price": 399,
+   "percentDiscount": 0,
+   "leafletId": 524175,
+   "pageNumber": 68,
+   "dateStart": {
+    "date": "2026-09-14 00:00:00.000000",
+    "timezone_type": 3,
+    "timezone": "Europe/Warsaw"
+   },
+   "dateEnd": {
+    "date": "2026-09-19 23:59:59.000000",
+    "timezone_type": 3,
+    "timezone": "Europe/Warsaw"
+   },
+   "area": {
+    "topLeftCorner": {
+     "x": 0.64,
+     "y": 0.29
+    },
+    "bottomRightCorner": {
+     "x": 0.96,
+     "y": 0.51
+    }
+   },
+   "availabilityLabel": {
+    "message": "aktualna",
+    "class": "lav-available"
+   }
+  },
+  {
+   "hash": null,
+   "name": "Serek twarogowy Kids World Minecraft",
+   "image": "https://imgproxy.blix.pl/product_occurrence//1882f92f-30aa-4781-9073-0ca89ba8f7fa.jpg",
+   "manufacturerName": null,
+   "manufacturerUuid": null,
+   "brandName": "Kids World",
+   "brandUuid": null,
+   "subBrandName": null,
+   "subBrandUuid": null,
+   "hiperCategoryId": null,
+   "offerSubcategoryId": null,
+   "productLeafletPageUuid": "01a0b35c-4649-7d06-b284-b326e4243856",
+   "price": 169,
+   "percentDiscount": 0,
+   "leafletId": 524175,
+   "pageNumber": 67,
+   "dateStart": {
+    "date": "2026-09-14 00:00:00.000000",
+    "timezone_type": 3,
+    "timezone": "Europe/Warsaw"
+   },
+   "dateEnd": {
+    "date": "2026-09-19 23:59:59.000000",
+    "timezone_type": 3,
+    "timezone": "Europe/Warsaw"
+   },
+   "area": {
+    "topLeftCorner": {
+     "x": 0.64,
+     "y": 0.3
+    },
+    "bottomRightCorner": {
+     "x": 0.97,
+     "y": 0.52
+    }
+   },
+   "availabilityLabel": {
+    "message": "aktualna",
+    "class": "lav-available"
+   }
+  },
+  {
+   "hash": null,
+   "name": "Krem do twarzy multi-odżywczy Eveline 24k Gold & Diamenty",
+   "image": "https://imgproxy.blix.pl/product_occurrence//3416abfe-0130-45f2-a49d-71afa47de8f3.jpg",
+   "manufacturerName": null,
+   "manufacturerUuid": null,
+   "brandName": "Eveline",
+   "brandUuid": null,
+   "subBrandName": null,
+   "subBrandUuid": null,
+   "hiperCategoryId": null,
+   "offerSubcategoryId": null,
+   "productLeafletPageUuid": "01a0b35c-2e29-76ce-aa51-5025d33a3991",
+   "price": null,
+   "percentDiscount": 0,
+   "leafletId": 524175,
+   "pageNumber": 27,
+   "dateStart": {
+    "date": "2026-09-14 00:00:00.000000",
+    "timezone_type": 3,
+    "timezone": "Europe/Warsaw"
+   },
+   "dateEnd": {
+    "date": "2026-09-19 23:59:59.000000",
+    "timezone_type": 3,
+    "timezone": "Europe/Warsaw"
+   },
+   "area": {
+    "topLeftCorner": {
+     "x": 0.5,
+     "y": 0.66
+    },
+    "bottomRightCorner": {
+     "x": 0.98,
+     "y": 0.98
+    }
+   },
+   "availabilityLabel": {
+    "message": "aktualna",
+    "class": "lav-available"
+   }
+  },
+  {
+   "hash": null,
+   "name": "Ser gouda w plastrach Światowid 1 kg",
+   "image": "https://imgproxy.blix.pl/product_occurrence//55a39388-f3d1-4695-a1c0-f6ec2cd83fb6.jpg",
+   "manufacturerName": null,
+   "manufacturerUuid": null,
+   "brandName": "Światowid",
+   "brandUuid": null,
+   "subBrandName": null,
+   "subBrandUuid": null,
+   "hiperCategoryId": null,
+   "offerSubcategoryId": null,
+   "productLeafletPageUuid": "01a0b35c-001c-73bd-aa13-cb68f195607b",
+   "price": null,
+   "percentDiscount": 0,
+   "leafletId": 524175,
+   "pageNumber": 0,
+   "dateStart": {
+    "date": "2026-09-14 00:00:00.000000",
+    "timezone_type": 3,
+    "timezone": "Europe/Warsaw"
+   },
+   "dateEnd": {
+    "date": "2026-09-19 23:59:59.000000",
+    "timezone_type": 3,
+    "timezone": "Europe/Warsaw"
+   },
+   "area": {
+    "topLeftCorner": {
+     "x": 0.54,
+     "y": 0.24
+    },
+    "bottomRightCorner": {
+     "x": 0.99,
+     "y": 0.5
+    }
+   },
+   "availabilityLabel": {
+    "message": "aktualna",
+    "class": "lav-available"
+   }
+  },
+  {
+   "hash": "54201420e",
+   "name": "Ser gouda holenderska w plastrach Światowid",
+   "image": "https://imgproxy.blix.pl/product_occurrence//3ef2d4bb-dca3-4aa9-b599-8dd7ea79b196.jpg",
+   "manufacturerName": null,
+   "manufacturerUuid": null,
+   "brandName": "Światowid",
+   "brandUuid": null,
+   "subBrandName": null,
+   "subBrandUuid": null,
+   "hiperCategoryId": null,
+   "offerSubcategoryId": null,
+   "productLeafletPageUuid": "01a0b35c-001c-73ad-aa13-cb68f185c444",
+   "price": null,
+   "percentDiscount": 0,
+   "leafletId": 524175,
+   "pageNumber": 0,
+   "dateStart": {
+    "date": "2026-09-14 00:00:00.000000",
+    "timezone_type": 3,
+    "timezone": "Europe/Warsaw"
+   },
+   "dateEnd": {
+    "date": "2026-09-19 23:59:59.000000",
+    "timezone_type": 3,
+    "timezone": "Europe/Warsaw"
+   },
+   "area": {
+    "topLeftCorner": {
+     "x": 0.54,
+     "y": 0.24
+    },
+    "bottomRightCorner": {
+     "x": 0.99,
+     "y": 0.5
+    }
+   },
+   "availabilityLabel": {
+    "message": "aktualna",
+    "class": "lav-available"
+   }
+  }
+ ]
+}

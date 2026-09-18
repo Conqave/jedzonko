@@ -1,19 +1,16 @@
-import axios from 'axios';
-import type { ApiError } from '@/features/accounts/models';
+import { describeApiError } from '@/features/shared/apiError';
 
 const MESSAGES: Record<string, string> = {
   promotion_source_unavailable: 'Źródło promocji jest chwilowo niedostępne.',
   promotion_source_contract_invalid: 'Źródło promocji zwróciło nieoczekiwaną odpowiedź.',
   permission_denied: 'Brak dostępu do promocji.',
-  not_authenticated: 'Sesja wygasła. Zaloguj się ponownie.',
+  unknown_shop: 'Wybrany sklep nie jest obsługiwany.',
+  invalid: 'Nieprawidłowe dane zapytania.',
 };
 
-export function describePromotionError(error: unknown): string {
-  if (axios.isAxiosError<ApiError>(error) && error.response !== undefined) {
-    const code = error.response.data?.code;
-    if (code !== undefined && MESSAGES[code] !== undefined) {
-      return MESSAGES[code];
-    }
-  }
-  return 'Nie udało się pobrać promocji.';
+export function describePromotionError(
+  error: unknown,
+  fallback = 'Nie udało się pobrać promocji.',
+): string {
+  return describeApiError(error, MESSAGES, fallback);
 }

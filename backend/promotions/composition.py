@@ -4,7 +4,12 @@ from contextlib import contextmanager
 import httpx
 from django.conf import settings
 
+from promotions.application.ports.favourite_shop_repository import FavouriteShopRepository
 from promotions.application.ports.promotion_source import PromotionSource
+from promotions.application.shop_selection import ShopSelection
+from promotions.infrastructure.django_favourite_shop_repository import (
+    DjangoFavouriteShopRepository,
+)
 from promotions.infrastructure.providers.blix.provider import BlixProvider
 
 
@@ -15,4 +20,12 @@ def open_promotion_source() -> Iterator[PromotionSource]:
         headers={"User-Agent": settings.PROMOTIONS_HTTP_USER_AGENT},
         follow_redirects=True,
     ) as client:
-        yield BlixProvider(client)
+        yield BlixProvider(client, settings.PROMOTIONS_SEARCH_LEAFLET_LIMIT)
+
+
+def build_favourite_shop_repository() -> FavouriteShopRepository:
+    return DjangoFavouriteShopRepository()
+
+
+def build_shop_selection() -> ShopSelection:
+    return ShopSelection(build_favourite_shop_repository())

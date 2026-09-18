@@ -29,5 +29,5 @@ class PromotionSource(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def search_promotions(self, query: str) -> list[PromotionOffer]:
+    def search_promotions(self, query: str, shop_slugs: tuple[str, ...]) -> list[PromotionOffer]:
         raise NotImplementedError

@@ -6,6 +6,7 @@ from decimal import Decimal
 @dataclass(frozen=True, slots=True)
 class Shop:
     name: str
+    slug: str
     url: str
 
 
@@ -30,6 +31,7 @@ class PromotionOffer:
     provider_offer_id: str | None
     name: str
     shop_name: str
+    shop_slug: str
     shop_url: str
     image_url: str
     product_brand_name: str | None
@@ -44,7 +46,14 @@ class PromotionOffer:
 @dataclass(frozen=True, slots=True)
 class StorePromotionCoverage:
     shop_name: str
+    shop_slug: str
     shop_url: str
     matched_query_count: int
     matched_queries: tuple[str, ...]
     offers: tuple[PromotionOffer, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class FavouriteShop:
+    name: str
+    slug: str
