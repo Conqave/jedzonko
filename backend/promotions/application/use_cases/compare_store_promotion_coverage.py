@@ -1,13 +1,17 @@
 from promotions.application.ports.promotion_source import PromotionSource
+from promotions.application.shop_selection import ShopSelection
 from promotions.domain.coverage import calculate_store_coverage
 from promotions.domain.models import PromotionOffer, StorePromotionCoverage
 
 
 class CompareStorePromotionCoverage:
-    def __init__(self, source: PromotionSource) -> None:
+    def __init__(self, source: PromotionSource, shop_selection: ShopSelection) -> None:
         self._source = source
+        self._shop_selection = shop_selection
 
-    def execute(self, queries: list[str]) -> list[StorePromotionCoverage]:
+    def execute(
+        self, user_id: int, queries: list[str], requested_shop_slugs: tuple[str, ...] | None
+    ) -> list[StorePromotionCoverage]:
         normalized_queries: list[str] = []
         for query in queries:
             normalized_query = query.strip()
@@ -18,7 +22,8 @@ class CompareStorePromotionCoverage:
         if not normalized_queries:
             raise ValueError("queries must not be empty")
 
+        shop_slugs = self._shop_selection.resolve(user_id, requested_shop_slugs)
         offers_by_query: dict[str, list[PromotionOffer]] = {
-            query: self._source.search_promotions(query) for query in normalized_queries
+            query: self._source.search_promotions(query, shop_slugs) for query in normalized_queries
         }
         return calculate_store_coverage(offers_by_query)

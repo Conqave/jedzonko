@@ -81,10 +81,13 @@ export default defineConfig((/* ctx */) => {
     devServer: {
       host: '0.0.0.0',
       port: 9000,
+      allowedHosts: ['jedzonko.conqave.pl', 'localhost', '127.0.0.1', '192.168.192.232'],
       open: false,
       proxy: {
         '/api': { target: 'http://127.0.0.1:8000', changeOrigin: false },
         '/media': { target: 'http://127.0.0.1:8000', changeOrigin: false },
+        '/admin': { target: 'http://127.0.0.1:8000', changeOrigin: false },
+        '/static': { target: 'http://127.0.0.1:8000', changeOrigin: false },
       },
     },
 

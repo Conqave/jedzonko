@@ -1,7 +1,19 @@
+export interface Shop {
+  name: string;
+  slug: string;
+  url: string;
+}
+
+export interface FavouriteShop {
+  name: string;
+  slug: string;
+}
+
 export interface PromotionOffer {
   provider_offer_id: string | null;
   name: string;
   shop_name: string;
+  shop_slug: string;
   shop_url: string;
   image_url: string;
   product_brand_name: string | null;
@@ -15,6 +27,7 @@ export interface PromotionOffer {
 
 export interface StorePromotionCoverage {
   shop_name: string;
+  shop_slug: string;
   shop_url: string;
   matched_query_count: number;
   matched_queries: string[];
