@@ -1,6 +1,12 @@
 import os
 from pathlib import Path
 
+import django_stubs_ext
+
+# Makes Django's generic classes subscriptable at runtime so the annotations
+# required by mypy --strict + django-stubs also work when Django imports them.
+django_stubs_ext.monkeypatch()
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.environ["DJANGO_SECRET_KEY"]
@@ -23,6 +29,11 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "accounts",
+    "catalog",
+    "households",
+    "inventory",
+    "recipes",
+    "shopping",
     "promotions",
 ]
 
@@ -62,7 +73,11 @@ DATABASES = {
         "HOST": os.environ.get("MARIADB_HOST", "database"),
         "PORT": int(os.environ.get("MARIADB_PORT", "3306")),
         "OPTIONS": {"charset": "utf8mb4"},
-        "TEST": {"CHARSET": "utf8mb4", "COLLATION": "utf8mb4_unicode_ci"},
+        "TEST": {
+            "NAME": os.environ.get("DJANGO_TEST_DATABASE", "test_jedzonko"),
+            "CHARSET": "utf8mb4",
+            "COLLATION": "utf8mb4_unicode_ci",
+        },
     }
 }
 

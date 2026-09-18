@@ -20,6 +20,36 @@ const routes: RouteRecordRaw[] = [
     children: [
       { path: '', name: 'home', component: () => import('@/pages/IndexPage.vue') },
       {
+        path: 'households',
+        name: 'households',
+        component: () => import('@/pages/HouseholdsPage.vue'),
+        meta: { requiresAuth: true },
+      },
+      {
+        path: 'inventory',
+        name: 'inventory',
+        component: () => import('@/pages/InventoryPage.vue'),
+        meta: { requiresAuth: true },
+      },
+      {
+        path: 'recipes',
+        name: 'recipes',
+        component: () => import('@/pages/RecipesPage.vue'),
+        meta: { requiresAuth: true },
+      },
+      {
+        path: 'recipes/:id',
+        name: 'recipe-detail',
+        component: () => import('@/pages/RecipeDetailPage.vue'),
+        meta: { requiresAuth: true },
+      },
+      {
+        path: 'shopping',
+        name: 'shopping',
+        component: () => import('@/pages/ShoppingPage.vue'),
+        meta: { requiresAuth: true },
+      },
+      {
         path: 'promotions',
         name: 'promotions',
         component: () => import('@/pages/PromotionsPage.vue'),
