@@ -6,6 +6,10 @@ class NotAHouseholdMemberError(Exception):
     pass
 
 
+class RecoveryWindowExpiredError(Exception):
+    pass
+
+
 class MemberNotFoundError(Exception):
     pass
 

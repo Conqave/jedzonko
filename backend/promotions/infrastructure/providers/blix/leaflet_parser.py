@@ -28,7 +28,11 @@ class BlixLeafletParser:
         for item in product_offers:
             if not isinstance(item, dict):
                 raise PromotionSourceContractError("Blix product offer entry is not an object")
-            if not matches_query(self._required_str(item, "name"), query):
+            if not matches_query(
+                self._required_str(item, "name"),
+                self._optional_str(item, "brandName"),
+                query,
+            ):
                 continue
             offers.append(self._map_offer(item, hit))
         return offers

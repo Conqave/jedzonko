@@ -1,3 +1,4 @@
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.exceptions import NotAuthenticated, NotFound, PermissionDenied, ValidationError
 from rest_framework.request import Request
@@ -5,16 +6,25 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from households.application.errors import (
+    HouseholdNotFoundError,
     LastMemberCannotLeaveError,
     MemberNotFoundError,
     NotAHouseholdMemberError,
+    RecoveryWindowExpiredError,
 )
 from households.application.use_cases.add_household_member import AddHouseholdMember
 from households.application.use_cases.create_household import CreateHousehold
 from households.application.use_cases.list_household_members import ListHouseholdMembers
 from households.application.use_cases.list_user_households import ListUserHouseholds
 from households.application.use_cases.remove_household_member import RemoveHouseholdMember
-from households.composition import build_household_access_policy, build_household_repository
+from households.composition import (
+    build_delete_household,
+    build_household_access_policy,
+    build_household_repository,
+    build_list_deleted_households,
+    build_restore_household,
+)
+from households.domain.deleted_household import DeletedHousehold
 from households.domain.models import HouseholdMember, HouseholdSummary
 from households.presentation.serializers import (
     AddHouseholdMemberSerializer,
@@ -31,6 +41,16 @@ def _current_user_id(request: Request) -> int:
 
 def _represent_household(household: HouseholdSummary) -> dict[str, object]:
     return {"id": household.id, "name": household.name, "member_count": household.member_count}
+
+
+def _represent_deleted_household(household: DeletedHousehold) -> dict[str, object]:
+    return {
+        "id": household.id,
+        "name": household.name,
+        "member_count": household.member_count,
+        "deleted_at": household.deleted_at.isoformat(),
+        "purge_after": household.purge_after.isoformat(),
+    }
 
 
 def _represent_member(member: HouseholdMember) -> dict[str, object]:
@@ -93,3 +113,39 @@ class HouseholdMemberDetailView(APIView):
                 detail="The last member cannot be removed.", code="last_member_cannot_leave"
             )
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class HouseholdDetailView(APIView):
+    def delete(self, request: Request, household_id: int) -> Response:
+        try:
+            build_delete_household().execute(
+                _current_user_id(request), household_id, timezone.now()
+            )
+        except NotAHouseholdMemberError:
+            raise PermissionDenied(detail="Not a household member.", code="not_a_household_member")
+        except HouseholdNotFoundError:
+            raise NotFound(detail="Household not found.", code="household_not_found")
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class DeletedHouseholdListView(APIView):
+    def get(self, request: Request) -> Response:
+        households = build_list_deleted_households().execute(_current_user_id(request))
+        return Response([_represent_deleted_household(item) for item in households])
+
+
+class HouseholdRestoreView(APIView):
+    def post(self, request: Request, household_id: int) -> Response:
+        try:
+            household = build_restore_household().execute(
+                _current_user_id(request), household_id, timezone.now()
+            )
+        except NotAHouseholdMemberError:
+            raise PermissionDenied(detail="Not a household member.", code="not_a_household_member")
+        except HouseholdNotFoundError:
+            raise NotFound(detail="Household not found.", code="household_not_found")
+        except RecoveryWindowExpiredError:
+            raise ValidationError(
+                detail="The recovery window has expired.", code="recovery_window_expired"
+            )
+        return Response(_represent_household(household))
