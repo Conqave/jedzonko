@@ -16,6 +16,7 @@ from promotions.application.use_cases.search_promotions import SearchPromotions
 from promotions.application.use_cases.set_favourite_shops import SetFavouriteShops, UnknownShopError
 from promotions.composition import (
     build_favourite_shop_repository,
+    build_search_result_limit,
     build_shop_selection,
     open_promotion_source,
 )
@@ -144,7 +145,7 @@ class PromotionSearchView(APIView):
         query = str(serializer.validated_data["query"])
         requested_shop_slugs = _read_requested_shop_slugs(serializer.validated_data, "shop")
         with open_promotion_source() as source:
-            use_case = SearchPromotions(source, build_shop_selection())
+            use_case = SearchPromotions(source, build_shop_selection(), build_search_result_limit())
             try:
                 offers = use_case.execute(
                     _authenticated_user_id(request), query, requested_shop_slugs

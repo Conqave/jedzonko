@@ -20,6 +20,7 @@
       v-else
       :rows="items"
       :columns="columns"
+      :visible-columns="visibleColumns"
       row-key="id"
       :loading="loading"
       flat
@@ -121,7 +122,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useQuasar, type QTableColumn } from 'quasar';
 import { searchIngredients, fetchUnits } from '@/features/catalog/api';
 import type { Ingredient, MeasurementUnit } from '@/features/catalog/models';
@@ -162,6 +163,12 @@ const columns: QTableColumn<InventoryItem>[] = [
   },
   { name: 'actions', label: '', field: 'id', align: 'right' },
 ];
+
+const MOBILE_COLUMNS = ['ingredient_name', 'quantity', 'actions'];
+
+const visibleColumns = computed(() =>
+  quasar.screen.lt.md ? MOBILE_COLUMNS : columns.map((column) => column.name),
+);
 
 const items = ref<InventoryItem[]>([]);
 const loading = ref(false);

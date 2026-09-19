@@ -4,36 +4,57 @@
       <q-toolbar>
         <q-btn flat dense round icon="menu" aria-label="Menu" @click="drawerOpen = !drawerOpen" />
         <q-toolbar-title>jedzonko</q-toolbar-title>
-        <q-select
-          v-if="households.hasHousehold"
-          :model-value="households.selectedId"
-          class="q-mr-md"
-          style="min-width: 180px"
-          dense
-          dark
-          standout
-          emit-value
-          map-options
-          option-value="id"
-          :options="householdOptions"
-          label="Gospodarstwo"
-          @update:model-value="households.select"
-        />
-        <q-btn flat dense no-caps :label="accounts.user?.username ?? ''" icon="account_circle">
-          <q-menu>
-            <q-list style="min-width: 160px">
-              <q-item clickable v-close-popup @click="signOut">
-                <q-item-section avatar><q-icon name="logout" /></q-item-section>
-                <q-item-section>Wyloguj</q-item-section>
-              </q-item>
-            </q-list>
-          </q-menu>
-        </q-btn>
+        <template v-if="quasar.screen.gt.sm">
+          <q-select
+            v-if="households.hasHousehold"
+            :model-value="households.selectedId"
+            class="q-mr-md"
+            style="min-width: 180px"
+            dense
+            dark
+            standout
+            emit-value
+            map-options
+            option-value="id"
+            :options="householdOptions"
+            label="Gospodarstwo"
+            @update:model-value="households.select"
+          />
+          <q-btn flat dense no-caps :label="accounts.user?.username ?? ''" icon="account_circle">
+            <q-menu>
+              <q-list style="min-width: 160px">
+                <q-item clickable v-close-popup @click="signOut">
+                  <q-item-section avatar><q-icon name="logout" /></q-item-section>
+                  <q-item-section>Wyloguj</q-item-section>
+                </q-item>
+              </q-list>
+            </q-menu>
+          </q-btn>
+        </template>
       </q-toolbar>
     </q-header>
 
     <q-drawer v-model="drawerOpen" show-if-above bordered>
       <q-list>
+        <template v-if="!quasar.screen.gt.sm">
+          <q-item v-if="households.hasHousehold">
+            <q-item-section>
+              <q-select
+                :model-value="households.selectedId"
+                dense
+                outlined
+                emit-value
+                map-options
+                option-value="id"
+                :options="householdOptions"
+                label="Gospodarstwo"
+                @update:model-value="households.select"
+              />
+            </q-item-section>
+          </q-item>
+          <q-separator />
+        </template>
+
         <q-item-label header>Nawigacja</q-item-label>
         <q-item clickable :to="{ name: 'home' }" exact>
           <q-item-section avatar><q-icon name="home" /></q-item-section>
@@ -59,6 +80,15 @@
           <q-item-section avatar><q-icon name="local_offer" /></q-item-section>
           <q-item-section>Promocje</q-item-section>
         </q-item>
+
+        <template v-if="!quasar.screen.gt.sm">
+          <q-separator class="q-my-sm" />
+          <q-item-label header>{{ accounts.user?.username ?? '' }}</q-item-label>
+          <q-item clickable @click="signOut">
+            <q-item-section avatar><q-icon name="logout" /></q-item-section>
+            <q-item-section>Wyloguj</q-item-section>
+          </q-item>
+        </template>
       </q-list>
     </q-drawer>
 

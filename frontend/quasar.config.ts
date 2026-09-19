@@ -55,7 +55,14 @@ export default defineConfig((/* ctx */) => {
       // minify: false,
       // distDir
 
-      // extendViteConf (viteConf) {},
+      // The project lives on a Windows drive mounted into WSL, where inotify
+      // never fires, so the file watcher has to poll for hot reload to work.
+      extendViteConf(viteConf) {
+        viteConf.server = {
+          ...viteConf.server,
+          watch: { usePolling: true, interval: 300 },
+        };
+      },
       // viteVuePluginOptions: {},
 
       // to write components with JSX/TSX:

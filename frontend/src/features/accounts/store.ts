@@ -12,11 +12,7 @@ export const useAccountStore = defineStore('accounts', () => {
 
   async function resolveSession(): Promise<void> {
     await accountsApi.fetchCsrfToken();
-    try {
-      user.value = await accountsApi.fetchCurrentUser();
-    } catch {
-      user.value = null;
-    }
+    user.value = await accountsApi.fetchCurrentUserIfSignedIn();
     isResolved.value = true;
   }
 

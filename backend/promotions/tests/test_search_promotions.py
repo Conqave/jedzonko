@@ -12,7 +12,7 @@ def _build_use_case(
     source: FakePromotionSource, favourites: list[FavouriteShop]
 ) -> SearchPromotions:
     repository = FakeFavouriteShopRepository({USER_ID: favourites})
-    return SearchPromotions(source, ShopSelection(repository))
+    return SearchPromotions(source, ShopSelection(repository), 200)
 
 
 def test_search_promotions_returns_provider_offers() -> None:

@@ -111,6 +111,7 @@ PROMOTIONS_HTTP_USER_AGENT = os.environ.get(
     "PROMOTIONS_HTTP_USER_AGENT", "jedzonko/0.1 (+https://github.com/Conqave/jedzonko)"
 )
 PROMOTIONS_SEARCH_LEAFLET_LIMIT = int(os.environ.get("PROMOTIONS_SEARCH_LEAFLET_LIMIT", "5"))
+PROMOTIONS_SEARCH_RESULT_LIMIT = int(os.environ.get("PROMOTIONS_SEARCH_RESULT_LIMIT", "200"))
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": ["rest_framework.authentication.SessionAuthentication"],
