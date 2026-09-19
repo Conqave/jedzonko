@@ -21,24 +21,14 @@ def represent_detail(detail: RecipeDetail) -> dict[str, object]:
     payload = represent_summary(detail.summary)
     payload["steps"] = [{"position": step.position, "text": step.text} for step in detail.steps]
     payload["ingredients"] = [
-        {
-            "ingredient_id": item.ingredient_id,
-            "ingredient_name": item.ingredient_name,
-            "quantity": str(item.quantity),
-            "unit_code": item.unit_code,
-        }
+        {"name": item.name, "quantity": str(item.quantity), "unit_code": item.unit_code}
         for item in detail.ingredients
     ]
     return payload
 
 
 def represent_missing_item(item: MissingRecipeItem) -> dict[str, object]:
-    return {
-        "ingredient_id": item.ingredient_id,
-        "ingredient_name": item.ingredient_name,
-        "amount": str(item.amount),
-        "unit_code": item.unit_code,
-    }
+    return {"name": item.name, "amount": str(item.amount), "unit_code": item.unit_code}
 
 
 def represent_suggestion(suggestion: RecipeSuggestion) -> dict[str, object]:

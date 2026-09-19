@@ -2,13 +2,13 @@ from decimal import Decimal
 
 import pytest
 
-from catalog.domain.measurement import (
+from inventory.domain.models import InventoryItemSnapshot
+from shared.measurement import (
     IncompatibleUnitsError,
     MeasurementDimension,
     MeasurementUnit,
     Quantity,
 )
-from inventory.domain.models import InventoryItemSnapshot
 
 GRAM = MeasurementUnit(code="g", dimension=MeasurementDimension.MASS, factor_to_base=Decimal("1"))
 KILOGRAM = MeasurementUnit(
@@ -22,8 +22,9 @@ LITRE = MeasurementUnit(
 def _snapshot(quantity: str, minimum: str | None) -> InventoryItemSnapshot:
     return InventoryItemSnapshot(
         id=1,
-        ingredient_id=1,
-        ingredient_name="Mąka",
+        product_id=1,
+        product_name="Mąka",
+        normalized_name="maka",
         quantity=Decimal(quantity),
         unit=KILOGRAM,
         minimum_quantity=None if minimum is None else Decimal(minimum),

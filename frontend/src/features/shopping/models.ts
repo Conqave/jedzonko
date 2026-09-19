@@ -7,8 +7,8 @@ export interface ShoppingList {
 
 export interface ShoppingItem {
   id: number | null;
-  ingredient_id: number | null;
-  ingredient_name: string | null;
+  product_id: number | null;
+  product_name: string | null;
   free_text: string | null;
   quantity: string;
   unit_code: string | null;
@@ -16,7 +16,7 @@ export interface ShoppingItem {
 }
 
 export interface NewShoppingItem {
-  ingredient_id?: number;
+  product_id?: number;
   free_text?: string;
   quantity: string;
   unit_code?: string;

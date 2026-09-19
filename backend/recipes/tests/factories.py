@@ -1,8 +1,9 @@
 from decimal import Decimal
 
-from catalog.domain.measurement import MeasurementDimension, MeasurementUnit, Quantity
 from inventory.domain.models import InventoryItemSnapshot
 from recipes.domain.models import RecipeRequirement
+from shared.measurement import MeasurementDimension, MeasurementUnit, Quantity
+from shared.text import normalize_text
 
 GRAM = MeasurementUnit(code="g", dimension=MeasurementDimension.MASS, factor_to_base=Decimal("1"))
 KILOGRAM = MeasurementUnit(
@@ -13,23 +14,22 @@ MILLILITRE = MeasurementUnit(
 )
 
 
-def make_requirement(
-    ingredient_id: int, name: str, amount: str, unit: MeasurementUnit
-) -> RecipeRequirement:
+def make_requirement(name: str, amount: str, unit: MeasurementUnit) -> RecipeRequirement:
     return RecipeRequirement(
-        ingredient_id=ingredient_id,
-        ingredient_name=name,
+        name=name,
+        normalized_name=normalize_text(name),
         quantity=Quantity(amount=Decimal(amount), unit=unit),
     )
 
 
 def make_snapshot(
-    ingredient_id: int, name: str, amount: str, unit: MeasurementUnit
+    product_id: int, name: str, amount: str, unit: MeasurementUnit
 ) -> InventoryItemSnapshot:
     return InventoryItemSnapshot(
-        id=ingredient_id,
-        ingredient_id=ingredient_id,
-        ingredient_name=name,
+        id=product_id,
+        product_id=product_id,
+        product_name=name,
+        normalized_name=normalize_text(name),
         quantity=Decimal(amount),
         unit=unit,
         minimum_quantity=None,

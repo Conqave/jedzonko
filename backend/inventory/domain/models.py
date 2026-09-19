@@ -1,14 +1,15 @@
 from dataclasses import dataclass
 from decimal import Decimal
 
-from catalog.domain.measurement import MeasurementUnit, Quantity
+from shared.measurement import MeasurementUnit, Quantity
 
 
 @dataclass(frozen=True, slots=True)
 class InventoryItemSnapshot:
     id: int
-    ingredient_id: int
-    ingredient_name: str
+    product_id: int
+    product_name: str
+    normalized_name: str
     quantity: Decimal
     unit: MeasurementUnit
     minimum_quantity: Decimal | None

@@ -1,8 +1,8 @@
 from django.core.validators import MinValueValidator
 from django.db import models
 
-from catalog.models import Ingredient, MeasurementUnit
-from households.models import Household
+from households.models import Household, Product
+from shared.measurement_units import MEASUREMENT_UNITS
 
 
 class InventoryCategory(models.Model):
@@ -27,11 +27,9 @@ class InventoryItem(models.Model):
     household = models.ForeignKey(
         Household, on_delete=models.CASCADE, related_name="inventory_items"
     )
-    ingredient = models.ForeignKey(
-        Ingredient, on_delete=models.PROTECT, related_name="inventory_items"
-    )
-    unit = models.ForeignKey(
-        MeasurementUnit, on_delete=models.PROTECT, related_name="inventory_items"
+    product = models.ForeignKey(Product, on_delete=models.PROTECT, related_name="inventory_items")
+    unit_code = models.CharField(
+        max_length=16, choices=[(item.code, item.name) for item in MEASUREMENT_UNITS]
     )
     category = models.ForeignKey(
         InventoryCategory,
@@ -52,8 +50,8 @@ class InventoryItem(models.Model):
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=["household", "ingredient"], name="unique_inventory_item_per_household"
+                fields=["household", "product"], name="unique_inventory_item_per_household"
             )
         ]
-        indexes = [models.Index(fields=["household", "ingredient"])]
-        ordering = ["ingredient__name"]
+        indexes = [models.Index(fields=["household", "product"])]
+        ordering = ["product__name"]

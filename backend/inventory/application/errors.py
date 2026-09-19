@@ -6,7 +6,7 @@ class DuplicateInventoryItemError(Exception):
     pass
 
 
-class IngredientNotFoundError(Exception):
+class ProductNotFoundError(Exception):
     pass
 
 

@@ -1,27 +1,14 @@
 from decimal import Decimal
 
-from catalog.domain.measurement import MeasurementDimension
-from catalog.domain.measurement import MeasurementUnit as UnitValue
-from catalog.models import MeasurementUnit
 from inventory.composition import build_consume_inventory_quantity
 from recipes.application.errors import MeasurementUnitNotFoundError
 from recipes.application.ports.inventory_consumer import HouseholdInventoryConsumer
+from shared.measurement_units import find_measurement_unit
 
 
 class InventoryHouseholdInventoryConsumer(HouseholdInventoryConsumer):
-    def consume(
-        self, household_id: int, ingredient_id: int, amount: Decimal, unit_code: str
-    ) -> None:
-        unit = MeasurementUnit.objects.filter(code=unit_code).first()
+    def consume(self, household_id: int, product_id: int, amount: Decimal, unit_code: str) -> None:
+        unit = find_measurement_unit(unit_code)
         if unit is None:
             raise MeasurementUnitNotFoundError
-        build_consume_inventory_quantity().execute(
-            household_id,
-            ingredient_id,
-            amount,
-            UnitValue(
-                code=unit.code,
-                dimension=MeasurementDimension(unit.dimension),
-                factor_to_base=unit.factor_to_base,
-            ),
-        )
+        build_consume_inventory_quantity().execute(household_id, product_id, amount, unit)

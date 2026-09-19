@@ -28,9 +28,9 @@
       :rows-per-page-options="[0]"
       no-data-label="Brak produktów w zapasach."
     >
-      <template #body-cell-ingredient_name="props">
+      <template #body-cell-product_name="props">
         <q-td :props="props">
-          {{ props.row.ingredient_name }}
+          {{ props.row.product_name }}
           <q-badge v-if="props.row.below_minimum" color="negative" class="q-ml-sm">
             poniżej minimum
           </q-badge>
@@ -71,18 +71,12 @@
         <q-card-section class="text-h6">Dodaj produkt</q-card-section>
         <q-form @submit.prevent="submitItem">
           <q-card-section class="q-gutter-sm">
-            <q-select
-              v-model="form.ingredient"
-              dense
-              outlined
-              use-input
-              input-debounce="300"
-              label="Składnik"
-              option-label="name"
-              :options="ingredientOptions"
-              :loading="searchingIngredients"
-              :rules="[(value) => value !== null || 'Wybierz składnik']"
-              @filter="filterIngredients"
+            <product-picker
+              v-if="households.selectedId !== null"
+              v-model="form.product"
+              :household-id="households.selectedId"
+              :units="units"
+              :rules="[(value) => value !== null || 'Wybierz produkt']"
               @update:model-value="applyDefaultUnit"
             />
             <q-input
@@ -124,8 +118,9 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
 import { useQuasar, type QTableColumn } from 'quasar';
-import { searchIngredients, fetchUnits } from '@/features/catalog/api';
-import type { Ingredient, MeasurementUnit } from '@/features/catalog/models';
+import { fetchUnits } from '@/features/products/api';
+import type { MeasurementUnit, Product } from '@/features/products/models';
+import ProductPicker from '@/features/products/ProductPicker.vue';
 import {
   addInventoryItem,
   deleteInventoryItem,
@@ -141,9 +136,9 @@ const households = useHouseholdStore();
 
 const columns: QTableColumn<InventoryItem>[] = [
   {
-    name: 'ingredient_name',
+    name: 'product_name',
     label: 'Produkt',
-    field: 'ingredient_name',
+    field: 'product_name',
     align: 'left',
     sortable: true,
   },
@@ -164,7 +159,7 @@ const columns: QTableColumn<InventoryItem>[] = [
   { name: 'actions', label: '', field: 'id', align: 'right' },
 ];
 
-const MOBILE_COLUMNS = ['ingredient_name', 'quantity', 'actions'];
+const MOBILE_COLUMNS = ['product_name', 'quantity', 'actions'];
 
 const visibleColumns = computed(() =>
   quasar.screen.lt.md ? MOBILE_COLUMNS : columns.map((column) => column.name),
@@ -173,17 +168,15 @@ const visibleColumns = computed(() =>
 const items = ref<InventoryItem[]>([]);
 const loading = ref(false);
 const units = ref<MeasurementUnit[]>([]);
-const ingredientOptions = ref<Ingredient[]>([]);
-const searchingIngredients = ref(false);
 const addDialogOpen = ref(false);
 const saving = ref(false);
 
 const form = ref<{
-  ingredient: Ingredient | null;
+  product: Product | null;
   quantity: string;
   unitCode: string;
   minimumQuantity: string;
-}>({ ingredient: null, quantity: '', unitCode: '', minimumQuantity: '' });
+}>({ product: null, quantity: '', unitCode: '', minimumQuantity: '' });
 
 function notifyError(error: unknown): void {
   quasar.notify({ type: 'negative', message: describeInventoryError(error) });
@@ -213,39 +206,20 @@ async function loadUnits(): Promise<void> {
   }
 }
 
-function filterIngredients(search: string, update: (callback: () => void) => void): void {
-  searchingIngredients.value = true;
-  void searchIngredients(search)
-    .then((found) => {
-      update(() => {
-        ingredientOptions.value = found;
-      });
-    })
-    .catch((error: unknown) => {
-      update(() => {
-        ingredientOptions.value = [];
-      });
-      notifyError(error);
-    })
-    .finally(() => {
-      searchingIngredients.value = false;
-    });
-}
-
-function applyDefaultUnit(ingredient: Ingredient | null): void {
-  if (ingredient !== null && form.value.unitCode === '') {
-    form.value.unitCode = ingredient.default_unit_code;
+function applyDefaultUnit(product: Product | null): void {
+  if (product !== null && form.value.unitCode === '') {
+    form.value.unitCode = product.default_unit_code;
   }
 }
 
 function openAddDialog(): void {
-  form.value = { ingredient: null, quantity: '', unitCode: '', minimumQuantity: '' };
+  form.value = { product: null, quantity: '', unitCode: '', minimumQuantity: '' };
   addDialogOpen.value = true;
 }
 
 async function submitItem(): Promise<void> {
-  const ingredient = form.value.ingredient;
-  if (households.selectedId === null || ingredient === null) {
+  const product = form.value.product;
+  if (households.selectedId === null || product === null) {
     return;
   }
   saving.value = true;
@@ -253,7 +227,7 @@ async function submitItem(): Promise<void> {
     const minimum = form.value.minimumQuantity.trim();
     const item = await addInventoryItem({
       household_id: households.selectedId,
-      ingredient_id: ingredient.id,
+      product_id: product.id,
       quantity: form.value.quantity.trim(),
       unit_code: form.value.unitCode,
       ...(minimum === '' ? {} : { minimum_quantity: minimum }),
@@ -281,7 +255,7 @@ function confirmDelete(item: InventoryItem): void {
   quasar
     .dialog({
       title: 'Usunąć produkt?',
-      message: `Czy usunąć ${item.ingredient_name} z zapasów?`,
+      message: `Czy usunąć ${item.product_name} z zapasów?`,
       cancel: true,
       persistent: true,
     })

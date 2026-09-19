@@ -12,3 +12,15 @@ class MemberNotFoundError(Exception):
 
 class LastMemberCannotLeaveError(Exception):
     pass
+
+
+class ProductNotFoundError(Exception):
+    pass
+
+
+class DuplicateProductError(Exception):
+    pass
+
+
+class MeasurementUnitNotFoundError(Exception):
+    pass

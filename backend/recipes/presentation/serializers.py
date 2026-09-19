@@ -9,7 +9,7 @@ class RecipeStepSerializer(serializers.Serializer[dict[str, object]]):
 
 
 class RecipeIngredientSerializer(serializers.Serializer[dict[str, object]]):
-    ingredient_id = serializers.IntegerField(min_value=1)
+    name = serializers.CharField(max_length=120, trim_whitespace=True)
     quantity = serializers.DecimalField(max_digits=12, decimal_places=3, min_value=0)
     unit_code = serializers.CharField(max_length=16, trim_whitespace=True)
 

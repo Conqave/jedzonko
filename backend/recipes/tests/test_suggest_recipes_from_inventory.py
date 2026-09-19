@@ -42,7 +42,7 @@ def _build(
 
 def test_recipe_fully_in_stock_has_no_missing_items() -> None:
     repository = FakeRecipeRepository(
-        [_recipe(1, "omlet")], {1: [make_requirement(1, "jajko", "2", GRAM)]}
+        [_recipe(1, "omlet")], {1: [make_requirement("jajko", "2", GRAM)]}
     )
     use_case = _build(repository, [make_snapshot(1, "jajko", "10", GRAM)])
 
@@ -57,8 +57,8 @@ def test_suggestions_are_ordered_and_read_requirements_once() -> None:
     repository = FakeRecipeRepository(
         [_recipe(1, "zupa"), _recipe(2, "bigos")],
         {
-            1: [make_requirement(1, "jajko", "2", GRAM), make_requirement(2, "mleko", "1", GRAM)],
-            2: [make_requirement(1, "jajko", "2", GRAM)],
+            1: [make_requirement("jajko", "2", GRAM), make_requirement("mleko", "1", GRAM)],
+            2: [make_requirement("jajko", "2", GRAM)],
         },
     )
     use_case = _build(repository, [make_snapshot(1, "jajko", "10", GRAM)])
@@ -71,7 +71,7 @@ def test_suggestions_are_ordered_and_read_requirements_once() -> None:
 
 def test_incompatible_unit_counts_as_missing() -> None:
     repository = FakeRecipeRepository(
-        [_recipe(1, "nalesniki")], {1: [make_requirement(1, "mleko", "250", MILLILITRE)]}
+        [_recipe(1, "nalesniki")], {1: [make_requirement("mleko", "250", MILLILITRE)]}
     )
     use_case = _build(repository, [make_snapshot(1, "mleko", "900", GRAM)])
 

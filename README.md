@@ -58,3 +58,12 @@ Each feature owns `domain/`, `application/`, `infrastructure/` and
 is the feature's composition root: it is the only place that wires
 infrastructure adapters into application use cases, and it is the only module
 another feature may import to reuse that feature's behaviour.
+
+`backend/shared/` is a plain Python package, not a Django app and not a staging
+area. Code belongs there only when at least two independent features need the
+same responsibility and none of them is its natural owner. It currently holds
+measurement units and quantity conversion (`shared/measurement.py`,
+`shared/measurement_units.py`), needed by `households`, `inventory`, `recipes`
+and `shopping`, and product/offer name normalization (`shared/text.py`), needed
+by `recipes`, `households` and `promotions`. `shared` may not import any
+feature.

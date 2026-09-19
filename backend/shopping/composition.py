@@ -1,6 +1,7 @@
 from households.composition import build_household_access_policy
 from shopping.application.ports.household_inventory_reader import HouseholdInventoryReader
 from shopping.application.ports.inventory_writer import InventoryWriter
+from shopping.application.ports.product_resolver import ProductResolver
 from shopping.application.ports.recipe_requirement_reader import RecipeRequirementReader
 from shopping.application.ports.shopping_list_repository import ShoppingListRepository
 from shopping.application.use_cases.add_missing_recipe_items_to_shopping_list import (
@@ -14,6 +15,7 @@ from shopping.application.use_cases.get_shopping_list_items import GetShoppingLi
 from shopping.application.use_cases.list_shopping_lists import ListShoppingLists
 from shopping.application.use_cases.synchronize_minimum_stock import SynchronizeMinimumStock
 from shopping.infrastructure.django_shopping_list_repository import DjangoShoppingListRepository
+from shopping.infrastructure.household_product_gateway import HouseholdProductGateway
 from shopping.infrastructure.inventory_stock_gateway import InventoryStockGateway
 from shopping.infrastructure.inventory_writer_gateway import InventoryWriterGateway
 from shopping.infrastructure.recipe_requirement_gateway import RecipeRequirementGateway
@@ -35,6 +37,10 @@ def build_recipe_requirement_reader() -> RecipeRequirementReader:
     return RecipeRequirementGateway()
 
 
+def build_product_resolver() -> ProductResolver:
+    return HouseholdProductGateway()
+
+
 def build_list_shopping_lists() -> ListShoppingLists:
     return ListShoppingLists(build_shopping_list_repository(), build_household_access_policy())
 
@@ -48,7 +54,11 @@ def build_get_shopping_list_items() -> GetShoppingListItems:
 
 
 def build_add_shopping_list_item() -> AddShoppingListItem:
-    return AddShoppingListItem(build_shopping_list_repository(), build_household_access_policy())
+    return AddShoppingListItem(
+        build_shopping_list_repository(),
+        build_household_access_policy(),
+        build_product_resolver(),
+    )
 
 
 def build_add_missing_recipe_items_to_shopping_list() -> AddMissingRecipeItemsToShoppingList:
@@ -56,6 +66,7 @@ def build_add_missing_recipe_items_to_shopping_list() -> AddMissingRecipeItemsTo
         build_shopping_list_repository(),
         build_household_access_policy(),
         build_recipe_requirement_reader(),
+        build_product_resolver(),
     )
 
 

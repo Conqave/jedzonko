@@ -6,7 +6,7 @@ const MESSAGES: Record<string, string> = {
   invalid_shopping_item: 'Nieprawidłowa pozycja listy zakupów.',
   recipe_not_found: 'Nie znaleziono przepisu.',
   invalid_servings: 'Nieprawidłowa liczba porcji.',
-  ingredient_not_found: 'Nie znaleziono wybranego składnika.',
+  product_not_found: 'Nie znaleziono wybranego produktu.',
   measurement_unit_not_found: 'Nie znaleziono wybranej jednostki miary.',
 };
 

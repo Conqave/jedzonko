@@ -2,11 +2,11 @@ class RecipeNotFoundError(Exception):
     pass
 
 
-class IngredientNotFoundError(Exception):
+class MeasurementUnitNotFoundError(Exception):
     pass
 
 
-class MeasurementUnitNotFoundError(Exception):
+class DuplicateRecipeIngredientError(Exception):
     pass
 
 

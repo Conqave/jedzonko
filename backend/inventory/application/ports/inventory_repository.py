@@ -18,14 +18,14 @@ class InventoryRepository(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def find_item_by_ingredient(
-        self, household_id: int, ingredient_id: int
+    def find_item_by_product(
+        self, household_id: int, product_id: int
     ) -> InventoryItemSnapshot | None:
         raise NotImplementedError
 
     @abstractmethod
-    def lock_item_by_ingredient(
-        self, household_id: int, ingredient_id: int
+    def lock_item_by_product(
+        self, household_id: int, product_id: int
     ) -> InventoryItemSnapshot | None:
         raise NotImplementedError
 
@@ -33,7 +33,7 @@ class InventoryRepository(ABC):
     def create_item(
         self,
         household_id: int,
-        ingredient_id: int,
+        product_id: int,
         quantity: Decimal,
         unit_code: str,
         minimum_quantity: Decimal | None,

@@ -1,14 +1,14 @@
 from dataclasses import dataclass
 from decimal import Decimal
 
-from catalog.domain.measurement import MeasurementUnit
+from shared.measurement import MeasurementUnit
 
 
 @dataclass(frozen=True, slots=True)
 class ShoppingItemSnapshot:
     id: int
-    ingredient_id: int | None
-    ingredient_name: str | None
+    product_id: int | None
+    product_name: str | None
     free_text: str | None
     quantity: Decimal
     unit: MeasurementUnit | None

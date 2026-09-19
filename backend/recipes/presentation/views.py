@@ -14,7 +14,7 @@ from rest_framework.views import APIView
 from households.application.errors import NotAHouseholdMemberError
 from recipes.application.commands import RecipeIngredientInput, RecipeInput, RecipeStepInput
 from recipes.application.errors import (
-    IngredientNotFoundError,
+    DuplicateRecipeIngredientError,
     InvalidServingsError,
     MeasurementUnitNotFoundError,
     RecipeCategoryNotFoundError,
@@ -62,7 +62,7 @@ def _read_recipe_input(request: Request) -> RecipeInput:
     )
     ingredients = tuple(
         RecipeIngredientInput(
-            ingredient_id=int(item["ingredient_id"]),
+            name=str(item["name"]),
             quantity=Decimal(item["quantity"]),
             unit_code=str(item["unit_code"]),
         )
@@ -92,8 +92,11 @@ class RecipeListView(APIView):
         command = _read_recipe_input(request)
         try:
             recipe = build_create_recipe().execute(_read_user_id(request), command)
-        except IngredientNotFoundError:
-            raise ValidationError(detail="Ingredient not found.", code="ingredient_not_found")
+        except DuplicateRecipeIngredientError:
+            raise ValidationError(
+                detail="The recipe lists the same ingredient twice.",
+                code="duplicate_recipe_ingredient",
+            )
         except MeasurementUnitNotFoundError:
             raise ValidationError(
                 detail="Measurement unit not found.", code="measurement_unit_not_found"
@@ -119,8 +122,11 @@ class RecipeDetailView(APIView):
             recipe = build_update_recipe().execute(recipe_id, command)
         except RecipeNotFoundError:
             raise NotFound(detail="Recipe not found.", code="recipe_not_found")
-        except IngredientNotFoundError:
-            raise ValidationError(detail="Ingredient not found.", code="ingredient_not_found")
+        except DuplicateRecipeIngredientError:
+            raise ValidationError(
+                detail="The recipe lists the same ingredient twice.",
+                code="duplicate_recipe_ingredient",
+            )
         except MeasurementUnitNotFoundError:
             raise ValidationError(
                 detail="Measurement unit not found.", code="measurement_unit_not_found"

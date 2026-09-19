@@ -1,11 +1,13 @@
 from decimal import Decimal
 
-from catalog.domain.measurement import MeasurementDimension, MeasurementUnit
 from households.application.ports.household_repository import HouseholdRepository
 from households.domain.models import HouseholdMember, HouseholdSummary
+from shared.measurement import MeasurementDimension, MeasurementUnit
+from shared.text import normalize_text
 from shopping.application.errors import ShoppingListItemNotFoundError, ShoppingListNotFoundError
 from shopping.application.ports.household_inventory_reader import HouseholdInventoryReader
 from shopping.application.ports.inventory_writer import InventoryWriter
+from shopping.application.ports.product_resolver import ProductResolver
 from shopping.application.ports.recipe_requirement_reader import RecipeRequirementReader
 from shopping.application.ports.shopping_list_repository import ShoppingListRepository
 from shopping.domain.inventory_stock_level import InventoryStockLevel
@@ -118,18 +120,18 @@ class FakeShoppingListRepository(ShoppingListRepository):
             return None
         return found[1]
 
-    def find_pending_item_by_ingredient(
-        self, list_id: int, ingredient_id: int
+    def find_pending_item_by_product(
+        self, list_id: int, product_id: int
     ) -> ShoppingItemSnapshot | None:
         for item in self.list_pending_items(list_id):
-            if item.ingredient_id == ingredient_id:
+            if item.product_id == product_id:
                 return item
         return None
 
     def add_item(
         self,
         list_id: int,
-        ingredient_id: int | None,
+        product_id: int | None,
         free_text: str | None,
         quantity: Decimal,
         unit_code: str | None,
@@ -140,8 +142,8 @@ class FakeShoppingListRepository(ShoppingListRepository):
         self._next_item_id += 1
         snapshot = ShoppingItemSnapshot(
             id=item_id,
-            ingredient_id=ingredient_id,
-            ingredient_name=None if ingredient_id is None else f"Składnik {ingredient_id}",
+            product_id=product_id,
+            product_name=None if product_id is None else f"Produkt {product_id}",
             free_text=free_text,
             quantity=quantity,
             unit=None if unit_code is None else UNITS[unit_code],
@@ -158,8 +160,8 @@ class FakeShoppingListRepository(ShoppingListRepository):
             raise ShoppingListItemNotFoundError
         updated = ShoppingItemSnapshot(
             id=found[1].id,
-            ingredient_id=found[1].ingredient_id,
-            ingredient_name=found[1].ingredient_name,
+            product_id=found[1].product_id,
+            product_name=found[1].product_name,
             free_text=found[1].free_text,
             quantity=quantity,
             unit=None if unit_code is None else UNITS[unit_code],
@@ -174,8 +176,8 @@ class FakeShoppingListRepository(ShoppingListRepository):
             raise ShoppingListItemNotFoundError
         updated = ShoppingItemSnapshot(
             id=found[1].id,
-            ingredient_id=found[1].ingredient_id,
-            ingredient_name=found[1].ingredient_name,
+            product_id=found[1].product_id,
+            product_name=found[1].product_name,
             free_text=found[1].free_text,
             quantity=found[1].quantity,
             unit=found[1].unit,
@@ -203,9 +205,9 @@ class FakeInventoryWriter(InventoryWriter):
         self.added: list[tuple[int, int, Decimal, str]] = []
 
     def add_purchased_quantity(
-        self, household_id: int, ingredient_id: int, amount: Decimal, unit: MeasurementUnit
+        self, household_id: int, product_id: int, amount: Decimal, unit: MeasurementUnit
     ) -> None:
-        self.added.append((household_id, ingredient_id, amount, unit.code))
+        self.added.append((household_id, product_id, amount, unit.code))
 
 
 class FakeRecipeRequirementReader(RecipeRequirementReader):
@@ -216,3 +218,22 @@ class FakeRecipeRequirementReader(RecipeRequirementReader):
         self, user_id: int, household_id: int, recipe_id: int, servings: int
     ) -> list[MissingRecipeItem]:
         return self.missing_items
+
+
+class FakeProductResolver(ProductResolver):
+    def __init__(self) -> None:
+        self.products: dict[tuple[int, str], int] = {}
+        self._next_product_id = 1
+
+    def resolve_product_id(self, household_id: int, name: str, default_unit_code: str) -> int:
+        key = (household_id, normalize_text(name))
+        if key not in self.products:
+            self.products[key] = self._next_product_id
+            self._next_product_id += 1
+        return self.products[key]
+
+    def is_household_product(self, household_id: int, product_id: int) -> bool:
+        return any(
+            owner == household_id and stored == product_id
+            for (owner, _), stored in self.products.items()
+        )

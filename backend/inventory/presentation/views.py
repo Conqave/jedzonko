@@ -7,9 +7,9 @@ from rest_framework.views import APIView
 from households.application.errors import NotAHouseholdMemberError
 from inventory.application.errors import (
     DuplicateInventoryItemError,
-    IngredientNotFoundError,
     InventoryItemNotFoundError,
     MeasurementUnitNotFoundError,
+    ProductNotFoundError,
 )
 from inventory.composition import (
     build_add_inventory_item,
@@ -35,8 +35,8 @@ def _current_user_id(request: Request) -> int:
 def _represent(item: InventoryItemSnapshot) -> dict[str, object]:
     return {
         "id": item.id,
-        "ingredient_id": item.ingredient_id,
-        "ingredient_name": item.ingredient_name,
+        "product_id": item.product_id,
+        "product_name": item.product_name,
         "quantity": str(item.quantity),
         "unit_code": item.unit.code,
         "minimum_quantity": None if item.minimum_quantity is None else str(item.minimum_quantity),
@@ -66,7 +66,7 @@ class InventoryListView(APIView):
             item = build_add_inventory_item().execute(
                 _current_user_id(request),
                 payload["household_id"],
-                payload["ingredient_id"],
+                payload["product_id"],
                 payload["quantity"],
                 payload["unit_code"],
                 payload.get("minimum_quantity"),
@@ -76,11 +76,11 @@ class InventoryListView(APIView):
             raise PermissionDenied(detail="Not a household member.", code="not_a_household_member")
         except DuplicateInventoryItemError:
             raise ValidationError(
-                detail="This ingredient is already in the inventory.",
+                detail="This product is already in the inventory.",
                 code="duplicate_inventory_item",
             )
-        except IngredientNotFoundError:
-            raise ValidationError(detail="Unknown ingredient.", code="ingredient_not_found")
+        except ProductNotFoundError:
+            raise ValidationError(detail="Unknown product.", code="product_not_found")
         except MeasurementUnitNotFoundError:
             raise ValidationError(
                 detail="Unknown measurement unit.", code="measurement_unit_not_found"

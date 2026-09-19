@@ -1,10 +1,10 @@
 from decimal import Decimal
 
-from catalog.domain.measurement import MeasurementUnit, Quantity
 from inventory.application.errors import InventoryItemNotFoundError
 from inventory.application.ports.inventory_repository import InventoryRepository
 from inventory.application.ports.transaction_manager import TransactionManager
 from inventory.domain.models import InventoryItemSnapshot
+from shared.measurement import MeasurementUnit, Quantity
 
 EMPTY = Decimal("0")
 
@@ -19,12 +19,12 @@ class ConsumeInventoryQuantity:
     def execute(
         self,
         household_id: int,
-        ingredient_id: int,
+        product_id: int,
         amount: Decimal,
         unit: MeasurementUnit,
     ) -> InventoryItemSnapshot:
         with self._transaction_manager.atomic():
-            existing = self._repository.lock_item_by_ingredient(household_id, ingredient_id)
+            existing = self._repository.lock_item_by_product(household_id, product_id)
             if existing is None:
                 raise InventoryItemNotFoundError
             remaining = existing.as_quantity().subtract(Quantity(amount=amount, unit=unit))

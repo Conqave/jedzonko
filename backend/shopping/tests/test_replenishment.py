@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from catalog.domain.measurement import MeasurementDimension, MeasurementUnit
+from shared.measurement import MeasurementDimension, MeasurementUnit
 from shopping.domain.inventory_stock_level import InventoryStockLevel
 from shopping.domain.replenishment import calculate_replenishment_targets
 from shopping.domain.shopping_item_snapshot import ShoppingItemSnapshot
@@ -13,8 +13,8 @@ KILOGRAM = MeasurementUnit(
 
 def _level(quantity: str, minimum: str | None) -> InventoryStockLevel:
     return InventoryStockLevel(
-        ingredient_id=1,
-        ingredient_name="Mąka",
+        product_id=1,
+        product_name="Mąka",
         quantity=Decimal(quantity),
         minimum_quantity=None if minimum is None else Decimal(minimum),
         unit=GRAM,
@@ -24,8 +24,8 @@ def _level(quantity: str, minimum: str | None) -> InventoryStockLevel:
 def _item(item_id: int, quantity: str, unit: MeasurementUnit | None) -> ShoppingItemSnapshot:
     return ShoppingItemSnapshot(
         id=item_id,
-        ingredient_id=1,
-        ingredient_name="Mąka",
+        product_id=1,
+        product_name="Mąka",
         free_text=None,
         quantity=Decimal(quantity),
         unit=unit,
@@ -71,8 +71,8 @@ def test_existing_item_with_other_unit_is_rewritten() -> None:
 def test_free_text_items_are_ignored() -> None:
     free_text_item = ShoppingItemSnapshot(
         id=9,
-        ingredient_id=None,
-        ingredient_name=None,
+        product_id=None,
+        product_name=None,
         free_text="Ręczniki",
         quantity=Decimal("1"),
         unit=None,

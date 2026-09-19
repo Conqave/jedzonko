@@ -25,8 +25,8 @@
             :caption="`dostępne: ${suggestion.available_item_count} · brakuje: ${suggestion.missing_item_count}`"
           >
             <q-list separator>
-              <q-item v-for="item in suggestion.missing_items" :key="item.ingredient_id">
-                <q-item-section>{{ item.ingredient_name }}</q-item-section>
+              <q-item v-for="item in suggestion.missing_items" :key="item.name">
+                <q-item-section>{{ item.name }}</q-item-section>
                 <q-item-section side>{{ item.amount }} {{ item.unit_code }}</q-item-section>
               </q-item>
             </q-list>

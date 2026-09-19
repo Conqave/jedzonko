@@ -6,15 +6,13 @@ from django.db import transaction
 from django.db.utils import IntegrityError
 from rest_framework.test import APIClient
 
-from catalog.domain.measurement import MeasurementDimension
-from catalog.models import Ingredient, MeasurementUnit
 from households.composition import build_household_access_policy
-from households.models import Household, HouseholdMembership
+from households.models import Household, HouseholdMembership, Product
 from inventory.models import InventoryItem
 from shopping.application.use_cases.add_missing_recipe_items_to_shopping_list import (
     AddMissingRecipeItemsToShoppingList,
 )
-from shopping.composition import build_shopping_list_repository
+from shopping.composition import build_product_resolver, build_shopping_list_repository
 from shopping.domain.missing_recipe_item import MissingRecipeItem
 from shopping.models import (
     PrimaryShoppingList,
@@ -23,28 +21,31 @@ from shopping.models import (
     ShoppingListItem,
 )
 from shopping.presentation import views
-from shopping.tests.fakes import FakeRecipeRequirementReader
+from shopping.tests.fakes import FakeProductResolver, FakeRecipeRequirementReader
 
 pytestmark = [pytest.mark.django_db, pytest.mark.urls("shopping.tests.urls")]
 
 
 @pytest.fixture
-def gram() -> MeasurementUnit:
-    unit, _ = MeasurementUnit.objects.get_or_create(
-        code="g",
-        defaults={
-            "name": "gram",
-            "dimension": MeasurementDimension.MASS.value,
-            "factor_to_base": "1",
-        },
+def flour(household: Household) -> Product:
+    return Product.objects.create(
+        household=household,
+        name="Mąka",
+        normalized_name="maka",
+        default_unit_code="g",
+        is_food=True,
     )
-    return unit
 
 
 @pytest.fixture
-def flour(gram: MeasurementUnit) -> Ingredient:
-    ingredient, _ = Ingredient.objects.get_or_create(name="Mąka", defaults={"default_unit": gram})
-    return ingredient
+def foreign_flour(other_household: Household) -> Product:
+    return Product.objects.create(
+        household=other_household,
+        name="Mąka",
+        normalized_name="maka",
+        default_unit_code="g",
+        is_food=True,
+    )
 
 
 @pytest.fixture
@@ -168,12 +169,12 @@ def test_member_of_other_household_cannot_mutate_items(
     member_client: APIClient,
     outsider_client: APIClient,
     other_household: Household,
-    flour: Ingredient,
+    foreign_flour: Product,
 ) -> None:
     list_id = _primary_list_id(outsider_client, other_household)
     created = outsider_client.post(
         f"/api/shopping/lists/{list_id}/items/",
-        {"ingredient_id": flour.pk, "quantity": "100.000", "unit_code": "g"},
+        {"product_id": foreign_flour.pk, "quantity": "100.000", "unit_code": "g"},
         format="json",
     )
     item_id = created.json()["id"]
@@ -194,36 +195,34 @@ def test_member_of_other_household_cannot_mutate_items(
     )
 
 
-def test_add_catalogue_item(
-    member_client: APIClient, household: Household, flour: Ingredient
-) -> None:
+def test_add_product_item(member_client: APIClient, household: Household, flour: Product) -> None:
     list_id = _primary_list_id(member_client, household)
 
     response = member_client.post(
         f"/api/shopping/lists/{list_id}/items/",
-        {"ingredient_id": flour.pk, "quantity": "250.000", "unit_code": "g"},
+        {"product_id": flour.pk, "quantity": "250.000", "unit_code": "g"},
         format="json",
     )
 
     assert response.status_code == 201
     body = response.json()
-    assert body["ingredient_id"] == flour.pk
-    assert body["ingredient_name"] == "Mąka"
+    assert body["product_id"] == flour.pk
+    assert body["product_name"] == "Mąka"
     assert body["free_text"] is None
     assert body["quantity"] == "250.000"
     assert body["unit_code"] == "g"
     assert body["is_purchased"] is False
 
 
-def test_item_with_both_ingredient_and_free_text_is_rejected(
-    member_client: APIClient, household: Household, flour: Ingredient
+def test_item_with_both_product_and_free_text_is_rejected(
+    member_client: APIClient, household: Household, flour: Product
 ) -> None:
     list_id = _primary_list_id(member_client, household)
 
     response = member_client.post(
         f"/api/shopping/lists/{list_id}/items/",
         {
-            "ingredient_id": flour.pk,
+            "product_id": flour.pk,
             "free_text": "Ręczniki",
             "quantity": "1.000",
             "unit_code": "g",
@@ -235,7 +234,7 @@ def test_item_with_both_ingredient_and_free_text_is_rejected(
     assert response.json()["code"] == "invalid_shopping_item"
 
 
-def test_item_with_neither_ingredient_nor_free_text_is_rejected(
+def test_item_with_neither_product_nor_free_text_is_rejected(
     member_client: APIClient, household: Household
 ) -> None:
     list_id = _primary_list_id(member_client, household)
@@ -249,12 +248,12 @@ def test_item_with_neither_ingredient_nor_free_text_is_rejected(
 
 
 def test_buying_adds_quantity_to_inventory(
-    member_client: APIClient, household: Household, flour: Ingredient
+    member_client: APIClient, household: Household, flour: Product
 ) -> None:
     list_id = _primary_list_id(member_client, household)
     created = member_client.post(
         f"/api/shopping/lists/{list_id}/items/",
-        {"ingredient_id": flour.pk, "quantity": "250.000", "unit_code": "g"},
+        {"product_id": flour.pk, "quantity": "250.000", "unit_code": "g"},
         format="json",
     )
     item_id = created.json()["id"]
@@ -262,19 +261,19 @@ def test_buying_adds_quantity_to_inventory(
     response = member_client.post(f"/api/shopping/items/{item_id}/buy/")
 
     assert response.status_code == 204
-    stored = InventoryItem.objects.get(household=household, ingredient=flour)
+    stored = InventoryItem.objects.get(household=household, product=flour)
     assert stored.quantity == Decimal("250.000")
     assert ShoppingListItem.objects.filter(pk=item_id).exists() is False
     assert PurchasedShoppingItem.objects.filter(shopping_list__household=household).count() == 1
 
 
 def test_buying_twice_is_rejected(
-    member_client: APIClient, household: Household, flour: Ingredient
+    member_client: APIClient, household: Household, flour: Product
 ) -> None:
     list_id = _primary_list_id(member_client, household)
     created = member_client.post(
         f"/api/shopping/lists/{list_id}/items/",
-        {"ingredient_id": flour.pk, "quantity": "250.000", "unit_code": "g"},
+        {"product_id": flour.pk, "quantity": "250.000", "unit_code": "g"},
         format="json",
     )
     item_id = created.json()["id"]
@@ -284,16 +283,16 @@ def test_buying_twice_is_rejected(
 
     assert response.status_code == 404
     assert response.json()["code"] == "shopping_item_not_found"
-    assert InventoryItem.objects.get(household=household, ingredient=flour).quantity == Decimal(
+    assert InventoryItem.objects.get(household=household, product=flour).quantity == Decimal(
         "250.000"
     )
 
 
-def test_delete_item(member_client: APIClient, household: Household, flour: Ingredient) -> None:
+def test_delete_item(member_client: APIClient, household: Household, flour: Product) -> None:
     list_id = _primary_list_id(member_client, household)
     created = member_client.post(
         f"/api/shopping/lists/{list_id}/items/",
-        {"ingredient_id": flour.pk, "quantity": "250.000", "unit_code": "g"},
+        {"product_id": flour.pk, "quantity": "250.000", "unit_code": "g"},
         format="json",
     )
     item_id = created.json()["id"]
@@ -312,15 +311,15 @@ def test_buy_unknown_item_returns_shopping_item_not_found(member_client: APIClie
 def test_from_recipe_is_idempotent(
     member_client: APIClient,
     household: Household,
-    flour: Ingredient,
+    flour: Product,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     list_id = _primary_list_id(member_client, household)
     recipes = FakeRecipeRequirementReader(
         [
             MissingRecipeItem(
-                ingredient_id=flour.pk,
-                ingredient_name="Mąka",
+                name="Mąka",
+                normalized_name="maka",
                 amount=Decimal("300"),
                 unit_code="g",
             )
@@ -329,7 +328,10 @@ def test_from_recipe_is_idempotent(
 
     def _build() -> AddMissingRecipeItemsToShoppingList:
         return AddMissingRecipeItemsToShoppingList(
-            build_shopping_list_repository(), build_household_access_policy(), recipes
+            build_shopping_list_repository(),
+            build_household_access_policy(),
+            recipes,
+            build_product_resolver(),
         )
 
     monkeypatch.setattr(views, "build_add_missing_recipe_items_to_shopping_list", _build)
@@ -353,13 +355,13 @@ def test_from_recipe_is_idempotent(
 
 
 def test_synchronize_minimum_stock_is_idempotent(
-    member_client: APIClient, household: Household, flour: Ingredient, gram: MeasurementUnit
+    member_client: APIClient, household: Household, flour: Product
 ) -> None:
     list_id = _primary_list_id(member_client, household)
     InventoryItem.objects.create(
         household=household,
-        ingredient=flour,
-        unit=gram,
+        product=flour,
+        unit_code="g",
         quantity=Decimal("100"),
         minimum_quantity=Decimal("300"),
     )
@@ -375,19 +377,19 @@ def test_synchronize_minimum_stock_is_idempotent(
 
 
 def test_purchased_items_stay_visible_and_can_be_rebought(
-    member_client: APIClient, household: Household, flour: Ingredient
+    member_client: APIClient, household: Household, flour: Product
 ) -> None:
     list_id = _primary_list_id(member_client, household)
     first = member_client.post(
         f"/api/shopping/lists/{list_id}/items/",
-        {"ingredient_id": flour.pk, "quantity": "250.000", "unit_code": "g"},
+        {"product_id": flour.pk, "quantity": "250.000", "unit_code": "g"},
         format="json",
     )
     member_client.post(f"/api/shopping/items/{first.json()['id']}/buy/")
 
     second = member_client.post(
         f"/api/shopping/lists/{list_id}/items/",
-        {"ingredient_id": flour.pk, "quantity": "100.000", "unit_code": "g"},
+        {"product_id": flour.pk, "quantity": "100.000", "unit_code": "g"},
         format="json",
     )
 
@@ -397,17 +399,17 @@ def test_purchased_items_stay_visible_and_can_be_rebought(
     assert [item["quantity"] for item in items] == ["250.000", "100.000"]
 
 
-def test_database_rejects_a_second_pending_row_for_the_same_ingredient(
-    household: Household, flour: Ingredient, gram: MeasurementUnit
+def test_database_rejects_a_second_pending_row_for_the_same_product(
+    household: Household, flour: Product
 ) -> None:
     shopping_list = ShoppingList.objects.create(household=household, name="Lista")
     ShoppingListItem.objects.create(
-        shopping_list=shopping_list, ingredient=flour, unit=gram, quantity=Decimal("1.000")
+        shopping_list=shopping_list, product=flour, unit_code="g", quantity=Decimal("1.000")
     )
 
     with pytest.raises(IntegrityError), transaction.atomic():
         ShoppingListItem.objects.create(
-            shopping_list=shopping_list, ingredient=flour, unit=gram, quantity=Decimal("2.000")
+            shopping_list=shopping_list, product=flour, unit_code="g", quantity=Decimal("2.000")
         )
 
 

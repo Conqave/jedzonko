@@ -4,6 +4,7 @@ from rest_framework.exceptions import APIException, NotFound, PermissionDenied
 from households.application.errors import NotAHouseholdMemberError
 from shopping.application.errors import (
     InvalidShoppingItemError,
+    ProductNotFoundError,
     ShoppingListItemNotFoundError,
     ShoppingListNotFoundError,
 )
@@ -30,6 +31,7 @@ _ERROR_RESPONSES: dict[type[Exception], tuple[type[APIException], str, str]] = {
         "Invalid shopping item.",
         "invalid_shopping_item",
     ),
+    ProductNotFoundError: (ShoppingBadRequest, "Unknown product.", "product_not_found"),
 }
 
 HANDLED_ERRORS = tuple(_ERROR_RESPONSES)
