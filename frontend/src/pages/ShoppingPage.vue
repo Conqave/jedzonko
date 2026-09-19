@@ -107,7 +107,7 @@
         Lista jest pusta.
       </q-banner>
       <q-list v-else bordered separator>
-        <q-item v-for="item in items" :key="item.id">
+        <q-item v-for="(item, index) in items" :key="item.id ?? `bought-${index}`">
           <q-item-section side top>
             <q-checkbox
               :model-value="item.is_purchased"
@@ -337,10 +337,14 @@ async function submitItem(): Promise<void> {
 }
 
 async function markPurchased(item: ShoppingItem): Promise<void> {
+  if (item.id === null) {
+    return;
+  }
+  const purchasedId = item.id;
   try {
-    await buyShoppingItem(item.id);
+    await buyShoppingItem(purchasedId);
     items.value = items.value.map((entry) =>
-      entry.id === item.id ? { ...entry, is_purchased: true } : entry,
+      entry.id === purchasedId ? { ...entry, id: null, is_purchased: true } : entry,
     );
   } catch (error) {
     notifyError(error);
@@ -362,9 +366,13 @@ function confirmDelete(item: ShoppingItem): void {
 }
 
 async function doDelete(item: ShoppingItem): Promise<void> {
+  if (item.id === null) {
+    return;
+  }
+  const deletedId = item.id;
   try {
-    await deleteShoppingItem(item.id);
-    items.value = items.value.filter((entry) => entry.id !== item.id);
+    await deleteShoppingItem(deletedId);
+    items.value = items.value.filter((entry) => entry.id !== deletedId);
   } catch (error) {
     notifyError(error);
   }

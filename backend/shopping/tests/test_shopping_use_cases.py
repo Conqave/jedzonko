@@ -5,7 +5,6 @@ import pytest
 from households.application.access import HouseholdAccessPolicy
 from households.application.errors import NotAHouseholdMemberError
 from shopping.application.errors import (
-    AlreadyPurchasedError,
     InvalidShoppingItemError,
     ShoppingListItemNotFoundError,
     ShoppingListNotFoundError,
@@ -40,6 +39,7 @@ def _access() -> HouseholdAccessPolicy:
     return HouseholdAccessPolicy(FakeHouseholdRepository({(MEMBER_ID, HOUSEHOLD_ID)}))
 
 
+@pytest.mark.django_db
 def test_list_shopping_lists_creates_the_primary_list_lazily() -> None:
     repository = FakeShoppingListRepository()
     use_case = ListShoppingLists(repository, _access())
@@ -162,6 +162,7 @@ def test_add_missing_recipe_items_raises_existing_quantity() -> None:
     assert items[0].quantity == Decimal("300")
 
 
+@pytest.mark.django_db
 def test_synchronize_minimum_stock_is_idempotent() -> None:
     repository = FakeShoppingListRepository()
     list_id = repository.seed_list(HOUSEHOLD_ID, "Lista", True)
@@ -187,6 +188,7 @@ def test_synchronize_minimum_stock_is_idempotent() -> None:
     assert second[0].quantity == Decimal("200")
 
 
+@pytest.mark.django_db
 def test_synchronize_minimum_stock_targets_the_primary_list() -> None:
     repository = FakeShoppingListRepository()
     primary_id = repository.seed_list(HOUSEHOLD_ID, "Lista", True)
@@ -221,13 +223,12 @@ def test_buy_shopping_item_adds_quantity_to_inventory() -> None:
     use_case.execute(MEMBER_ID, item.id)
 
     assert writer.added == [(HOUSEHOLD_ID, 5, Decimal("250"), "g")]
-    stored = repository.find_item(item.id)
-    assert stored is not None
-    assert stored.is_purchased
+    assert repository.find_pending_item(item.id) is None
+    assert [snapshot.is_purchased for snapshot in repository.list_items(list_id)] == [True]
 
 
 @pytest.mark.django_db
-def test_buying_twice_fails() -> None:
+def test_buying_twice_fails_because_the_pending_row_is_gone() -> None:
     repository = FakeShoppingListRepository()
     list_id = repository.seed_list(HOUSEHOLD_ID, "Lista", True)
     item = repository.add_item(list_id, 5, None, Decimal("250"), "g")
@@ -235,7 +236,7 @@ def test_buying_twice_fails() -> None:
     use_case = BuyShoppingItem(repository, _access(), writer)
     use_case.execute(MEMBER_ID, item.id)
 
-    with pytest.raises(AlreadyPurchasedError):
+    with pytest.raises(ShoppingListItemNotFoundError):
         use_case.execute(MEMBER_ID, item.id)
 
     assert len(writer.added) == 1

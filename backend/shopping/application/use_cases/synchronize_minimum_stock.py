@@ -1,3 +1,5 @@
+from django.db import transaction
+
 from households.application.access import HouseholdAccessPolicy
 from shopping.application.errors import ShoppingListNotFoundError
 from shopping.application.ports.household_inventory_reader import HouseholdInventoryReader
@@ -22,10 +24,11 @@ class SynchronizeMinimumStock:
         if household_id is None:
             raise ShoppingListNotFoundError
         self._access.require_membership(user_id, household_id)
-        primary_list = self._repository.get_or_create_primary_list(household_id)
+        with transaction.atomic():
+            primary_list = self._repository.get_or_create_primary_list(household_id)
         stock_levels = self._inventory.read_stock_levels(user_id, household_id)
-        unpurchased = self._repository.list_unpurchased_items(primary_list.id)
-        targets = calculate_replenishment_targets(stock_levels, unpurchased)
+        pending = self._repository.list_pending_items(primary_list.id)
+        targets = calculate_replenishment_targets(stock_levels, pending)
         for target in targets:
             if target.existing_item_id is None:
                 self._repository.add_item(

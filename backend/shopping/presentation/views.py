@@ -44,8 +44,10 @@ def _represent_list(shopping_list: ShoppingListSummary) -> dict[str, object]:
 
 
 def _represent_item(item: ShoppingItemSnapshot) -> dict[str, object]:
+    # Pending and purchased rows live in separate tables with independent id
+    # spaces, so only the addressable pending rows expose an id over HTTP.
     return {
-        "id": item.id,
+        "id": None if item.is_purchased else item.id,
         "ingredient_id": item.ingredient_id,
         "ingredient_name": item.ingredient_name,
         "free_text": item.free_text,

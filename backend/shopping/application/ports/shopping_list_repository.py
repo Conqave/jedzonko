@@ -31,15 +31,15 @@ class ShoppingListRepository(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def list_unpurchased_items(self, list_id: int) -> list[ShoppingItemSnapshot]:
+    def list_pending_items(self, list_id: int) -> list[ShoppingItemSnapshot]:
         raise NotImplementedError
 
     @abstractmethod
-    def find_item(self, item_id: int) -> ShoppingItemSnapshot | None:
+    def find_pending_item(self, item_id: int) -> ShoppingItemSnapshot | None:
         raise NotImplementedError
 
     @abstractmethod
-    def find_unpurchased_item_by_ingredient(
+    def find_pending_item_by_ingredient(
         self, list_id: int, ingredient_id: int
     ) -> ShoppingItemSnapshot | None:
         raise NotImplementedError
@@ -62,7 +62,7 @@ class ShoppingListRepository(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def mark_purchased(self, item_id: int) -> ShoppingItemSnapshot:
+    def purchase_item(self, item_id: int) -> ShoppingItemSnapshot:
         raise NotImplementedError
 
     @abstractmethod

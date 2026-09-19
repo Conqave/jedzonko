@@ -30,7 +30,7 @@ class AddShoppingListItem:
         self._access.require_membership(user_id, household_id)
         if ingredient_id is None:
             return self._repository.add_item(list_id, None, free_text, quantity, unit_code)
-        existing = self._repository.find_unpurchased_item_by_ingredient(list_id, ingredient_id)
+        existing = self._repository.find_pending_item_by_ingredient(list_id, ingredient_id)
         if existing is None:
             return self._repository.add_item(list_id, ingredient_id, None, quantity, unit_code)
         if existing.unit is None or existing.unit.code != unit_code:

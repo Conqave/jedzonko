@@ -8,7 +8,3 @@ class ShoppingListItemNotFoundError(Exception):
 
 class InvalidShoppingItemError(Exception):
     pass
-
-
-class AlreadyPurchasedError(Exception):
-    pass

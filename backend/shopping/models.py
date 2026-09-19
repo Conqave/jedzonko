@@ -11,21 +11,22 @@ class ShoppingList(models.Model):
         Household, on_delete=models.CASCADE, related_name="shopping_lists"
     )
     name = models.CharField(max_length=120)
-    is_primary = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        constraints = [
-            models.UniqueConstraint(
-                fields=["household"],
-                condition=Q(is_primary=True),
-                name="unique_primary_shopping_list_per_household",
-            )
-        ]
-        ordering = ["-is_primary", "name"]
+        ordering = ["name"]
 
     def __str__(self) -> str:
         return self.name
+
+
+class PrimaryShoppingList(models.Model):
+    household = models.OneToOneField(
+        Household, on_delete=models.CASCADE, related_name="primary_shopping_list"
+    )
+    shopping_list = models.OneToOneField(
+        ShoppingList, on_delete=models.CASCADE, related_name="primary_marker"
+    )
 
 
 class ShoppingListItem(models.Model):
@@ -48,8 +49,6 @@ class ShoppingListItem(models.Model):
     quantity = models.DecimalField(
         max_digits=12, decimal_places=3, validators=[MinValueValidator(0)]
     )
-    is_purchased = models.BooleanField(default=False)
-    purchased_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -63,9 +62,46 @@ class ShoppingListItem(models.Model):
             ),
             models.UniqueConstraint(
                 fields=["shopping_list", "ingredient"],
-                condition=Q(is_purchased=False, ingredient__isnull=False),
-                name="unique_unpurchased_shopping_item_ingredient",
+                name="unique_pending_shopping_item_ingredient",
             ),
         ]
-        indexes = [models.Index(fields=["shopping_list", "is_purchased"])]
+        ordering = ["created_at", "id"]
+
+
+class PurchasedShoppingItem(models.Model):
+    shopping_list = models.ForeignKey(
+        ShoppingList, on_delete=models.CASCADE, related_name="purchased_items"
+    )
+    ingredient = models.ForeignKey(
+        Ingredient,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="purchased_shopping_items",
+    )
+    free_text = models.CharField(max_length=120, null=True, blank=True)
+    unit = models.ForeignKey(
+        MeasurementUnit,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="purchased_shopping_items",
+    )
+    quantity = models.DecimalField(
+        max_digits=12, decimal_places=3, validators=[MinValueValidator(0)]
+    )
+    created_at = models.DateTimeField()
+    purchased_at = models.DateTimeField()
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    Q(ingredient__isnull=False, free_text__isnull=True)
+                    | Q(ingredient__isnull=True, free_text__isnull=False)
+                ),
+                name="purchased_shopping_item_ingredient_xor_free_text",
+            )
+        ]
+        indexes = [models.Index(fields=["shopping_list", "purchased_at"])]
         ordering = ["created_at", "id"]

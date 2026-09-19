@@ -25,7 +25,7 @@ class AddMissingRecipeItemsToShoppingList:
         self._access.require_membership(user_id, household_id)
         missing_items = self._recipes.read_missing_items(user_id, household_id, recipe_id, servings)
         for missing in missing_items:
-            existing = self._repository.find_unpurchased_item_by_ingredient(
+            existing = self._repository.find_pending_item_by_ingredient(
                 list_id, missing.ingredient_id
             )
             if existing is None:

@@ -4,7 +4,6 @@ const MESSAGES: Record<string, string> = {
   shopping_list_not_found: 'Nie znaleziono listy zakupów.',
   shopping_item_not_found: 'Nie znaleziono pozycji na liście zakupów.',
   invalid_shopping_item: 'Nieprawidłowa pozycja listy zakupów.',
-  already_purchased: 'Ta pozycja została już kupiona.',
   recipe_not_found: 'Nie znaleziono przepisu.',
   invalid_servings: 'Nieprawidłowa liczba porcji.',
   ingredient_not_found: 'Nie znaleziono wybranego składnika.',

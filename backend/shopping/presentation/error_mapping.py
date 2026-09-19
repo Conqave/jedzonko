@@ -3,7 +3,6 @@ from rest_framework.exceptions import APIException, NotFound, PermissionDenied
 
 from households.application.errors import NotAHouseholdMemberError
 from shopping.application.errors import (
-    AlreadyPurchasedError,
     InvalidShoppingItemError,
     ShoppingListItemNotFoundError,
     ShoppingListNotFoundError,
@@ -30,11 +29,6 @@ _ERROR_RESPONSES: dict[type[Exception], tuple[type[APIException], str, str]] = {
         ShoppingBadRequest,
         "Invalid shopping item.",
         "invalid_shopping_item",
-    ),
-    AlreadyPurchasedError: (
-        ShoppingBadRequest,
-        "Shopping item is already purchased.",
-        "already_purchased",
     ),
 }
 
