@@ -1,0 +1,5 @@
+SHELL=/bin/sh
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+MAILTO=root
+
+15 3 * * * root cd /srv/jedzonko/infra && docker compose exec -T backend python manage.py purge_deleted_households

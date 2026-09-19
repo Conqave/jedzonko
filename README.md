@@ -51,6 +51,32 @@ There is no public registration. An administrator creates users in Django admin
 permission. New users have no promotion access. The backend permission is the
 single source of truth; the Quasar UI only hides navigation.
 
+## Household deletion and purge
+
+Deleting a household is recoverable for 7 days
+(`households/domain/retention.py: HOUSEHOLD_RETENTION_PERIOD`). Members see
+their deleted households at `GET /api/households/deleted/` and restore one with
+`POST /api/households/{id}/restore/` while the window lasts. Afterwards the
+household and all its data are purged permanently.
+
+The purge runs as a daily host cron job, because the existing Compose stack has
+no scheduler and a one-line crontab entry is cheaper than adding one:
+
+```bash
+sudo install -m 0644 infra/cron/jedzonko-purge /etc/cron.d/jedzonko-purge
+```
+
+It runs at 03:15 every day and cron mails the command output (how many
+households were purged, and which). Run it manually with:
+
+```bash
+cd infra
+docker compose exec -T backend python manage.py purge_deleted_households --dry-run
+docker compose exec -T backend python manage.py purge_deleted_households
+```
+
+`--dry-run` reports what would be purged and changes nothing.
+
 ## Backend layering
 
 Each feature owns `domain/`, `application/`, `infrastructure/` and
