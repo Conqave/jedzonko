@@ -10,7 +10,10 @@ from households.models import Household, HouseholdMembership
 class DjangoHouseholdRepository(HouseholdRepository):
     def find_households_for_user(self, user_id: int) -> list[HouseholdSummary]:
         rows = (
-            Household.objects.filter(memberships__user_id=user_id, deleted_at__isnull=True)
+            Household.objects.filter(
+                pk__in=HouseholdMembership.objects.filter(user_id=user_id).values("household_id"),
+                deleted_at__isnull=True,
+            )
             .annotate(number_of_members=Count("memberships"))
             .order_by("name")
         )
