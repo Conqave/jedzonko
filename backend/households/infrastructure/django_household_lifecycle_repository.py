@@ -37,7 +37,10 @@ class DjangoHouseholdLifecycleRepository(HouseholdLifecycleRepository):
 
     def find_deleted_for_user(self, user_id: int) -> list[DeletedHousehold]:
         rows = (
-            Household.objects.filter(memberships__user_id=user_id, deleted_at__isnull=False)
+            Household.objects.filter(
+                pk__in=HouseholdMembership.objects.filter(user_id=user_id).values("household_id"),
+                deleted_at__isnull=False,
+            )
             .annotate(number_of_members=Count("memberships"))
             .order_by("deleted_at", "name")
         )

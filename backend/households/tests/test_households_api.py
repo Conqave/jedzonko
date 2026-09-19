@@ -109,3 +109,13 @@ def test_last_member_cannot_be_removed(api_client: APIClient, ala: User) -> None
 
     assert response.status_code == 400
     assert response.data["code"] == "last_member_cannot_leave"
+
+
+def test_member_count_reflects_every_member(api_client: APIClient, ala: User, ola: User) -> None:
+    household = _create_household("Wspólny dom", ala)
+    HouseholdMembership.objects.create(household=household, user=ola)
+    api_client.force_login(ala)
+
+    response = api_client.get("/api/households/")
+
+    assert [(item["name"], item["member_count"]) for item in response.data] == [("Wspólny dom", 2)]
