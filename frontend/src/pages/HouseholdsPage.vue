@@ -24,11 +24,21 @@
           <q-item-label caption>{{ household.member_count }} członków</q-item-label>
         </q-item-section>
         <q-item-section side>
-          <q-icon
-            v-if="household.id === households.selectedId"
-            name="check_circle"
-            color="primary"
-          />
+          <div class="row items-center no-wrap q-gutter-xs">
+            <q-icon
+              v-if="household.id === households.selectedId"
+              name="check_circle"
+              color="primary"
+            />
+            <q-btn
+              flat
+              dense
+              round
+              icon="edit"
+              aria-label="Zmień nazwę"
+              @click.stop="openRename(household)"
+            />
+          </div>
         </q-item-section>
       </q-item>
     </q-list>
@@ -96,6 +106,28 @@
         </q-form>
       </q-card>
     </q-dialog>
+
+    <q-dialog v-model="renameOpen">
+      <q-card style="min-width: 320px">
+        <q-card-section class="text-h6">Zmień nazwę gospodarstwa</q-card-section>
+        <q-form @submit.prevent="submitRename">
+          <q-card-section>
+            <q-input
+              v-model="renameName"
+              autofocus
+              dense
+              outlined
+              label="Nazwa"
+              :rules="[(value) => !!value || 'Podaj nazwę']"
+            />
+          </q-card-section>
+          <q-card-actions align="right">
+            <q-btn v-close-popup flat label="Anuluj" no-caps />
+            <q-btn type="submit" color="primary" label="Zapisz" no-caps :loading="renaming" />
+          </q-card-actions>
+        </q-form>
+      </q-card>
+    </q-dialog>
   </q-page>
 </template>
 
@@ -104,13 +136,38 @@ import { onMounted, ref, watch } from 'vue';
 import { useQuasar } from 'quasar';
 import { addMember, fetchMembers, removeMember } from '@/features/households/api';
 import { describeHouseholdError } from '@/features/households/errors';
-import type { HouseholdMember } from '@/features/households/models';
+import type { Household, HouseholdMember } from '@/features/households/models';
 import { useHouseholdStore } from '@/features/households/store';
 
 const quasar = useQuasar();
 const households = useHouseholdStore();
 
 const members = ref<HouseholdMember[]>([]);
+const renameOpen = ref(false);
+const renameName = ref('');
+const renameId = ref<number | null>(null);
+const renaming = ref(false);
+
+function openRename(household: Household): void {
+  renameId.value = household.id;
+  renameName.value = household.name;
+  renameOpen.value = true;
+}
+
+async function submitRename(): Promise<void> {
+  if (renameId.value === null) {
+    return;
+  }
+  renaming.value = true;
+  try {
+    await households.rename(renameId.value, renameName.value.trim());
+    renameOpen.value = false;
+  } catch (error) {
+    quasar.notify({ type: 'negative', message: describeHouseholdError(error) });
+  } finally {
+    renaming.value = false;
+  }
+}
 const newMemberUsername = ref('');
 const addingMember = ref(false);
 const createDialogOpen = ref(false);

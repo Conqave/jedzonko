@@ -1,13 +1,17 @@
 from decimal import Decimal
 
+from django.core.files.base import ContentFile
+
 from households.models import Product
 from inventory.application.errors import (
     InventoryItemNotFoundError,
+    InventoryPhotoNotFoundError,
     MeasurementUnitNotFoundError,
     ProductNotFoundError,
 )
 from inventory.application.ports.inventory_repository import InventoryRepository
 from inventory.domain.models import InventoryItemSnapshot
+from inventory.domain.photo import InventoryPhoto
 from inventory.models import InventoryItem
 from shared.measurement import MeasurementUnit
 from shared.measurement_units import find_measurement_unit
@@ -86,6 +90,50 @@ class DjangoInventoryRepository(InventoryRepository):
         row = InventoryItem.objects.select_related("product", "category").get(pk=item_id)
         return self._to_snapshot(row)
 
+    def update_item(
+        self, item_id: int, quantity: Decimal | None, unit_code: str | None
+    ) -> InventoryItemSnapshot:
+        changes: dict[str, Decimal | str] = {}
+        if quantity is not None:
+            changes["quantity"] = quantity
+        if unit_code is not None:
+            if find_measurement_unit(unit_code) is None:
+                raise MeasurementUnitNotFoundError
+            changes["unit_code"] = unit_code
+        if changes:
+            updated = InventoryItem.objects.filter(pk=item_id).update(**changes)
+            if updated == 0:
+                raise InventoryItemNotFoundError
+        row = InventoryItem.objects.select_related("product", "category").filter(pk=item_id).first()
+        if row is None:
+            raise InventoryItemNotFoundError
+        return self._to_snapshot(row)
+
+    def set_category(self, item_id: int, category_id: int | None) -> InventoryItemSnapshot:
+        updated = InventoryItem.objects.filter(pk=item_id).update(category_id=category_id)
+        if updated == 0:
+            raise InventoryItemNotFoundError
+        row = InventoryItem.objects.select_related("product", "category").get(pk=item_id)
+        return self._to_snapshot(row)
+
+    def set_photo(self, item_id: int, photo: InventoryPhoto) -> InventoryItemSnapshot:
+        row = InventoryItem.objects.select_related("product", "category").filter(pk=item_id).first()
+        if row is None:
+            raise InventoryItemNotFoundError
+        if row.photo:
+            row.photo.delete(save=False)
+        row.photo.save(photo.filename, ContentFile(photo.content), save=True)
+        return self._to_snapshot(row)
+
+    def clear_photo(self, item_id: int) -> InventoryItemSnapshot:
+        row = InventoryItem.objects.select_related("product", "category").filter(pk=item_id).first()
+        if row is None:
+            raise InventoryItemNotFoundError
+        if not row.photo:
+            raise InventoryPhotoNotFoundError
+        row.photo.delete(save=True)
+        return self._to_snapshot(row)
+
     def delete_item(self, item_id: int) -> None:
         deleted, _ = InventoryItem.objects.filter(pk=item_id).delete()
         if deleted == 0:
@@ -101,6 +149,7 @@ class DjangoInventoryRepository(InventoryRepository):
             quantity=row.quantity,
             unit=cls._to_unit(row.unit_code),
             minimum_quantity=row.minimum_quantity,
+            category_id=row.category_id,
             category_name=None if row.category is None else row.category.name,
             photo_url=row.photo.url if row.photo else None,
         )

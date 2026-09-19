@@ -1,9 +1,9 @@
 from households.application.errors import NotAHouseholdMemberError
-from households.application.ports.household_repository import HouseholdRepository
+from households.application.ports.household_membership_reader import HouseholdMembershipReader
 
 
 class HouseholdAccessPolicy:
-    def __init__(self, repository: HouseholdRepository) -> None:
+    def __init__(self, repository: HouseholdMembershipReader) -> None:
         self._repository = repository
 
     def require_membership(self, user_id: int, household_id: int) -> None:

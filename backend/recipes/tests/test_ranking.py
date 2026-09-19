@@ -1,14 +1,21 @@
 from recipes.domain.ranking import rank_suggestions
-from recipes.domain.suggestion import RecipeSuggestion
+from recipes.domain.suggestion import MissingRecipeItem, RecipeShortfall, RecipeSuggestion
+from recipes.tests.factories import make_missing_item
 
 
 def _suggestion(recipe_id: int, name: str, available: int, missing: int) -> RecipeSuggestion:
+    missing_items: tuple[MissingRecipeItem, ...] = tuple(
+        make_missing_item(f"brak {index}") for index in range(missing)
+    )
     return RecipeSuggestion(
         recipe_id=recipe_id,
         recipe_name=name,
-        available_item_count=available,
-        missing_item_count=missing,
-        missing_items=(),
+        shortfall=RecipeShortfall(
+            missing_items=missing_items,
+            unmeasured_ingredient_names=(),
+            required_item_count=available + missing,
+            available_item_count=available,
+        ),
     )
 
 

@@ -11,6 +11,11 @@ export async function createHousehold(name: string): Promise<Household> {
   return response.data;
 }
 
+export async function renameHousehold(householdId: number, name: string): Promise<Household> {
+  const response = await api.patch<Household>(`/households/${householdId}/`, { name });
+  return response.data;
+}
+
 export async function fetchMembers(householdId: number): Promise<HouseholdMember[]> {
   const response = await api.get<HouseholdMember[]>(`/households/${householdId}/members/`);
   return response.data;

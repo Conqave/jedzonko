@@ -23,6 +23,10 @@ class ProductRepository(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def rename_product(self, household_id: int, product_id: int, name: str) -> ProductSummary:
+        raise NotImplementedError
+
+    @abstractmethod
     def get_or_create_product(
         self, household_id: int, name: str, default_unit_code: str, is_food: bool
     ) -> ProductSummary:

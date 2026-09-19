@@ -12,3 +12,15 @@ class ProductNotFoundError(Exception):
 
 class MeasurementUnitNotFoundError(Exception):
     pass
+
+
+class InventoryCategoryNotFoundError(Exception):
+    pass
+
+
+class DuplicateInventoryCategoryError(Exception):
+    pass
+
+
+class InventoryPhotoNotFoundError(Exception):
+    pass

@@ -9,6 +9,7 @@ export interface RecipeSummary {
   category_name: string | null;
   tags: string[];
   image_url: string | null;
+  author_username: string;
 }
 
 export interface RecipeStep {
@@ -33,10 +34,51 @@ export interface MissingItem {
   unit_code: string;
 }
 
-export interface RecipeSuggestion {
+export interface RecipeShortfall {
+  missing_items: MissingItem[];
+  required_item_count: number;
+  available_item_count: number;
+  unmeasured_ingredients: string[];
+  is_ready: boolean;
+}
+
+export interface RecipeSuggestion extends RecipeShortfall {
   recipe_id: number;
   recipe_name: string;
-  available_item_count: number;
   missing_item_count: number;
-  missing_items: MissingItem[];
+}
+
+export interface ExternalRecipeIngredient {
+  source_text: string;
+  name: string;
+  quantity: string | null;
+  unit_code: string | null;
+}
+
+export interface ExternalRecipe {
+  source_name: string;
+  source_url: string;
+  reference: string;
+  name: string;
+  description: string;
+  image_url: string | null;
+  yield_label: string;
+  total_time_minutes: number | null;
+  preparation_time_minutes: number;
+  cooking_time_minutes: number;
+  tags: string[];
+  steps: string[];
+  ingredients: ExternalRecipeIngredient[];
+}
+
+export interface RecipeInput {
+  name: string;
+  description: string;
+  servings: number;
+  preparation_time_minutes: number;
+  cooking_time_minutes: number;
+  difficulty: string;
+  tag_names: string[];
+  steps: RecipeStep[];
+  ingredients: RecipeIngredient[];
 }

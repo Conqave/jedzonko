@@ -112,6 +112,17 @@ PROMOTIONS_HTTP_USER_AGENT = os.environ.get(
 PROMOTIONS_SEARCH_LEAFLET_LIMIT = int(os.environ.get("PROMOTIONS_SEARCH_LEAFLET_LIMIT", "5"))
 PROMOTIONS_SEARCH_RESULT_LIMIT = int(os.environ.get("PROMOTIONS_SEARCH_RESULT_LIMIT", "200"))
 
+RECIPE_SOURCE_HTTP_TIMEOUT_SECONDS = float(
+    os.environ.get("RECIPE_SOURCE_HTTP_TIMEOUT_SECONDS", "10")
+)
+RECIPE_SOURCE_HTTP_USER_AGENT = os.environ.get(
+    "RECIPE_SOURCE_HTTP_USER_AGENT", "jedzonko/0.1 (+https://github.com/Conqave/jedzonko)"
+)
+RECIPE_SOURCE_PAGE_SIZE_LIMIT = int(os.environ.get("RECIPE_SOURCE_PAGE_SIZE_LIMIT", "24"))
+RECIPE_SOURCE_SUGGESTION_INGREDIENT_LIMIT = int(
+    os.environ.get("RECIPE_SOURCE_SUGGESTION_INGREDIENT_LIMIT", "5")
+)
+
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": ["rest_framework.authentication.SessionAuthentication"],
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],

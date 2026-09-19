@@ -28,6 +28,7 @@ def _snapshot(quantity: str, minimum: str | None) -> InventoryItemSnapshot:
         quantity=Decimal(quantity),
         unit=KILOGRAM,
         minimum_quantity=None if minimum is None else Decimal(minimum),
+        category_id=None,
         category_name=None,
         photo_url=None,
     )

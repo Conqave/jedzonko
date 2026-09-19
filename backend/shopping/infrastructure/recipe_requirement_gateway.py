@@ -7,7 +7,7 @@ class RecipeRequirementGateway(RecipeRequirementReader):
     def read_missing_items(
         self, user_id: int, household_id: int, recipe_id: int, servings: int
     ) -> list[MissingRecipeItem]:
-        missing = build_calculate_missing_recipe_items().execute(
+        shortfall = build_calculate_missing_recipe_items().execute(
             user_id, household_id, recipe_id, servings
         )
         return [
@@ -17,5 +17,5 @@ class RecipeRequirementGateway(RecipeRequirementReader):
                 amount=item.amount,
                 unit_code=item.unit_code,
             )
-            for item in missing
+            for item in shortfall.missing_items
         ]

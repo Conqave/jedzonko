@@ -24,7 +24,7 @@ from shared.text import normalize_text
 
 class DjangoRecipeRepository(RecipeRepository):
     def list_recipes(self) -> list[RecipeSummary]:
-        rows = Recipe.objects.select_related("category").prefetch_related("tags")
+        rows = Recipe.objects.select_related("category", "created_by").prefetch_related("tags")
         return [self._to_summary(row) for row in rows]
 
     def find_recipe(self, recipe_id: int) -> RecipeDetail | None:
@@ -87,7 +87,7 @@ class DjangoRecipeRepository(RecipeRepository):
 
     @staticmethod
     def _detail_queryset() -> models.QuerySet[Recipe]:
-        return Recipe.objects.select_related("category").prefetch_related(
+        return Recipe.objects.select_related("category", "created_by").prefetch_related(
             "tags", "steps", "ingredients"
         )
 
@@ -153,6 +153,7 @@ class DjangoRecipeRepository(RecipeRepository):
             category_name=None if row.category is None else row.category.name,
             tag_names=tuple(tag.name for tag in row.tags.all()),
             image_url=row.image.url if row.image else None,
+            author_username=row.created_by.get_username(),
         )
 
     @classmethod

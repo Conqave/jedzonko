@@ -11,6 +11,8 @@ from households.application.use_cases.list_deleted_households import ListDeleted
 from households.application.use_cases.list_household_products import ListHouseholdProducts
 from households.application.use_cases.list_measurement_units import ListMeasurementUnits
 from households.application.use_cases.purge_expired_households import PurgeExpiredHouseholds
+from households.application.use_cases.rename_household import RenameHousehold
+from households.application.use_cases.rename_household_product import RenameHouseholdProduct
 from households.application.use_cases.resolve_household_product import ResolveHouseholdProduct
 from households.application.use_cases.restore_household import RestoreHousehold
 from households.infrastructure.django_household_lifecycle_repository import (
@@ -40,6 +42,10 @@ def build_create_household_product() -> CreateHouseholdProduct:
     return CreateHouseholdProduct(build_product_repository(), build_household_access_policy())
 
 
+def build_rename_household_product() -> RenameHouseholdProduct:
+    return RenameHouseholdProduct(build_product_repository(), build_household_access_policy())
+
+
 def build_resolve_household_product() -> ResolveHouseholdProduct:
     return ResolveHouseholdProduct(build_product_repository())
 
@@ -50,6 +56,10 @@ def build_find_household_product() -> FindHouseholdProduct:
 
 def build_list_measurement_units() -> ListMeasurementUnits:
     return ListMeasurementUnits()
+
+
+def build_rename_household() -> RenameHousehold:
+    return RenameHousehold(build_household_repository(), build_household_access_policy())
 
 
 def build_household_lifecycle_repository() -> HouseholdLifecycleRepository:

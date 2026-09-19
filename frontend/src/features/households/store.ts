@@ -55,5 +55,24 @@ export const useHouseholdStore = defineStore('households', () => {
     return household;
   }
 
-  return { households, selectedId, selected, hasHousehold, loading, loaded, select, load, create };
+  async function rename(householdId: number, name: string): Promise<Household> {
+    const renamed = await householdsApi.renameHousehold(householdId, name);
+    households.value = households.value.map((household) =>
+      household.id === renamed.id ? renamed : household,
+    );
+    return renamed;
+  }
+
+  return {
+    households,
+    selectedId,
+    selected,
+    hasHousehold,
+    loading,
+    loaded,
+    select,
+    load,
+    create,
+    rename,
+  };
 });

@@ -13,6 +13,7 @@ class InventoryItemSnapshot:
     quantity: Decimal
     unit: MeasurementUnit
     minimum_quantity: Decimal | None
+    category_id: int | None
     category_name: str | None
     photo_url: str | None
 

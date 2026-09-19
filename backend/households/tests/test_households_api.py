@@ -119,3 +119,54 @@ def test_member_count_reflects_every_member(api_client: APIClient, ala: User, ol
     response = api_client.get("/api/households/")
 
     assert [(item["name"], item["member_count"]) for item in response.data] == [("Wspólny dom", 2)]
+
+
+def test_member_renames_a_household(api_client: APIClient, ala: User) -> None:
+    household = _create_household("Stara nazwa", ala)
+    api_client.force_login(ala)
+
+    response = api_client.patch(
+        f"/api/households/{household.pk}/", {"name": "Nowa nazwa"}, format="json"
+    )
+
+    assert response.status_code == 200
+    assert response.data == {"id": household.pk, "name": "Nowa nazwa", "member_count": 1}
+    household.refresh_from_db()
+    assert household.name == "Nowa nazwa"
+
+
+def test_non_member_cannot_rename_a_household(api_client: APIClient, ala: User, ola: User) -> None:
+    household = _create_household("Dom Ali", ala)
+    api_client.force_login(ola)
+
+    response = api_client.patch(
+        f"/api/households/{household.pk}/", {"name": "Przejęty dom"}, format="json"
+    )
+
+    assert response.status_code == 403
+    assert response.data["code"] == "not_a_household_member"
+    household.refresh_from_db()
+    assert household.name == "Dom Ali"
+
+
+def test_renaming_requires_a_name(api_client: APIClient, ala: User) -> None:
+    household = _create_household("Dom Ali", ala)
+    api_client.force_login(ala)
+
+    response = api_client.patch(f"/api/households/{household.pk}/", {"name": "  "}, format="json")
+
+    assert response.status_code == 400
+    assert response.data["code"] == "invalid"
+
+
+def test_renaming_a_deleted_household_is_not_found(api_client: APIClient, ala: User) -> None:
+    from django.utils import timezone
+
+    household = _create_household("Dom Ali", ala)
+    Household.objects.filter(pk=household.pk).update(deleted_at=timezone.now())
+    api_client.force_login(ala)
+
+    response = api_client.patch(f"/api/households/{household.pk}/", {"name": "Nowa"}, format="json")
+
+    assert response.status_code == 403
+    assert response.data["code"] == "not_a_household_member"

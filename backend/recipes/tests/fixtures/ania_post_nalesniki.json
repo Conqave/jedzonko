@@ -1,0 +1,70 @@
+{
+ "id": 21234,
+ "slug": "jak-zrobic-ciasto-na-nalesniki",
+ "title": "Naleśniki",
+ "intro": "<p>Poznaj najlepszy i sprawdzony przepis na <strong>naleśniki</strong>. Ciasto jest super proste do zrobienia. Wystarczy zmiksować razem wszystkie składniki. To uniwersalne naleśniki, które możesz podać z dowolnym farszem.&nbsp;</p>\n<p>- tylko kilka łatwo dostępnych składników<br>\n  - uniwersalny przepis na naleśniki<br>\n  - z ciasta można też zrobić krokiety<br>\n  - idealnie cienkie i elastyczne naleśniki<br><br>\n Zobacz też mój najnowszy super przepis na <a href=\"https://aniagotuje.pl/przepis/koktajl-odchudzajacy\">koktajl odchudzający</a>!</p>",
+ "body": "<h2>Naleśniki</h2>\n<p>Szklanka ma u mnie pojemność 250 ml. <br>\n  Do usmażenia naleśników użyłam szerokiej patelni do naleśników: średnica 24 cm. <br>\n  Z podanej ilości składników wyszło mi 16 bardzo cienkich naleśników.&nbsp;<br>\n  Jajka wyjmij wcześniej z lodówki. Możesz też lekko podgrzać mleko do temperatury nie wyższej niż 40 stopni.<br><br>\n Kalorie policzone zostały na podstawie użytych przeze mnie składników. Jest to więc orientacyjna ilość kalorii, ponieważ nawet mąka może mieć inną ilość kalorii niż ta, której użyłam ja.&nbsp;</p>\n<p><strong>Naleśniki</strong> szykuję przynajmniej raz w tygodniu. To danie proste, szybkie i uwielbiane przez dzieci. Możesz je podać na dowolny posiłek w ciągu dnia. Naleśniki możesz zabrać do pracy, do szkoły lub na piknik. Są po prostu boskie!<br></p>\n<h2>Przepis na naleśniki</h2>",
+ "recipePrepTime": "PT0H5M",
+ "recipeCookTime": "PT0H25M",
+ "recipeTotalTime": "PT0H30M",
+ "recipeYield": "do 16 naleśników średnicy 24 cm",
+ "recipeCuisine": "polska",
+ "postThumb": {
+  "url": "https://cdn.aniagotuje.com/pictures/articles/2019/08/1066536-v-1500x1500.jpg"
+ },
+ "categories": [
+  {
+   "name": "dla dzieci",
+   "slug": "dla-dzieci",
+   "type": "TAG"
+  },
+  {
+   "name": "jajka",
+   "slug": "jajka",
+   "type": "TAG"
+  },
+  {
+   "name": "kolacja",
+   "slug": "kolacja",
+   "type": "IDEA"
+  },
+  {
+   "name": "śniadanie",
+   "slug": "sniadanie",
+   "type": "IDEA"
+  }
+ ],
+ "score": 4.86,
+ "votes": 21494,
+ "ingredients": [
+  {
+   "title": "Składniki",
+   "items": [
+    {
+     "name": "1 pełna szklanka i 2 łyżki mąki pszennej - 230 g",
+     "qty": null
+    },
+    {
+     "name": "3 średnie jajka - około 165 g po rozbiciu",
+     "qty": null
+    },
+    {
+     "name": "1 szklanka mleka - 250 ml",
+     "qty": null
+    },
+    {
+     "name": "1 szklanka wody - 250 ml",
+     "qty": null
+    },
+    {
+     "name": "4 łyżki oleju roślinnego - około 40 ml",
+     "qty": null
+    },
+    {
+     "name": "szczypta soli",
+     "qty": null
+    }
+   ]
+  }
+ ]
+}

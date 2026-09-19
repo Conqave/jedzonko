@@ -1,5 +1,12 @@
 import { api } from '@/boot/api';
-import type { MissingItem, RecipeDetail, RecipeSuggestion, RecipeSummary } from './models';
+import type {
+  ExternalRecipe,
+  RecipeDetail,
+  RecipeInput,
+  RecipeShortfall,
+  RecipeSuggestion,
+  RecipeSummary,
+} from './models';
 
 export async function fetchRecipes(): Promise<RecipeSummary[]> {
   const response = await api.get<RecipeSummary[]>('/recipes/');
@@ -22,9 +29,39 @@ export async function fetchMissingItems(
   recipeId: number,
   householdId: number,
   servings: number,
-): Promise<MissingItem[]> {
-  const response = await api.get<MissingItem[]>(`/recipes/${recipeId}/missing-items/`, {
+): Promise<RecipeShortfall> {
+  const response = await api.get<RecipeShortfall>(`/recipes/${recipeId}/missing-items/`, {
     params: { household_id: householdId, servings },
   });
   return response.data;
+}
+
+export async function fetchExternalRecipe(reference: string): Promise<ExternalRecipe> {
+  const response = await api.get<ExternalRecipe>(`/recipes/external/${reference}/`);
+  return response.data;
+}
+
+export async function createRecipe(recipe: RecipeInput): Promise<RecipeDetail> {
+  const response = await api.post<RecipeDetail>('/recipes/', recipe);
+  return response.data;
+}
+
+export async function updateRecipe(recipeId: number, recipe: RecipeInput): Promise<RecipeDetail> {
+  const response = await api.put<RecipeDetail>(`/recipes/${recipeId}/`, recipe);
+  return response.data;
+}
+
+export async function deleteRecipe(recipeId: number): Promise<void> {
+  await api.delete(`/recipes/${recipeId}/`);
+}
+
+export async function confirmPreparation(
+  recipeId: number,
+  householdId: number,
+  servings: number,
+): Promise<void> {
+  await api.post(`/recipes/${recipeId}/confirm-preparation/`, {
+    household_id: householdId,
+    servings,
+  });
 }

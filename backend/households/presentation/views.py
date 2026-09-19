@@ -22,6 +22,7 @@ from households.composition import (
     build_household_access_policy,
     build_household_repository,
     build_list_deleted_households,
+    build_rename_household,
     build_restore_household,
 )
 from households.domain.deleted_household import DeletedHousehold
@@ -29,6 +30,7 @@ from households.domain.models import HouseholdMember, HouseholdSummary
 from households.presentation.serializers import (
     AddHouseholdMemberSerializer,
     CreateHouseholdSerializer,
+    RenameHouseholdSerializer,
 )
 
 
@@ -116,6 +118,19 @@ class HouseholdMemberDetailView(APIView):
 
 
 class HouseholdDetailView(APIView):
+    def patch(self, request: Request, household_id: int) -> Response:
+        serializer = RenameHouseholdSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            household = build_rename_household().execute(
+                _current_user_id(request), household_id, serializer.validated_data["name"]
+            )
+        except NotAHouseholdMemberError:
+            raise PermissionDenied(detail="Not a household member.", code="not_a_household_member")
+        except HouseholdNotFoundError:
+            raise NotFound(detail="Household not found.", code="household_not_found")
+        return Response(_represent_household(household))
+
     def delete(self, request: Request, household_id: int) -> Response:
         try:
             build_delete_household().execute(

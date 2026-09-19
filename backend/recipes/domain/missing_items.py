@@ -2,7 +2,7 @@ from decimal import Decimal
 
 from inventory.domain.models import InventoryItemSnapshot
 from recipes.domain.models import RecipeRequirement
-from recipes.domain.suggestion import MissingRecipeItem
+from recipes.domain.suggestion import MissingRecipeItem, RecipeShortfall
 from shared.measurement import Quantity
 
 
@@ -22,21 +22,31 @@ def scale_requirements(
     ]
 
 
-def calculate_missing_items(
+def calculate_shortfall(
     requirements: list[RecipeRequirement], inventory: list[InventoryItemSnapshot]
-) -> list[MissingRecipeItem]:
+) -> RecipeShortfall:
     available_by_name = {item.normalized_name: item for item in inventory}
     missing: list[MissingRecipeItem] = []
+    unmeasured: list[str] = []
     for requirement in requirements:
         required = requirement.quantity
         available = available_by_name.get(requirement.normalized_name)
-        if available is None or not required.is_compatible_with(available.as_quantity()):
+        if available is None:
+            missing.append(_to_missing_item(requirement, required.amount))
+            continue
+        if not required.is_compatible_with(available.as_quantity()):
+            unmeasured.append(requirement.name)
             missing.append(_to_missing_item(requirement, required.amount))
             continue
         remainder = required.subtract(available.as_quantity())
         if remainder.amount > 0:
             missing.append(_to_missing_item(requirement, remainder.amount))
-    return missing
+    return RecipeShortfall(
+        missing_items=tuple(missing),
+        unmeasured_ingredient_names=tuple(unmeasured),
+        required_item_count=len(requirements),
+        available_item_count=len(requirements) - len(missing),
+    )
 
 
 def _to_missing_item(requirement: RecipeRequirement, amount: Decimal) -> MissingRecipeItem:

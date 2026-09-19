@@ -1,0 +1,99 @@
+{
+ "id": 165654,
+ "slug": "sernik-krolewski",
+ "title": "Sernik królewski",
+ "intro": "<p>Zdecydowanie najlepszy przepis na <strong>sernik królewski</strong>, który powstaje z ciasta kruchego z dodatkiem kakao oraz z idealnej masy serowej. Sernik królewski to jedno z pyszniejszych ciast, jakie pieczemy na Święta.&nbsp;</p>",
+ "body": "<h2>Sernik królewski</h2>\n<p>Jajka i twaróg wyjmij wcześniej z lodówki.<br>\n  Dodatkowy czas: Chłodzenie ciasta kruchego: minimum 2 godziny. <br></p>\n<p>Szykowanie sernika zdecydowanie zacznij od kakaowego ciasta kruchego. W jednej misce umieść razem wszystkie składniki na ciasto. Dwie i pół szklanki mąki pszennej np. tortowej, czyli 400 gramów. Dalej pięć płaskich łyżek kakao w proszku oraz dwie łyżeczki proszku do pieczenia. Szczyptę soli jak najbardziej można również dodać.&nbsp;<br><br>\n    Zostaje jeszcze cukier oraz masło i żółtka jajek. Wsyp niecałe pół szklanki cukru, czyli około 130 gramów. Z tej ilości cukru ciasto kruche nie jest bardzo słodkie. Jeśli więc lubisz słodsze ciasta, to możesz dodać go więcej. Białka oddziel od żółtek. Żółtka dodaj do miski z resztą składników. Białka przelej do szklanej miseczki z przykrywką i odłóż do lodówki. Często tak robię i zbieram białka przez kilka dni. Potem robię z nich bezy. Świetne są <a href=\"https://aniagotuje.pl/przepis/jak-zrobic-mini-bezy\">bezy</a>, które można jeść same, dekorować nimi ciasta lub oddawać do wielu deserów.<br><br>\n    300 gramów masła pokrój w kostkę i również dodaj do miski z innymi składnikami. Masło może być wyjęte prosto z lodówki. Zacznij mieszać wszystkie składniki.</p>",
+ "recipePrepTime": "PT0H30M",
+ "recipeCookTime": "PT1H0M",
+ "recipeTotalTime": "PT1H30M",
+ "recipeYield": "2300 gramów sernika",
+ "recipeCuisine": "polska",
+ "postThumb": {
+  "url": "https://cdn.aniagotuje.com/pictures/articles/2018/11/165653-v-1000x1000.jpg"
+ },
+ "categories": [
+  {
+   "name": "skórka cytrynowa",
+   "slug": "skorka-cytrynowa",
+   "type": "TAG"
+  },
+  {
+   "name": "kakao",
+   "slug": "kakao",
+   "type": "TAG"
+  },
+  {
+   "name": "żółtko",
+   "slug": "zoltko",
+   "type": "TAG"
+  },
+  {
+   "name": "budyń",
+   "slug": "budyn",
+   "type": "TAG"
+  }
+ ],
+ "score": 4.82,
+ "votes": 15332,
+ "ingredients": [
+  {
+   "title": "Składniki na kruche ciasto",
+   "items": [
+    {
+     "name": "2,5 szklanki mąki pszennej - 400 g",
+     "qty": null
+    },
+    {
+     "name": "5 płaskich łyżek surowego kakao - lub mniej",
+     "qty": null
+    },
+    {
+     "name": "1,5 kostki masła - 300 g",
+     "qty": null
+    },
+    {
+     "name": "niecałe pół szklanki cukru - około 130 g",
+     "qty": null
+    },
+    {
+     "name": "2 żółtka jajek",
+     "qty": null
+    },
+    {
+     "name": "2 łyżeczki proszku do pieczenia",
+     "qty": null
+    }
+   ]
+  },
+  {
+   "title": "Składniki na masę serową",
+   "items": [
+    {
+     "name": "1 kg mielonego twarogu np. z kubełka",
+     "qty": null
+    },
+    {
+     "name": "5 średnich jajek",
+     "qty": null
+    },
+    {
+     "name": "około 0,5 szklanki cukru - 150 g",
+     "qty": null
+    },
+    {
+     "name": "1 opakowanie budyniu śmietankowego bez cukru",
+     "qty": null
+    },
+    {
+     "name": "pół kostki masła - 100 g",
+     "qty": null
+    },
+    {
+     "name": "skórka otarta z jednej cytryny",
+     "qty": null
+    }
+   ]
+  }
+ ]
+}

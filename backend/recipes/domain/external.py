@@ -1,0 +1,41 @@
+from dataclasses import dataclass
+from decimal import Decimal
+
+
+@dataclass(frozen=True, slots=True)
+class ExternalRecipeIngredient:
+    source_text: str
+    name: str
+    quantity: Decimal | None
+    unit_code: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class ExternalRecipeSummary:
+    source_name: str
+    source_url: str
+    reference: str
+    name: str
+    description: str
+    image_url: str | None
+    yield_label: str
+    total_time_minutes: int | None
+
+
+@dataclass(frozen=True, slots=True)
+class ExternalRecipeDetail:
+    summary: ExternalRecipeSummary
+    preparation_time_minutes: int
+    cooking_time_minutes: int
+    tag_names: tuple[str, ...]
+    steps: tuple[str, ...]
+    ingredients: tuple[ExternalRecipeIngredient, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class ExternalRecipePage:
+    recipes: tuple[ExternalRecipeSummary, ...]
+    page: int
+    page_size: int
+    total_count: int
+    total_pages: int

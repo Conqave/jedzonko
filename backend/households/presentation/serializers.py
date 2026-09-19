@@ -19,3 +19,7 @@ class CreateProductSerializer(serializers.Serializer[dict[str, object]]):
     name = serializers.CharField(max_length=120, trim_whitespace=True)
     default_unit_code = serializers.CharField(max_length=16, trim_whitespace=True)
     is_food = serializers.BooleanField(required=False, default=True)
+
+
+class RenameHouseholdSerializer(serializers.Serializer[dict[str, str]]):
+    name = serializers.CharField(max_length=120, trim_whitespace=True)

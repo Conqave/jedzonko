@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from decimal import Decimal
 
 from inventory.domain.models import InventoryItemSnapshot
+from inventory.domain.photo import InventoryPhoto
 
 
 class InventoryRepository(ABC):
@@ -43,6 +44,24 @@ class InventoryRepository(ABC):
 
     @abstractmethod
     def set_quantity(self, item_id: int, quantity: Decimal) -> InventoryItemSnapshot:
+        raise NotImplementedError
+
+    @abstractmethod
+    def update_item(
+        self, item_id: int, quantity: Decimal | None, unit_code: str | None
+    ) -> InventoryItemSnapshot:
+        raise NotImplementedError
+
+    @abstractmethod
+    def set_category(self, item_id: int, category_id: int | None) -> InventoryItemSnapshot:
+        raise NotImplementedError
+
+    @abstractmethod
+    def set_photo(self, item_id: int, photo: InventoryPhoto) -> InventoryItemSnapshot:
+        raise NotImplementedError
+
+    @abstractmethod
+    def clear_photo(self, item_id: int) -> InventoryItemSnapshot:
         raise NotImplementedError
 
     @abstractmethod
