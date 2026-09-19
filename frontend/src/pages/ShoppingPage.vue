@@ -112,7 +112,9 @@
             <q-item-label :class="item.is_purchased ? 'text-strike text-grey' : ''">
               {{ item.product_name ?? item.free_text }}
             </q-item-label>
-            <q-item-label caption>{{ item.quantity }} {{ item.unit_code ?? '' }}</q-item-label>
+            <q-item-label caption
+              >{{ formatQuantity(item.quantity) }} {{ item.unit_code ?? '' }}</q-item-label
+            >
           </q-item-section>
           <q-item-section side>
             <q-btn
@@ -154,6 +156,7 @@
 </template>
 
 <script setup lang="ts">
+import { formatQuantity } from '@/features/shared/formatQuantity';
 import { computed, onMounted, ref, watch } from 'vue';
 import { useQuasar } from 'quasar';
 import { fetchUnits } from '@/features/products/api';

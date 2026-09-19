@@ -33,7 +33,7 @@ from recipes.composition import (
 from recipes.domain.difficulty import RecipeDifficulty
 from recipes.presentation.representation import (
     represent_detail,
-    represent_missing_item,
+    represent_shortfall,
     represent_suggestion,
     represent_summary,
 )
@@ -166,7 +166,7 @@ class RecipeMissingItemListView(APIView):
         household_id = int(serializer.validated_data["household_id"])
         servings = int(serializer.validated_data["servings"])
         try:
-            items = build_calculate_missing_recipe_items().execute(
+            shortfall = build_calculate_missing_recipe_items().execute(
                 _read_user_id(request), household_id, recipe_id, servings
             )
         except NotAHouseholdMemberError:
@@ -175,7 +175,7 @@ class RecipeMissingItemListView(APIView):
             raise ValidationError(detail="Servings must be at least 1.", code="invalid_servings")
         except RecipeNotFoundError:
             raise NotFound(detail="Recipe not found.", code="recipe_not_found")
-        return Response([represent_missing_item(item) for item in items])
+        return Response(represent_shortfall(shortfall))
 
 
 class RecipePreparationView(APIView):

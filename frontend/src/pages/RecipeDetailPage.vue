@@ -8,9 +8,34 @@
 
     <template v-if="recipe !== null">
       <div class="text-h5 q-mt-md">{{ recipe.name }}</div>
+      <div class="row items-center q-gutter-sm q-mt-xs">
+        <q-btn
+          no-caps
+          color="primary"
+          icon="restaurant"
+          label="Ugotowane"
+          :loading="confirming"
+          :disable="households.selectedId === null"
+          @click="askConfirmPreparation"
+        >
+          <q-tooltip v-if="households.selectedId === null">
+            Wybierz gospodarstwo domowe, aby potwierdzić przygotowanie.
+          </q-tooltip>
+        </q-btn>
+        <q-btn
+          flat
+          no-caps
+          color="primary"
+          icon="edit"
+          label="Edytuj"
+          :to="{ name: 'recipe-edit', params: { id: recipe.id } }"
+        />
+        <q-btn flat no-caps color="negative" icon="delete" label="Usuń" @click="askDelete" />
+      </div>
       <div class="text-caption q-mb-md">
-        {{ recipe.servings }} porcji · przygotowanie {{ recipe.preparation_time_minutes }} min ·
-        gotowanie {{ recipe.cooking_time_minutes }} min · {{ recipe.difficulty }}
+        autor: {{ recipe.author_username }} · {{ recipe.servings }} porcji · przygotowanie
+        {{ recipe.preparation_time_minutes }} min · gotowanie {{ recipe.cooking_time_minutes }} min
+        · {{ recipe.difficulty }}
         <span v-if="recipe.category_name"> · {{ recipe.category_name }}</span>
       </div>
       <div class="q-gutter-xs q-mb-md">
@@ -25,7 +50,9 @@
       <q-list bordered separator class="q-mb-md">
         <q-item v-for="ingredient in recipe.ingredients" :key="ingredient.name">
           <q-item-section>{{ ingredient.name }}</q-item-section>
-          <q-item-section side>{{ ingredient.quantity }} {{ ingredient.unit_code }}</q-item-section>
+          <q-item-section side
+            >{{ formatQuantity(ingredient.quantity) }} {{ ingredient.unit_code }}</q-item-section
+          >
         </q-item>
       </q-list>
 
@@ -55,13 +82,25 @@
           />
         </div>
       </div>
-      <q-banner v-if="missingLoaded && missingItems.length === 0" class="bg-grey-3">
-        Masz w domu wszystkie składniki.
-      </q-banner>
-      <q-list v-else-if="missingItems.length > 0" bordered separator>
-        <q-item v-for="item in missingItems" :key="item.name">
+      <template v-if="shortfall !== null">
+        <q-banner v-if="shortfall.is_ready" class="bg-green-2 q-mb-sm">
+          <q-badge color="positive" class="q-mr-sm">Ugotujesz teraz</q-badge>
+          Masz w domu wszystkie składniki.
+        </q-banner>
+        <q-banner
+          v-else-if="shortfall.unmeasured_ingredients.length > 0"
+          class="bg-orange-2 q-mb-sm"
+        >
+          Nie da się porównać ilości dla:
+          {{ shortfall.unmeasured_ingredients.join(', ') }}
+        </q-banner>
+      </template>
+      <q-list v-if="shortfall !== null && shortfall.missing_items.length > 0" bordered separator>
+        <q-item v-for="item in shortfall.missing_items" :key="item.name">
           <q-item-section>{{ item.name }}</q-item-section>
-          <q-item-section side>{{ item.amount }} {{ item.unit_code }}</q-item-section>
+          <q-item-section side
+            >{{ formatQuantity(item.amount) }} {{ item.unit_code }}</q-item-section
+          >
         </q-item>
       </q-list>
     </template>
@@ -69,25 +108,32 @@
 </template>
 
 <script setup lang="ts">
+import { formatQuantity } from '@/features/shared/formatQuantity';
 import { onMounted, ref } from 'vue';
 import { useQuasar } from 'quasar';
-import { useRoute } from 'vue-router';
-import { fetchMissingItems, fetchRecipe } from '@/features/recipes/api';
+import { useRoute, useRouter } from 'vue-router';
+import {
+  confirmPreparation,
+  deleteRecipe,
+  fetchMissingItems,
+  fetchRecipe,
+} from '@/features/recipes/api';
 import { describeRecipeError } from '@/features/recipes/errors';
-import type { MissingItem, RecipeDetail } from '@/features/recipes/models';
+import type { RecipeDetail, RecipeShortfall } from '@/features/recipes/models';
 import { useHouseholdStore } from '@/features/households/store';
 
 const quasar = useQuasar();
 const route = useRoute();
+const router = useRouter();
 const households = useHouseholdStore();
 
 const recipeId = Number(route.params.id);
 const recipe = ref<RecipeDetail | null>(null);
 const loading = ref(false);
 const servings = ref(1);
-const missingItems = ref<MissingItem[]>([]);
-const missingLoaded = ref(false);
+const shortfall = ref<RecipeShortfall | null>(null);
 const loadingMissing = ref(false);
+const confirming = ref(false);
 
 function notifyError(error: unknown): void {
   quasar.notify({ type: 'negative', message: describeRecipeError(error) });
@@ -112,13 +158,74 @@ async function loadMissing(): Promise<void> {
   }
   loadingMissing.value = true;
   try {
-    missingItems.value = await fetchMissingItems(recipeId, households.selectedId, servings.value);
-    missingLoaded.value = true;
+    shortfall.value = await fetchMissingItems(recipeId, households.selectedId, servings.value);
   } catch (error) {
-    missingItems.value = [];
+    shortfall.value = null;
     notifyError(error);
   } finally {
     loadingMissing.value = false;
+  }
+}
+
+function askConfirmPreparation(): void {
+  const householdId = households.selectedId;
+  if (householdId === null) {
+    return;
+  }
+  quasar
+    .dialog({
+      title: 'Potwierdź przygotowanie',
+      message:
+        'Potwierdzenie ZUŻYJE składniki tego przepisu z zapasów wybranego gospodarstwa domowego ' +
+        '(„Mam w domu”). Ilości zostaną odjęte od stanu w spiżarni. Podaj liczbę ugotowanych porcji:',
+      prompt: { model: String(servings.value), type: 'number' },
+      cancel: { label: 'Anuluj', flat: true, noCaps: true },
+      ok: { label: 'Ugotowane — zużyj składniki', color: 'primary', noCaps: true },
+      persistent: true,
+    })
+    .onOk((value: string) => {
+      void runConfirmPreparation(householdId, Number(value));
+    });
+}
+
+async function runConfirmPreparation(householdId: number, preparedServings: number): Promise<void> {
+  confirming.value = true;
+  try {
+    await confirmPreparation(recipeId, householdId, preparedServings);
+    quasar.notify({
+      type: 'positive',
+      message: `Zużyto składniki na ${preparedServings} porcji.`,
+    });
+    servings.value = preparedServings;
+    await loadMissing();
+  } catch (error) {
+    notifyError(error);
+  } finally {
+    confirming.value = false;
+  }
+}
+
+function askDelete(): void {
+  quasar
+    .dialog({
+      title: 'Usuń przepis',
+      message: 'Czy na pewno usunąć ten przepis? Tej operacji nie można cofnąć.',
+      cancel: { label: 'Anuluj', flat: true, noCaps: true },
+      ok: { label: 'Usuń', color: 'negative', noCaps: true },
+      persistent: true,
+    })
+    .onOk(() => {
+      void runDelete();
+    });
+}
+
+async function runDelete(): Promise<void> {
+  try {
+    await deleteRecipe(recipeId);
+    quasar.notify({ type: 'positive', message: 'Przepis usunięty.' });
+    await router.push({ name: 'recipes' });
+  } catch (error) {
+    notifyError(error);
   }
 }
 

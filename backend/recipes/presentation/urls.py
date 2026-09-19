@@ -1,5 +1,10 @@
 from django.urls import URLPattern, path
 
+from recipes.presentation.external_views import (
+    ExternalRecipeDetailView,
+    ExternalRecipeListView,
+    ExternalRecipeSuggestionListView,
+)
 from recipes.presentation.views import (
     RecipeDetailView,
     RecipeListView,
@@ -11,6 +16,9 @@ from recipes.presentation.views import (
 urlpatterns: list[URLPattern] = [
     path("", RecipeListView.as_view()),
     path("suggestions/", RecipeSuggestionListView.as_view()),
+    path("external/", ExternalRecipeListView.as_view()),
+    path("external/suggestions/", ExternalRecipeSuggestionListView.as_view()),
+    path("external/<slug:reference>/", ExternalRecipeDetailView.as_view()),
     path("<int:recipe_id>/", RecipeDetailView.as_view()),
     path("<int:recipe_id>/missing-items/", RecipeMissingItemListView.as_view()),
     path("<int:recipe_id>/confirm-preparation/", RecipePreparationView.as_view()),

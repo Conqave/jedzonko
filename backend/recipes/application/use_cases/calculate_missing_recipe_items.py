@@ -2,8 +2,8 @@ from households.application.access import HouseholdAccessPolicy
 from recipes.application.errors import InvalidServingsError, RecipeNotFoundError
 from recipes.application.ports.household_inventory_reader import HouseholdInventoryReader
 from recipes.application.ports.recipe_repository import RecipeRepository
-from recipes.domain.missing_items import calculate_missing_items, scale_requirements
-from recipes.domain.suggestion import MissingRecipeItem
+from recipes.domain.missing_items import calculate_shortfall, scale_requirements
+from recipes.domain.suggestion import RecipeShortfall
 
 
 class CalculateMissingRecipeItems:
@@ -19,7 +19,7 @@ class CalculateMissingRecipeItems:
 
     def execute(
         self, user_id: int, household_id: int, recipe_id: int, servings: int
-    ) -> list[MissingRecipeItem]:
+    ) -> RecipeShortfall:
         self._access.require_membership(user_id, household_id)
         if servings < 1:
             raise InvalidServingsError
@@ -29,4 +29,4 @@ class CalculateMissingRecipeItems:
         requirements = self._repository.list_requirements(recipe_id)
         scaled = scale_requirements(requirements, recipe.summary.servings, servings)
         inventory = self._inventory_reader.read_inventory(user_id, household_id)
-        return calculate_missing_items(scaled, inventory)
+        return calculate_shortfall(scaled, inventory)

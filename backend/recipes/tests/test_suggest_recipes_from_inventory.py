@@ -26,6 +26,7 @@ def _recipe(recipe_id: int, name: str) -> RecipeDetail:
         category_name=None,
         tag_names=(),
         image_url=None,
+        author_username="ala",
     )
     return RecipeDetail(summary=summary, steps=(), ingredients=())
 
@@ -48,9 +49,9 @@ def test_recipe_fully_in_stock_has_no_missing_items() -> None:
 
     suggestions = use_case.execute(5, 7)
 
-    assert suggestions[0].missing_item_count == 0
-    assert suggestions[0].available_item_count == 1
-    assert suggestions[0].missing_items == ()
+    assert suggestions[0].shortfall.missing_items == ()
+    assert suggestions[0].shortfall.available_item_count == 1
+    assert suggestions[0].shortfall.is_ready is True
 
 
 def test_suggestions_are_ordered_and_read_requirements_once() -> None:
@@ -77,8 +78,10 @@ def test_incompatible_unit_counts_as_missing() -> None:
 
     suggestions = use_case.execute(5, 7)
 
-    assert suggestions[0].missing_item_count == 1
-    assert suggestions[0].missing_items[0].unit_code == "ml"
+    assert len(suggestions[0].shortfall.missing_items) == 1
+    assert suggestions[0].shortfall.missing_items[0].unit_code == "ml"
+    assert suggestions[0].shortfall.unmeasured_ingredient_names == ("mleko",)
+    assert suggestions[0].shortfall.is_ready is False
 
 
 def test_non_member_is_rejected() -> None:

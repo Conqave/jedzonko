@@ -1,7 +1,7 @@
 from households.application.access import HouseholdAccessPolicy
 from recipes.application.ports.household_inventory_reader import HouseholdInventoryReader
 from recipes.application.ports.recipe_repository import RecipeRepository
-from recipes.domain.missing_items import calculate_missing_items
+from recipes.domain.missing_items import calculate_shortfall
 from recipes.domain.ranking import rank_suggestions
 from recipes.domain.suggestion import RecipeSuggestion
 
@@ -22,17 +22,12 @@ class SuggestRecipesFromInventory:
         inventory = self._inventory_reader.read_inventory(user_id, household_id)
         recipes = self._repository.list_recipes()
         requirements_by_recipe = self._repository.list_requirements_by_recipe()
-        suggestions: list[RecipeSuggestion] = []
-        for recipe in recipes:
-            requirements = requirements_by_recipe.get(recipe.id, [])
-            missing = calculate_missing_items(requirements, inventory)
-            suggestions.append(
-                RecipeSuggestion(
-                    recipe_id=recipe.id,
-                    recipe_name=recipe.name,
-                    available_item_count=len(requirements) - len(missing),
-                    missing_item_count=len(missing),
-                    missing_items=tuple(missing),
-                )
+        suggestions = [
+            RecipeSuggestion(
+                recipe_id=recipe.id,
+                recipe_name=recipe.name,
+                shortfall=calculate_shortfall(requirements_by_recipe.get(recipe.id, []), inventory),
             )
+            for recipe in recipes
+        ]
         return rank_suggestions(suggestions)

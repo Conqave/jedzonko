@@ -2,44 +2,25 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from decimal import Decimal
 
-from households.application.ports.household_repository import HouseholdRepository
+from households.application.ports.household_membership_reader import HouseholdMembershipReader
 from households.domain.models import HouseholdMember, HouseholdSummary
 from inventory.domain.models import InventoryItemSnapshot
 from recipes.application.commands import RecipeInput
 from recipes.application.ports.household_inventory_reader import HouseholdInventoryReader
 from recipes.application.ports.inventory_consumer import HouseholdInventoryConsumer
 from recipes.application.ports.recipe_repository import RecipeRepository
+from recipes.application.ports.recipe_source import RecipeSource
 from recipes.application.ports.transaction_manager import TransactionManager
+from recipes.domain.external import ExternalRecipeDetail, ExternalRecipePage
 from recipes.domain.models import RecipeDetail, RecipeRequirement, RecipeSummary
 
 
-class FakeHouseholdRepository(HouseholdRepository):
+class FakeHouseholdRepository(HouseholdMembershipReader):
     def __init__(self, member_household_ids: set[int]) -> None:
         self._member_household_ids = member_household_ids
 
-    def find_households_for_user(self, user_id: int) -> list[HouseholdSummary]:
-        raise NotImplementedError
-
-    def find_household(self, household_id: int) -> HouseholdSummary | None:
-        raise NotImplementedError
-
     def is_member(self, user_id: int, household_id: int) -> bool:
         return household_id in self._member_household_ids
-
-    def list_members(self, household_id: int) -> list[HouseholdMember]:
-        raise NotImplementedError
-
-    def create_household(self, name: str, owner_user_id: int) -> HouseholdSummary:
-        raise NotImplementedError
-
-    def add_member(self, household_id: int, username: str) -> HouseholdMember:
-        raise NotImplementedError
-
-    def remove_member(self, household_id: int, user_id: int) -> None:
-        raise NotImplementedError
-
-    def count_members(self, household_id: int) -> int:
-        raise NotImplementedError
 
 
 class FakeHouseholdInventoryReader(HouseholdInventoryReader):
@@ -103,3 +84,25 @@ class FakeHouseholdInventoryConsumer(HouseholdInventoryConsumer):
 
     def consume(self, household_id: int, product_id: int, amount: Decimal, unit_code: str) -> None:
         self.consumed.append((household_id, product_id, amount, unit_code))
+
+
+class FakeRecipeSource(RecipeSource):
+    def __init__(self, page: ExternalRecipePage) -> None:
+        self._page = page
+        self.search_calls: list[tuple[str, tuple[str, ...], tuple[str, ...], int, int]] = []
+
+    def get_recipe(self, reference: str) -> ExternalRecipeDetail:
+        raise NotImplementedError
+
+    def search_recipes(
+        self,
+        query: str,
+        ingredient_names: tuple[str, ...],
+        excluded_ingredient_names: tuple[str, ...],
+        page: int,
+        page_size: int,
+    ) -> ExternalRecipePage:
+        self.search_calls.append(
+            (query, ingredient_names, excluded_ingredient_names, page, page_size)
+        )
+        return self._page

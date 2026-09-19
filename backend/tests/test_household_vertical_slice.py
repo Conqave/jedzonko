@@ -65,7 +65,7 @@ def test_scenario_a_inventory_to_suggestion_to_shopping_to_inventory(
         {"household_id": household_a.pk, "servings": 4},
     )
     assert missing.status_code == 200, missing.data
-    missing_by_name = {item["name"]: item for item in missing.data}
+    missing_by_name = {item["name"]: item for item in missing.data["missing_items"]}
     assert Decimal(missing_by_name["Mąka pszenna"]["amount"]) == Decimal("300.000")
     assert missing_by_name["Mąka pszenna"]["unit_code"] == "g"
     assert Decimal(missing_by_name["Cukier"]["amount"]) == Decimal("100.000")
@@ -291,7 +291,11 @@ def test_a_more_specific_product_name_does_not_satisfy_a_recipe_requirement(
         {"household_id": household_a.pk, "servings": 4},
     )
 
-    assert {item["name"] for item in missing.data} == {"Mąka pszenna", "Cukier"}
+    assert {item["name"] for item in missing.data["missing_items"]} == {
+        "Mąka pszenna",
+        "Cukier",
+    }
+    assert missing.data["is_ready"] is False
 
 
 def test_purchasing_locks_the_inventory_row_against_concurrent_updates(

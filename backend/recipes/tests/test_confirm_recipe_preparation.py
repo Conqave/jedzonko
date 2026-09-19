@@ -31,6 +31,7 @@ def _recipe(servings: int) -> RecipeDetail:
         category_name=None,
         tag_names=(),
         image_url=None,
+        author_username="ala",
     )
     return RecipeDetail(summary=summary, steps=(), ingredients=())
 

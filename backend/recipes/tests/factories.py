@@ -2,6 +2,7 @@ from decimal import Decimal
 
 from inventory.domain.models import InventoryItemSnapshot
 from recipes.domain.models import RecipeRequirement
+from recipes.domain.suggestion import MissingRecipeItem
 from shared.measurement import MeasurementDimension, MeasurementUnit, Quantity
 from shared.text import normalize_text
 
@@ -33,6 +34,16 @@ def make_snapshot(
         quantity=Decimal(amount),
         unit=unit,
         minimum_quantity=None,
+        category_id=None,
         category_name=None,
         photo_url=None,
+    )
+
+
+def make_missing_item(name: str) -> MissingRecipeItem:
+    return MissingRecipeItem(
+        name=name,
+        normalized_name=normalize_text(name),
+        amount=Decimal("1"),
+        unit_code="g",
     )

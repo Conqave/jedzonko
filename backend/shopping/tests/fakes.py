@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from households.application.ports.household_repository import HouseholdRepository
+from households.application.ports.household_membership_reader import HouseholdMembershipReader
 from households.domain.models import HouseholdMember, HouseholdSummary
 from shared.measurement import MeasurementDimension, MeasurementUnit
 from shared.text import normalize_text
@@ -28,33 +28,12 @@ UNITS = {
 }
 
 
-class FakeHouseholdRepository(HouseholdRepository):
+class FakeHouseholdRepository(HouseholdMembershipReader):
     def __init__(self, memberships: set[tuple[int, int]]) -> None:
         self._memberships = memberships
 
-    def find_households_for_user(self, user_id: int) -> list[HouseholdSummary]:
-        raise NotImplementedError
-
-    def find_household(self, household_id: int) -> HouseholdSummary | None:
-        raise NotImplementedError
-
     def is_member(self, user_id: int, household_id: int) -> bool:
         return (user_id, household_id) in self._memberships
-
-    def list_members(self, household_id: int) -> list[HouseholdMember]:
-        raise NotImplementedError
-
-    def create_household(self, name: str, owner_user_id: int) -> HouseholdSummary:
-        raise NotImplementedError
-
-    def add_member(self, household_id: int, username: str) -> HouseholdMember:
-        raise NotImplementedError
-
-    def remove_member(self, household_id: int, user_id: int) -> None:
-        raise NotImplementedError
-
-    def count_members(self, household_id: int) -> int:
-        raise NotImplementedError
 
 
 class FakeShoppingListRepository(ShoppingListRepository):

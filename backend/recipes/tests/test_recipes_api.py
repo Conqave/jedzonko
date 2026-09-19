@@ -157,9 +157,12 @@ def test_suggestions_report_stocked_recipe_as_complete(
         {
             "recipe_id": recipe_id,
             "recipe_name": "omlet",
-            "available_item_count": 1,
-            "missing_item_count": 0,
             "missing_items": [],
+            "required_item_count": 1,
+            "available_item_count": 1,
+            "unmeasured_ingredients": [],
+            "is_ready": True,
+            "missing_item_count": 0,
         }
     ]
 
@@ -188,7 +191,10 @@ def test_missing_items_scale_with_servings(
     )
 
     assert response.status_code == 200
-    assert response.data == [{"name": "jajko", "amount": "50.000", "unit_code": "g"}]
+    assert response.data["missing_items"] == [
+        {"name": "jajko", "amount": "50.000", "unit_code": "g"}
+    ]
+    assert response.data["is_ready"] is False
 
 
 def test_missing_items_reject_non_member(

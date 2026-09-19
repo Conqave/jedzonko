@@ -1,0 +1,330 @@
+{
+ "content": [
+  {
+   "id": 106725022,
+   "publish": 1788580800000,
+   "slug": "omlet-twarogowy-z-jablkami",
+   "title": "Omlet twarogowy z jabłkami",
+   "intro": "<p><strong>Omlet twarogowy z jabłkami </strong>to rewelacyjny pomysł na pyszny posiłek, który z powodzeniem można też spakować do pracy lub do szkoły. Przepis jest prosty i sprawdzony… idealnie jesienny.&nbsp;&nbsp;</p>",
+   "postThumb": {
+    "url": "https://cdn.aniagotuje.com/pictures/articles/2026/08/106725018-v-1500x1500.jpg",
+    "srcSet": "https://cdn.aniagotuje.com/pictures/articles/2026/08/106725019-v-360x360.jpg 360w, https://cdn.aniagotuje.com/pictures/articles/2026/08/106725020-v-720x720.jpg 720w, https://cdn.aniagotuje.com/pictures/articles/2026/08/106725021-v-1080x1080.jpg 1080w, https://cdn.aniagotuje.com/pictures/articles/2026/08/106725018-v-1500x1500.jpg 1500w"
+   },
+   "comments": 15,
+   "commentsPictures": 1,
+   "categories": [
+    {
+     "name": "dania na słodko",
+     "slug": "dania-na-slodko",
+     "type": "CATEGORY"
+    },
+    {
+     "name": "twaróg półtłusty",
+     "slug": "twarog-poltlusty",
+     "type": "TAG"
+    },
+    {
+     "name": "kolacja",
+     "slug": "kolacja",
+     "type": "IDEA"
+    },
+    {
+     "name": "śniadanie",
+     "slug": "sniadanie",
+     "type": "IDEA"
+    },
+    {
+     "name": "jabłko",
+     "slug": "jablko",
+     "type": "TAG"
+    },
+    {
+     "name": "proszek do pieczenia",
+     "slug": "proszek-do-pieczenia",
+     "type": "TAG"
+    },
+    {
+     "name": "jajko",
+     "slug": "jajko",
+     "type": "TAG"
+    },
+    {
+     "name": "masło klarowane",
+     "slug": "maslo-klarowane",
+     "type": "TAG"
+    },
+    {
+     "name": "Tłusty Czwartek",
+     "slug": "tlusty-czwartek",
+     "type": "OCCASION"
+    },
+    {
+     "name": "wegetariańska",
+     "slug": "wegetarianska",
+     "type": "DIET"
+    },
+    {
+     "name": "kluski",
+     "slug": "kluski",
+     "type": "SUBCAT"
+    },
+    {
+     "name": "wysokobiałkowa",
+     "slug": "wysokobialkowa",
+     "type": "DIET"
+    },
+    {
+     "name": "cukier drobny",
+     "slug": "cukier-drobny",
+     "type": "TAG"
+    },
+    {
+     "name": "mąka pszenna tortowa",
+     "slug": "maka-pszenna-tortowa",
+     "type": "TAG"
+    },
+    {
+     "name": "cukier waniliowy",
+     "slug": "cukier-waniliowy",
+     "type": "TAG"
+    }
+   ],
+   "recipe": true,
+   "recipeCookTime": "",
+   "recipeYield": "gruby omlet o średnicy 18 cm ",
+   "recipeTotalTimeMinutes": 30,
+   "voting": true,
+   "votes": 19,
+   "score": 5.0
+  },
+  {
+   "id": 107274178,
+   "publish": 1787976000000,
+   "slug": "knedle-serowe-ze-sliwkami",
+   "title": "Knedle serowe ze śliwkami",
+   "intro": "<p><strong>Knedle z twarogu ze śliwkami</strong> to wspaniały pomysł na słodki obiad, za który można się brać już na samym początku sezonu śliwkowego. W przepisie tym nie ma ziemniaków.&nbsp;</p>",
+   "postThumb": {
+    "url": "https://cdn.aniagotuje.com/pictures/articles/2026/08/107274174-v-1500x1500.jpg",
+    "srcSet": "https://cdn.aniagotuje.com/pictures/articles/2026/08/107274175-v-360x360.jpg 360w, https://cdn.aniagotuje.com/pictures/articles/2026/08/107274176-v-720x720.jpg 720w, https://cdn.aniagotuje.com/pictures/articles/2026/08/107274177-v-1080x1080.jpg 1080w, https://cdn.aniagotuje.com/pictures/articles/2026/08/107274174-v-1500x1500.jpg 1500w"
+   },
+   "comments": 24,
+   "commentsPictures": 2,
+   "categories": [
+    {
+     "name": "dania na słodko",
+     "slug": "dania-na-slodko",
+     "type": "CATEGORY"
+    },
+    {
+     "name": "obiad",
+     "slug": "obiad",
+     "type": "IDEA"
+    },
+    {
+     "name": "twaróg półtłusty",
+     "slug": "twarog-poltlusty",
+     "type": "TAG"
+    },
+    {
+     "name": "śliwka",
+     "slug": "sliwka",
+     "type": "TAG"
+    },
+    {
+     "name": "kolacja",
+     "slug": "kolacja",
+     "type": "IDEA"
+    },
+    {
+     "name": "śniadanie",
+     "slug": "sniadanie",
+     "type": "IDEA"
+    },
+    {
+     "name": "jajko",
+     "slug": "jajko",
+     "type": "TAG"
+    },
+    {
+     "name": "wegetariańska",
+     "slug": "wegetarianska",
+     "type": "DIET"
+    },
+    {
+     "name": "budyń waniliowy",
+     "slug": "budyn-waniliowy",
+     "type": "TAG"
+    },
+    {
+     "name": "kluski",
+     "slug": "kluski",
+     "type": "SUBCAT"
+    },
+    {
+     "name": "niskotłuszczowa",
+     "slug": "niskotluszczowa",
+     "type": "DIET"
+    },
+    {
+     "name": "wysokobiałkowa",
+     "slug": "wysokobialkowa",
+     "type": "DIET"
+    },
+    {
+     "name": "mąka pszenna tortowa",
+     "slug": "maka-pszenna-tortowa",
+     "type": "TAG"
+    },
+    {
+     "name": "cukier wanilinowy",
+     "slug": "cukier-wanilinowy",
+     "type": "TAG"
+    },
+    {
+     "name": "sól",
+     "slug": "sol",
+     "type": "TAG"
+    }
+   ],
+   "recipe": true,
+   "recipeCookTime": "",
+   "recipeYield": "minimum 12 dużych knedli",
+   "recipeTotalTimeMinutes": 60,
+   "voting": true,
+   "votes": 63,
+   "score": 4.87
+  },
+  {
+   "id": 104919306,
+   "publish": 1786593600000,
+   "slug": "kluski-leniwe-z-bulka-tarta-i-borowkami",
+   "title": "Kluski leniwe z bułką tartą i borówkami",
+   "intro": "<p><strong>Kluski leniwe z bułką tartą</strong> i borówkami to tak pyszny pomysł na słodki obiad, że każdy musi je zrobić. Przepis jest super prosty. Wystarczy połączyć składniki na ciasto serowe. Coś wspaniałego!</p>",
+   "postThumb": {
+    "url": "https://cdn.aniagotuje.com/pictures/articles/2026/07/104919302-v-1500x1500.jpg",
+    "srcSet": "https://cdn.aniagotuje.com/pictures/articles/2026/07/104919303-v-360x360.jpg 360w, https://cdn.aniagotuje.com/pictures/articles/2026/07/104919304-v-720x720.jpg 720w, https://cdn.aniagotuje.com/pictures/articles/2026/07/104919305-v-1080x1080.jpg 1080w, https://cdn.aniagotuje.com/pictures/articles/2026/07/104919302-v-1500x1500.jpg 1500w"
+   },
+   "comments": 5,
+   "commentsPictures": 1,
+   "categories": [
+    {
+     "name": "dania na słodko",
+     "slug": "dania-na-slodko",
+     "type": "CATEGORY"
+    },
+    {
+     "name": "obiad",
+     "slug": "obiad",
+     "type": "IDEA"
+    },
+    {
+     "name": "borówka",
+     "slug": "borowka",
+     "type": "TAG"
+    },
+    {
+     "name": "twaróg półtłusty",
+     "slug": "twarog-poltlusty",
+     "type": "TAG"
+    },
+    {
+     "name": "kolacja",
+     "slug": "kolacja",
+     "type": "IDEA"
+    },
+    {
+     "name": "śniadanie",
+     "slug": "sniadanie",
+     "type": "IDEA"
+    },
+    {
+     "name": "serek waniliowy",
+     "slug": "serek-waniliowy",
+     "type": "TAG"
+    },
+    {
+     "name": "jajko",
+     "slug": "jajko",
+     "type": "TAG"
+    },
+    {
+     "name": "cukier",
+     "slug": "cukier",
+     "type": "TAG"
+    },
+    {
+     "name": "cukier trzcinowy",
+     "slug": "cukier-trzcinowy",
+     "type": "TAG"
+    },
+    {
+     "name": "wegetariańska",
+     "slug": "wegetarianska",
+     "type": "DIET"
+    },
+    {
+     "name": "jogurt",
+     "slug": "jogurt",
+     "type": "TAG"
+    },
+    {
+     "name": "bułka tarta",
+     "slug": "bulka-tarta",
+     "type": "TAG"
+    },
+    {
+     "name": "kluski",
+     "slug": "kluski",
+     "type": "SUBCAT"
+    },
+    {
+     "name": "wysokobiałkowa",
+     "slug": "wysokobialkowa",
+     "type": "DIET"
+    },
+    {
+     "name": "mąka pszenna tortowa",
+     "slug": "maka-pszenna-tortowa",
+     "type": "TAG"
+    },
+    {
+     "name": "masło",
+     "slug": "maslo",
+     "type": "TAG"
+    },
+    {
+     "name": "cukier wanilinowy",
+     "slug": "cukier-wanilinowy",
+     "type": "TAG"
+    },
+    {
+     "name": "śmietana",
+     "slug": "smietana",
+     "type": "TAG"
+    },
+    {
+     "name": "sól",
+     "slug": "sol",
+     "type": "TAG"
+    }
+   ],
+   "recipe": true,
+   "recipeCookTime": "",
+   "recipeYield": "około 1200 g - 4 małe porcje",
+   "recipeTotalTimeMinutes": 50,
+   "voting": true,
+   "votes": 21,
+   "score": 4.9
+  }
+ ],
+ "facets": [],
+ "size": 3,
+ "number": 0,
+ "totalElements": 252,
+ "msgToUser": null,
+ "query": "naleśniki",
+ "first": true,
+ "last": false,
+ "numberOfElements": 3,
+ "totalPages": 84
+}

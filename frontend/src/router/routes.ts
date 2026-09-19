@@ -38,6 +38,18 @@ const routes: RouteRecordRaw[] = [
         meta: { requiresAuth: true },
       },
       {
+        path: 'recipes/new',
+        name: 'recipe-new',
+        component: () => import('@/pages/RecipeFormPage.vue'),
+        meta: { requiresAuth: true },
+      },
+      {
+        path: 'recipes/:id/edit',
+        name: 'recipe-edit',
+        component: () => import('@/pages/RecipeFormPage.vue'),
+        meta: { requiresAuth: true },
+      },
+      {
         path: 'recipes/:id',
         name: 'recipe-detail',
         component: () => import('@/pages/RecipeDetailPage.vue'),

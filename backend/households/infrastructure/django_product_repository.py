@@ -1,6 +1,6 @@
 from django.db import IntegrityError
 
-from households.application.errors import DuplicateProductError
+from households.application.errors import DuplicateProductError, ProductNotFoundError
 from households.application.ports.product_repository import ProductRepository
 from households.domain.product import ProductSummary
 from households.models import Product
@@ -35,6 +35,18 @@ class DjangoProductRepository(ProductRepository):
                 default_unit_code=default_unit_code,
                 is_food=is_food,
             )
+        except IntegrityError as error:
+            raise DuplicateProductError from error
+        return self._to_summary(row)
+
+    def rename_product(self, household_id: int, product_id: int, name: str) -> ProductSummary:
+        row = Product.objects.filter(household_id=household_id, pk=product_id).first()
+        if row is None:
+            raise ProductNotFoundError
+        row.name = name
+        row.normalized_name = normalize_text(name)
+        try:
+            row.save(update_fields=["name", "normalized_name", "updated_at"])
         except IntegrityError as error:
             raise DuplicateProductError from error
         return self._to_summary(row)

@@ -48,6 +48,17 @@ class DjangoHouseholdRepository(HouseholdRepository):
         HouseholdMembership.objects.create(household=household, user_id=owner_user_id)
         return HouseholdSummary(id=household.pk, name=household.name, member_count=1)
 
+    def rename_household(self, household_id: int, name: str) -> HouseholdSummary:
+        updated = Household.objects.filter(pk=household_id, deleted_at__isnull=True).update(
+            name=name
+        )
+        if updated == 0:
+            raise HouseholdNotFoundError
+        renamed = self.find_household(household_id)
+        if renamed is None:
+            raise HouseholdNotFoundError
+        return renamed
+
     def add_member(self, household_id: int, username: str) -> HouseholdMember:
         if not Household.objects.filter(pk=household_id, deleted_at__isnull=True).exists():
             raise HouseholdNotFoundError
