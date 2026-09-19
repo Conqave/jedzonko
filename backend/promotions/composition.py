@@ -29,3 +29,10 @@ def build_favourite_shop_repository() -> FavouriteShopRepository:
 
 def build_shop_selection() -> ShopSelection:
     return ShopSelection(build_favourite_shop_repository())
+
+
+def build_search_result_limit() -> int:
+    limit = settings.PROMOTIONS_SEARCH_RESULT_LIMIT
+    if not isinstance(limit, int):
+        raise TypeError("PROMOTIONS_SEARCH_RESULT_LIMIT must be an integer")
+    return limit

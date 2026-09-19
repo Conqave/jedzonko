@@ -1,8 +1,8 @@
 <template>
   <q-page padding>
-    <q-tabs v-model="tab" align="left" class="q-mb-md">
-      <q-tab name="favourites" label="Ulubione sklepy" no-caps />
-      <q-tab name="search" label="Szukaj produktu" no-caps />
+    <q-tabs v-model="tab" align="left" class="q-mb-md" dense outside-arrows mobile-arrows>
+      <q-tab name="favourites" label="Ulubione" no-caps />
+      <q-tab name="search" label="Szukaj" no-caps />
       <q-tab name="coverage" label="Gdzie się opłaca" no-caps />
     </q-tabs>
 
@@ -91,36 +91,55 @@
           Brak promocji dla podanego zapytania.
         </q-banner>
 
-        <q-list v-else-if="offers.length > 0" bordered separator>
-          <q-item v-for="(offer, index) in offers" :key="index">
-            <q-item-section avatar>
-              <q-avatar rounded>
-                <img :src="offer.image_url" :alt="offer.name" />
-              </q-avatar>
-            </q-item-section>
-            <q-item-section>
-              <q-item-label>{{ offer.name }}</q-item-label>
-              <q-item-label caption>
-                {{ offer.shop_name }}
-                <span v-if="offer.product_brand_name"> · {{ offer.product_brand_name }}</span>
-                · do {{ offer.valid_until }}
-              </q-item-label>
-            </q-item-section>
-            <q-item-section side>
-              <q-item-label class="text-weight-bold">{{ formatPrice(offer.price) }}</q-item-label>
-              <q-btn
-                flat
-                dense
-                no-caps
-                size="sm"
-                label="Gazetka"
-                type="a"
-                :href="offer.leaflet_url"
-                target="_blank"
-              />
-            </q-item-section>
-          </q-item>
-        </q-list>
+        <template v-else-if="offers.length > 0">
+          <div class="text-caption text-grey-8 q-mb-sm">
+            Znaleziono {{ offers.length }} promocji. Strona {{ offerPage }} z {{ offerPageCount }}.
+          </div>
+
+          <q-list bordered separator>
+            <template v-for="group in offerGroups" :key="group.shop_slug">
+              <q-item-label header>{{ group.shop_name }}</q-item-label>
+              <q-item v-for="(offer, index) in group.offers" :key="`${group.shop_slug}-${index}`">
+                <q-item-section avatar>
+                  <q-avatar rounded>
+                    <img :src="offer.image_url" :alt="offer.name" />
+                  </q-avatar>
+                </q-item-section>
+                <q-item-section>
+                  <q-item-label>{{ offer.name }}</q-item-label>
+                  <q-item-label caption>
+                    <span v-if="offer.product_brand_name">{{ offer.product_brand_name }} · </span>
+                    do {{ offer.valid_until }}
+                  </q-item-label>
+                </q-item-section>
+                <q-item-section side>
+                  <q-item-label class="text-weight-bold">{{
+                    formatPrice(offer.price)
+                  }}</q-item-label>
+                  <q-btn
+                    flat
+                    dense
+                    no-caps
+                    size="sm"
+                    label="Gazetka"
+                    type="a"
+                    :href="offer.leaflet_url"
+                    target="_blank"
+                  />
+                </q-item-section>
+              </q-item>
+            </template>
+          </q-list>
+
+          <div v-if="offerPageCount > 1" class="row justify-center q-mt-md">
+            <q-pagination
+              v-model="offerPage"
+              :max="offerPageCount"
+              :max-pages="7"
+              boundary-numbers
+            />
+          </div>
+        </template>
       </q-tab-panel>
 
       <q-tab-panel name="coverage" class="q-pa-none">
@@ -176,25 +195,32 @@
         </q-banner>
 
         <template v-else-if="coverage.length > 0">
-          <q-card v-if="bestShop !== null" flat bordered class="bg-green-1 q-mb-md">
+          <q-card v-if="topShops.length > 0" flat bordered class="bg-green-1 q-mb-md">
             <q-card-section>
-              <div class="text-overline text-green-8">Najlepiej się opłaca</div>
+              <div class="text-overline text-green-8">
+                {{ topShops.length === 1 ? 'Najlepiej się opłaca' : 'Największe pokrycie' }}
+              </div>
               <div class="text-h6">
-                {{ bestShop.shop_name }} — {{ bestShop.matched_query_count }} z
+                {{ topShopNames.join(', ') }} — {{ topShops[0]?.matched_query_count }} z
                 {{ comparedItems.length }} produktów w promocji
               </div>
-              <div v-if="missingFor(bestShop).length > 0" class="text-caption text-grey-8 q-mt-xs">
-                Brak w promocji: {{ missingFor(bestShop).join(', ') }}
+              <div v-if="topShops.length > 1" class="text-caption text-grey-8 q-mt-xs">
+                Te sklepy mają takie samo pokrycie listy — kolejność nie oznacza przewagi.
+              </div>
+              <div v-if="topMissing.length > 0" class="text-caption text-grey-8 q-mt-xs">
+                Brak w promocji: {{ topMissing.join(', ') }}
               </div>
             </q-card-section>
             <q-card-actions>
               <q-btn
+                v-for="entry in topShops"
+                :key="entry.shop_slug"
                 flat
                 dense
                 no-caps
-                label="Strona sklepu"
+                :label="`Strona sklepu: ${entry.shop_name}`"
                 type="a"
-                :href="bestShop.shop_url"
+                :href="entry.shop_url"
                 target="_blank"
               />
             </q-card-actions>
@@ -240,6 +266,12 @@ import type { PromotionOffer, Shop, StorePromotionCoverage } from '@/features/pr
 const quasar = useQuasar();
 const store = usePromotionsStore();
 
+interface OfferGroup {
+  shop_slug: string;
+  shop_name: string;
+  offers: PromotionOffer[];
+}
+
 function formatPrice(price: string | null): string {
   return price === null ? 'brak ceny' : `${price} zł`;
 }
@@ -254,6 +286,31 @@ const searchShops = ref<string[]>([]);
 const offers = ref<PromotionOffer[]>([]);
 const searching = ref(false);
 const searched = ref(false);
+const offerPage = ref(1);
+
+const OFFERS_PER_PAGE = 20;
+
+const offerPageCount = computed(() =>
+  Math.max(1, Math.ceil(offers.value.length / OFFERS_PER_PAGE)),
+);
+
+const offerGroups = computed<OfferGroup[]>(() => {
+  const start = (offerPage.value - 1) * OFFERS_PER_PAGE;
+  const groups = new Map<string, OfferGroup>();
+  for (const offer of offers.value.slice(start, start + OFFERS_PER_PAGE)) {
+    const existing = groups.get(offer.shop_slug);
+    if (existing === undefined) {
+      groups.set(offer.shop_slug, {
+        shop_slug: offer.shop_slug,
+        shop_name: offer.shop_name,
+        offers: [offer],
+      });
+      continue;
+    }
+    existing.offers.push(offer);
+  }
+  return [...groups.values()];
+});
 
 const requestedItems = ref<string[]>([]);
 const comparedItems = ref<string[]>([]);
@@ -262,7 +319,20 @@ const coverage = ref<StorePromotionCoverage[]>([]);
 const comparing = ref(false);
 const compared = ref(false);
 
-const bestShop = computed<StorePromotionCoverage | null>(() => coverage.value[0] ?? null);
+const topShops = computed<StorePromotionCoverage[]>(() => {
+  const best = coverage.value[0];
+  if (best === undefined || best.matched_query_count === 0) {
+    return [];
+  }
+  return coverage.value.filter((entry) => entry.matched_query_count === best.matched_query_count);
+});
+
+const topShopNames = computed(() => topShops.value.map((entry) => entry.shop_name));
+
+const topMissing = computed<string[]>(() => {
+  const only = topShops.value.length === 1 ? topShops.value[0] : undefined;
+  return only === undefined ? [] : missingFor(only);
+});
 
 function shopNames(slugs: string[]): string[] {
   return slugs.map((slug) => store.shops.find((shop) => shop.slug === slug)?.name ?? slug);
@@ -353,6 +423,7 @@ async function runSearch(): Promise<void> {
   searching.value = true;
   try {
     offers.value = await searchPromotions(query.value.trim(), searchShops.value);
+    offerPage.value = 1;
     searched.value = true;
   } catch (error) {
     quasar.notify({ type: 'negative', message: describePromotionError(error) });
