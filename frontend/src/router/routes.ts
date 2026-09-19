@@ -59,7 +59,10 @@ const routes: RouteRecordRaw[] = [
   },
   {
     path: '/:catchAll(.*)*',
-    component: () => import('@/pages/ErrorNotFound.vue'),
+    component: () => import('@/layouts/AuthLayout.vue'),
+    children: [
+      { path: '', name: 'not-found', component: () => import('@/pages/ErrorNotFound.vue') },
+    ],
   },
 ];
 
