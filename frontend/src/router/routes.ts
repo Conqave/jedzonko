@@ -50,6 +50,11 @@ const routes: RouteRecordRaw[] = [
         meta: { requiresAuth: true },
       },
       {
+        path: 'recipes/ania/:reference',
+        name: 'external-recipe',
+        component: () => import('@/pages/ExternalRecipePage.vue'),
+      },
+      {
         path: 'recipes/:id',
         name: 'recipe-detail',
         component: () => import('@/pages/RecipeDetailPage.vue'),

@@ -71,6 +71,30 @@ export interface ExternalRecipe {
   ingredients: ExternalRecipeIngredient[];
 }
 
+export interface ExternalRecipeSummary {
+  source_name: string;
+  source_url: string;
+  reference: string;
+  name: string;
+  description: string;
+  image_url: string | null;
+  yield_label: string;
+  total_time_minutes: number | null;
+}
+
+export interface ExternalRecipePage {
+  recipes: ExternalRecipeSummary[];
+  page: number;
+  page_size: number;
+  total_count: number;
+  total_pages: number;
+}
+
+export interface ExternalRecipeSuggestionPage extends ExternalRecipePage {
+  ingredient_names: string[];
+  inventory_item_count: number;
+}
+
 export interface RecipeInput {
   name: string;
   description: string;
