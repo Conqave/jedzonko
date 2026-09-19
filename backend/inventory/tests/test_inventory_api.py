@@ -4,8 +4,7 @@ import pytest
 from django.contrib.auth.models import User
 from rest_framework.test import APIClient
 
-from catalog.models import Ingredient, MeasurementUnit
-from households.models import Household, HouseholdMembership
+from households.models import Household, HouseholdMembership, Product
 from inventory.models import InventoryItem
 
 pytestmark = pytest.mark.django_db
@@ -34,9 +33,13 @@ def household(ala: User) -> Household:
 
 
 @pytest.fixture
-def flour() -> Ingredient:
-    return Ingredient.objects.create(
-        name="Mąka pszenna", default_unit=MeasurementUnit.objects.get(code="kg")
+def flour(household: Household) -> Product:
+    return Product.objects.create(
+        household=household,
+        name="Mąka pszenna",
+        normalized_name="maka pszenna",
+        default_unit_code="kg",
+        is_food=True,
     )
 
 
@@ -56,7 +59,7 @@ def test_inventory_is_denied_for_non_member(
 
 
 def test_member_adds_and_lists_an_inventory_item(
-    api_client: APIClient, ala: User, household: Household, flour: Ingredient
+    api_client: APIClient, ala: User, household: Household, flour: Product
 ) -> None:
     api_client.force_login(ala)
 
@@ -64,7 +67,7 @@ def test_member_adds_and_lists_an_inventory_item(
         "/api/inventory/",
         {
             "household_id": household.pk,
-            "ingredient_id": flour.pk,
+            "product_id": flour.pk,
             "quantity": "2.000",
             "unit_code": "kg",
             "minimum_quantity": "3.000",
@@ -73,20 +76,20 @@ def test_member_adds_and_lists_an_inventory_item(
     )
 
     assert created.status_code == 201
-    assert created.data["ingredient_name"] == "Mąka pszenna"
+    assert created.data["product_name"] == "Mąka pszenna"
     assert created.data["below_minimum"] is True
 
     listed = api_client.get("/api/inventory/", {"household_id": household.pk})
     assert [item["id"] for item in listed.data] == [created.data["id"]]
 
 
-def test_the_same_ingredient_cannot_be_added_twice(
-    api_client: APIClient, ala: User, household: Household, flour: Ingredient
+def test_the_same_product_cannot_be_added_twice(
+    api_client: APIClient, ala: User, household: Household, flour: Product
 ) -> None:
     api_client.force_login(ala)
     payload = {
         "household_id": household.pk,
-        "ingredient_id": flour.pk,
+        "product_id": flour.pk,
         "quantity": "1.000",
         "unit_code": "kg",
     }
@@ -99,7 +102,7 @@ def test_the_same_ingredient_cannot_be_added_twice(
 
 
 def test_unknown_unit_is_rejected(
-    api_client: APIClient, ala: User, household: Household, flour: Ingredient
+    api_client: APIClient, ala: User, household: Household, flour: Product
 ) -> None:
     api_client.force_login(ala)
 
@@ -107,7 +110,7 @@ def test_unknown_unit_is_rejected(
         "/api/inventory/",
         {
             "household_id": household.pk,
-            "ingredient_id": flour.pk,
+            "product_id": flour.pk,
             "quantity": "1.000",
             "unit_code": "parsek",
         },
@@ -118,14 +121,31 @@ def test_unknown_unit_is_rejected(
     assert response.data["code"] == "measurement_unit_not_found"
 
 
+def test_unknown_product_is_rejected(
+    api_client: APIClient, ala: User, household: Household
+) -> None:
+    api_client.force_login(ala)
+
+    response = api_client.post(
+        "/api/inventory/",
+        {
+            "household_id": household.pk,
+            "product_id": 999999,
+            "quantity": "1.000",
+            "unit_code": "kg",
+        },
+        format="json",
+    )
+
+    assert response.status_code == 400
+    assert response.data["code"] == "product_not_found"
+
+
 def test_corrected_quantity_becomes_authoritative(
-    api_client: APIClient, ala: User, household: Household, flour: Ingredient
+    api_client: APIClient, ala: User, household: Household, flour: Product
 ) -> None:
     item = InventoryItem.objects.create(
-        household=household,
-        ingredient=flour,
-        unit=MeasurementUnit.objects.get(code="kg"),
-        quantity=Decimal("2.000"),
+        household=household, product=flour, unit_code="kg", quantity=Decimal("2.000")
     )
     api_client.force_login(ala)
 
@@ -138,13 +158,10 @@ def test_corrected_quantity_becomes_authoritative(
 
 
 def test_non_member_cannot_touch_another_households_item(
-    api_client: APIClient, ola: User, household: Household, flour: Ingredient
+    api_client: APIClient, ola: User, household: Household, flour: Product
 ) -> None:
     item = InventoryItem.objects.create(
-        household=household,
-        ingredient=flour,
-        unit=MeasurementUnit.objects.get(code="kg"),
-        quantity=Decimal("2.000"),
+        household=household, product=flour, unit_code="kg", quantity=Decimal("2.000")
     )
     api_client.force_login(ola)
 
@@ -164,12 +181,3 @@ def test_missing_item_is_not_found(api_client: APIClient, ala: User) -> None:
 
     assert response.status_code == 404
     assert response.data["code"] == "inventory_item_not_found"
-
-
-def test_catalog_endpoints_expose_seeded_units(api_client: APIClient, ala: User) -> None:
-    api_client.force_login(ala)
-
-    units = api_client.get("/api/catalog/units/")
-
-    assert units.status_code == 200
-    assert {unit["code"] for unit in units.data} >= {"g", "kg", "ml", "l", "szt"}

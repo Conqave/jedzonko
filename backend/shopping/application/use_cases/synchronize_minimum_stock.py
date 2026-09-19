@@ -32,7 +32,7 @@ class SynchronizeMinimumStock:
         for target in targets:
             if target.existing_item_id is None:
                 self._repository.add_item(
-                    primary_list.id, target.ingredient_id, None, target.amount, target.unit_code
+                    primary_list.id, target.product_id, None, target.amount, target.unit_code
                 )
                 continue
             self._repository.set_item_quantity(

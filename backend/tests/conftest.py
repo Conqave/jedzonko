@@ -4,9 +4,9 @@ import pytest
 from django.contrib.auth.models import User
 from rest_framework.test import APIClient
 
-from catalog.models import Ingredient, MeasurementUnit
-from households.models import Household, HouseholdMembership
+from households.models import Household, HouseholdMembership, Product
 from recipes.models import Recipe, RecipeIngredient, RecipeStep
+from shared.text import normalize_text
 
 
 @pytest.fixture
@@ -38,28 +38,33 @@ def household_b(ola: User) -> Household:
     return household
 
 
-@pytest.fixture
-def gram() -> MeasurementUnit:
-    return MeasurementUnit.objects.get(code="g")
+def make_product(household: Household, name: str, default_unit_code: str) -> Product:
+    return Product.objects.create(
+        household=household,
+        name=name,
+        normalized_name=normalize_text(name),
+        default_unit_code=default_unit_code,
+        is_food=True,
+    )
 
 
 @pytest.fixture
-def kilogram() -> MeasurementUnit:
-    return MeasurementUnit.objects.get(code="kg")
+def flour(household_a: Household) -> Product:
+    return make_product(household_a, "Mąka pszenna", "kg")
 
 
 @pytest.fixture
-def flour(kilogram: MeasurementUnit) -> Ingredient:
-    return Ingredient.objects.create(name="Mąka pszenna", default_unit=kilogram)
+def sugar(household_a: Household) -> Product:
+    return make_product(household_a, "Cukier", "kg")
 
 
 @pytest.fixture
-def sugar(kilogram: MeasurementUnit) -> Ingredient:
-    return Ingredient.objects.create(name="Cukier", default_unit=kilogram)
+def foreign_flour(household_b: Household) -> Product:
+    return make_product(household_b, "Mąka pszenna", "kg")
 
 
 @pytest.fixture
-def pancakes(ala: User, flour: Ingredient, sugar: Ingredient, gram: MeasurementUnit) -> Recipe:
+def pancakes(ala: User) -> Recipe:
     recipe = Recipe.objects.create(
         name="Naleśniki",
         description="Podstawowe naleśniki.",
@@ -71,9 +76,17 @@ def pancakes(ala: User, flour: Ingredient, sugar: Ingredient, gram: MeasurementU
     )
     RecipeStep.objects.create(recipe=recipe, position=1, text="Wymieszaj składniki.")
     RecipeIngredient.objects.create(
-        recipe=recipe, ingredient=flour, unit=gram, quantity=Decimal("500.000")
+        recipe=recipe,
+        name="Mąka pszenna",
+        normalized_name=normalize_text("Mąka pszenna"),
+        unit_code="g",
+        quantity=Decimal("500.000"),
     )
     RecipeIngredient.objects.create(
-        recipe=recipe, ingredient=sugar, unit=gram, quantity=Decimal("100.000")
+        recipe=recipe,
+        name="Cukier",
+        normalized_name=normalize_text("Cukier"),
+        unit_code="g",
+        quantity=Decimal("100.000"),
     )
     return recipe

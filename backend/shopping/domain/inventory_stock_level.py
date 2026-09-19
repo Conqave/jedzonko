@@ -1,13 +1,13 @@
 from dataclasses import dataclass
 from decimal import Decimal
 
-from catalog.domain.measurement import MeasurementUnit
+from shared.measurement import MeasurementUnit
 
 
 @dataclass(frozen=True, slots=True)
 class InventoryStockLevel:
-    ingredient_id: int
-    ingredient_name: str
+    product_id: int
+    product_name: str
     quantity: Decimal
     minimum_quantity: Decimal | None
     unit: MeasurementUnit

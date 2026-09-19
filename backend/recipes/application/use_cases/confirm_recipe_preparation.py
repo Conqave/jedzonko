@@ -33,13 +33,14 @@ class ConfirmRecipePreparation:
         scaled = scale_requirements(requirements, recipe.summary.servings, servings)
         with self._transaction_manager.atomic():
             inventory = self._inventory_reader.read_inventory(user_id, household_id)
-            stocked_ingredient_ids = {item.ingredient_id for item in inventory}
+            stocked_by_name = {item.normalized_name: item for item in inventory}
             for requirement in scaled:
-                if requirement.ingredient_id not in stocked_ingredient_ids:
+                stocked = stocked_by_name.get(requirement.normalized_name)
+                if stocked is None:
                     continue
                 self._inventory_consumer.consume(
                     household_id,
-                    requirement.ingredient_id,
+                    stocked.product_id,
                     requirement.quantity.amount,
                     requirement.quantity.unit.code,
                 )

@@ -12,8 +12,8 @@ class RecipeRequirementGateway(RecipeRequirementReader):
         )
         return [
             MissingRecipeItem(
-                ingredient_id=item.ingredient_id,
-                ingredient_name=item.ingredient_name,
+                name=item.name,
+                normalized_name=item.normalized_name,
                 amount=item.amount,
                 unit_code=item.unit_code,
             )

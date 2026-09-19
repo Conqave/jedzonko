@@ -10,5 +10,5 @@ class InventoryCategoryAdmin(admin.ModelAdmin[InventoryCategory]):
 
 @admin.register(InventoryItem)
 class InventoryItemAdmin(admin.ModelAdmin[InventoryItem]):
-    list_display = ["ingredient", "household", "quantity", "unit", "minimum_quantity"]
+    list_display = ["product", "household", "quantity", "unit_code", "minimum_quantity"]
     list_filter = ["household"]

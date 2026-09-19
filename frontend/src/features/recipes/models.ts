@@ -17,8 +17,7 @@ export interface RecipeStep {
 }
 
 export interface RecipeIngredient {
-  ingredient_id: number;
-  ingredient_name: string;
+  name: string;
   quantity: string;
   unit_code: string;
 }
@@ -29,8 +28,7 @@ export interface RecipeDetail extends RecipeSummary {
 }
 
 export interface MissingItem {
-  ingredient_id: number;
-  ingredient_name: string;
+  name: string;
   amount: string;
   unit_code: string;
 }

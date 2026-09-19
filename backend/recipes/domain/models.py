@@ -1,14 +1,14 @@
 from dataclasses import dataclass
 from decimal import Decimal
 
-from catalog.domain.measurement import Quantity
 from recipes.domain.difficulty import RecipeDifficulty
+from shared.measurement import Quantity
 
 
 @dataclass(frozen=True, slots=True)
 class RecipeRequirement:
-    ingredient_id: int
-    ingredient_name: str
+    name: str
+    normalized_name: str
     quantity: Quantity
 
 
@@ -20,8 +20,7 @@ class RecipeStepDetail:
 
 @dataclass(frozen=True, slots=True)
 class RecipeIngredientDetail:
-    ingredient_id: int
-    ingredient_name: str
+    name: str
     quantity: Decimal
     unit_code: str
 

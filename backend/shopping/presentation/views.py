@@ -48,8 +48,8 @@ def _represent_item(item: ShoppingItemSnapshot) -> dict[str, object]:
     # spaces, so only the addressable pending rows expose an id over HTTP.
     return {
         "id": None if item.is_purchased else item.id,
-        "ingredient_id": item.ingredient_id,
-        "ingredient_name": item.ingredient_name,
+        "product_id": item.product_id,
+        "product_name": item.product_name,
         "free_text": item.free_text,
         "quantity": str(item.quantity),
         "unit_code": None if item.unit is None else item.unit.code,
@@ -93,16 +93,16 @@ class ShoppingListItemListView(APIView):
     def post(self, request: Request, list_id: int) -> Response:
         serializer = AddShoppingListItemSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        raw_ingredient_id = serializer.validated_data.get("ingredient_id")
+        raw_product_id = serializer.validated_data.get("product_id")
         raw_free_text = serializer.validated_data.get("free_text")
         raw_unit_code = serializer.validated_data.get("unit_code")
-        ingredient_id = None if raw_ingredient_id is None else int(str(raw_ingredient_id))
+        product_id = None if raw_product_id is None else int(str(raw_product_id))
         free_text = None if raw_free_text is None else str(raw_free_text)
         unit_code = None if raw_unit_code is None else str(raw_unit_code)
         quantity = Decimal(str(serializer.validated_data["quantity"]))
         try:
             item = build_add_shopping_list_item().execute(
-                _user_id(request), list_id, ingredient_id, free_text, quantity, unit_code
+                _user_id(request), list_id, product_id, free_text, quantity, unit_code
             )
         except HANDLED_ERRORS as error:
             raise to_api_exception(error) from error

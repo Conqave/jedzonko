@@ -23,8 +23,8 @@
 
       <div class="text-h6 q-mb-sm">Składniki</div>
       <q-list bordered separator class="q-mb-md">
-        <q-item v-for="ingredient in recipe.ingredients" :key="ingredient.ingredient_id">
-          <q-item-section>{{ ingredient.ingredient_name }}</q-item-section>
+        <q-item v-for="ingredient in recipe.ingredients" :key="ingredient.name">
+          <q-item-section>{{ ingredient.name }}</q-item-section>
           <q-item-section side>{{ ingredient.quantity }} {{ ingredient.unit_code }}</q-item-section>
         </q-item>
       </q-list>
@@ -59,8 +59,8 @@
         Masz w domu wszystkie składniki.
       </q-banner>
       <q-list v-else-if="missingItems.length > 0" bordered separator>
-        <q-item v-for="item in missingItems" :key="item.ingredient_id">
-          <q-item-section>{{ item.ingredient_name }}</q-item-section>
+        <q-item v-for="item in missingItems" :key="item.name">
+          <q-item-section>{{ item.name }}</q-item-section>
           <q-item-section side>{{ item.amount }} {{ item.unit_code }}</q-item-section>
         </q-item>
       </q-list>

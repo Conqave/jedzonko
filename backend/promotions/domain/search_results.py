@@ -1,8 +1,8 @@
 from collections.abc import Sequence
 from decimal import Decimal
 
-from promotions.domain.matching import normalize_text
 from promotions.domain.models import PromotionOffer
+from shared.text import normalize_text
 
 _ZERO = Decimal(0)
 
@@ -61,4 +61,4 @@ def _ordering_key(offer: PromotionOffer) -> tuple[str, str, str, bool, Decimal, 
 
 
 def _normalized_product(offer: PromotionOffer) -> str:
-    return " ".join(normalize_text(offer.name).split())
+    return normalize_text(offer.name)

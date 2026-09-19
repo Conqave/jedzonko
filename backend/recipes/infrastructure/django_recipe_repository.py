@@ -1,12 +1,8 @@
 from django.db import models, transaction
 
-from catalog.domain.measurement import MeasurementDimension
-from catalog.domain.measurement import MeasurementUnit as UnitValue
-from catalog.domain.measurement import Quantity
-from catalog.models import Ingredient, MeasurementUnit
 from recipes.application.commands import RecipeInput
 from recipes.application.errors import (
-    IngredientNotFoundError,
+    DuplicateRecipeIngredientError,
     MeasurementUnitNotFoundError,
     RecipeCategoryNotFoundError,
     RecipeNotFoundError,
@@ -21,6 +17,9 @@ from recipes.domain.models import (
     RecipeSummary,
 )
 from recipes.models import Recipe, RecipeCategory, RecipeIngredient, RecipeStep, RecipeTag
+from shared.measurement import MeasurementUnit, Quantity
+from shared.measurement_units import find_measurement_unit
+from shared.text import normalize_text
 
 
 class DjangoRecipeRepository(RecipeRepository):
@@ -33,15 +32,12 @@ class DjangoRecipeRepository(RecipeRepository):
         return None if row is None else self._to_detail(row)
 
     def list_requirements(self, recipe_id: int) -> list[RecipeRequirement]:
-        rows = RecipeIngredient.objects.filter(recipe_id=recipe_id).select_related(
-            "ingredient", "unit"
-        )
+        rows = RecipeIngredient.objects.filter(recipe_id=recipe_id)
         return [self._to_requirement(row) for row in rows]
 
     def list_requirements_by_recipe(self) -> dict[int, list[RecipeRequirement]]:
-        rows = RecipeIngredient.objects.select_related("ingredient", "unit")
         grouped: dict[int, list[RecipeRequirement]] = {}
-        for row in rows:
+        for row in RecipeIngredient.objects.all():
             grouped.setdefault(row.recipe_id, []).append(self._to_requirement(row))
         return grouped
 
@@ -92,7 +88,7 @@ class DjangoRecipeRepository(RecipeRepository):
     @staticmethod
     def _detail_queryset() -> models.QuerySet[Recipe]:
         return Recipe.objects.select_related("category").prefetch_related(
-            "tags", "steps", "ingredients__ingredient", "ingredients__unit"
+            "tags", "steps", "ingredients"
         )
 
     @staticmethod
@@ -104,8 +100,8 @@ class DjangoRecipeRepository(RecipeRepository):
             raise RecipeCategoryNotFoundError
         return category
 
-    @staticmethod
-    def _replace_children(recipe: Recipe, command: RecipeInput) -> None:
+    @classmethod
+    def _replace_children(cls, recipe: Recipe, command: RecipeInput) -> None:
         tags = [RecipeTag.objects.get_or_create(name=name)[0] for name in command.tag_names]
         recipe.tags.set(tags)
         RecipeStep.objects.bulk_create(
@@ -114,33 +110,34 @@ class DjangoRecipeRepository(RecipeRepository):
                 for step in command.steps
             ]
         )
+        used_names: set[str] = set()
         for ingredient_input in command.ingredients:
-            if not Ingredient.objects.filter(pk=ingredient_input.ingredient_id).exists():
-                raise IngredientNotFoundError
-            unit = MeasurementUnit.objects.filter(code=ingredient_input.unit_code).first()
-            if unit is None:
-                raise MeasurementUnitNotFoundError
+            cls._to_unit(ingredient_input.unit_code)
+            normalized_name = normalize_text(ingredient_input.name)
+            if normalized_name in used_names:
+                raise DuplicateRecipeIngredientError
+            used_names.add(normalized_name)
             RecipeIngredient.objects.create(
                 recipe=recipe,
-                ingredient_id=ingredient_input.ingredient_id,
-                unit=unit,
+                name=ingredient_input.name,
+                normalized_name=normalized_name,
+                unit_code=ingredient_input.unit_code,
                 quantity=ingredient_input.quantity,
             )
 
     @staticmethod
-    def _to_unit_value(unit: MeasurementUnit) -> UnitValue:
-        return UnitValue(
-            code=unit.code,
-            dimension=MeasurementDimension(unit.dimension),
-            factor_to_base=unit.factor_to_base,
-        )
+    def _to_unit(unit_code: str) -> MeasurementUnit:
+        unit = find_measurement_unit(unit_code)
+        if unit is None:
+            raise MeasurementUnitNotFoundError
+        return unit
 
     @classmethod
     def _to_requirement(cls, row: RecipeIngredient) -> RecipeRequirement:
         return RecipeRequirement(
-            ingredient_id=row.ingredient_id,
-            ingredient_name=row.ingredient.name,
-            quantity=Quantity(amount=row.quantity, unit=cls._to_unit_value(row.unit)),
+            name=row.name,
+            normalized_name=row.normalized_name,
+            quantity=Quantity(amount=row.quantity, unit=cls._to_unit(row.unit_code)),
         )
 
     @staticmethod
@@ -167,10 +164,7 @@ class DjangoRecipeRepository(RecipeRepository):
             ),
             ingredients=tuple(
                 RecipeIngredientDetail(
-                    ingredient_id=item.ingredient_id,
-                    ingredient_name=item.ingredient.name,
-                    quantity=item.quantity,
-                    unit_code=item.unit.code,
+                    name=item.name, quantity=item.quantity, unit_code=item.unit_code
                 )
                 for item in row.ingredients.all()
             ),

@@ -27,7 +27,7 @@ class BuyShoppingItem:
             raise ShoppingListItemNotFoundError
         with transaction.atomic():
             self._repository.purchase_item(item_id)
-            if item.ingredient_id is not None and item.unit is not None:
+            if item.product_id is not None and item.unit is not None:
                 self._inventory.add_purchased_quantity(
-                    household_id, item.ingredient_id, item.quantity, item.unit
+                    household_id, item.product_id, item.quantity, item.unit
                 )

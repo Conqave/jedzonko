@@ -53,7 +53,7 @@ def _build(
 def test_each_stocked_ingredient_is_consumed_exactly_once() -> None:
     repository = FakeRecipeRepository(
         [_recipe(2)],
-        {1: [make_requirement(1, "jajko", "2", GRAM), make_requirement(2, "maka", "50", GRAM)]},
+        {1: [make_requirement("jajko", "2", GRAM), make_requirement("maka", "50", GRAM)]},
     )
     consumer = FakeHouseholdInventoryConsumer()
     transaction_manager = FakeTransactionManager()
@@ -76,7 +76,7 @@ def test_each_stocked_ingredient_is_consumed_exactly_once() -> None:
 def test_ingredients_absent_from_inventory_are_skipped() -> None:
     repository = FakeRecipeRepository(
         [_recipe(2)],
-        {1: [make_requirement(1, "jajko", "2", GRAM), make_requirement(2, "maka", "50", GRAM)]},
+        {1: [make_requirement("jajko", "2", GRAM), make_requirement("maka", "50", GRAM)]},
     )
     consumer = FakeHouseholdInventoryConsumer()
     use_case = _build(
@@ -89,7 +89,7 @@ def test_ingredients_absent_from_inventory_are_skipped() -> None:
 
 
 def test_repeated_confirmation_consumes_again() -> None:
-    repository = FakeRecipeRepository([_recipe(2)], {1: [make_requirement(1, "jajko", "2", GRAM)]})
+    repository = FakeRecipeRepository([_recipe(2)], {1: [make_requirement("jajko", "2", GRAM)]})
     consumer = FakeHouseholdInventoryConsumer()
     transaction_manager = FakeTransactionManager()
     use_case = _build(
@@ -104,7 +104,7 @@ def test_repeated_confirmation_consumes_again() -> None:
 
 
 def test_non_member_consumes_nothing() -> None:
-    repository = FakeRecipeRepository([_recipe(2)], {1: [make_requirement(1, "jajko", "2", GRAM)]})
+    repository = FakeRecipeRepository([_recipe(2)], {1: [make_requirement("jajko", "2", GRAM)]})
     consumer = FakeHouseholdInventoryConsumer()
     transaction_manager = FakeTransactionManager()
     use_case = _build(

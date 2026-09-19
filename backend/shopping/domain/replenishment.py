@@ -7,7 +7,7 @@ from shopping.domain.shopping_item_snapshot import ShoppingItemSnapshot
 
 @dataclass(frozen=True, slots=True)
 class ReplenishmentTarget:
-    ingredient_id: int
+    product_id: int
     amount: Decimal
     unit_code: str
     existing_item_id: int | None
@@ -16,21 +16,21 @@ class ReplenishmentTarget:
 def calculate_replenishment_targets(
     stock_levels: list[InventoryStockLevel], unpurchased_items: list[ShoppingItemSnapshot]
 ) -> list[ReplenishmentTarget]:
-    items_by_ingredient: dict[int, ShoppingItemSnapshot] = {
-        item.ingredient_id: item
+    items_by_product: dict[int, ShoppingItemSnapshot] = {
+        item.product_id: item
         for item in unpurchased_items
-        if item.ingredient_id is not None and not item.is_purchased
+        if item.product_id is not None and not item.is_purchased
     }
     targets: list[ReplenishmentTarget] = []
     for level in stock_levels:
         shortfall = level.missing_to_minimum()
         if shortfall <= 0:
             continue
-        existing = items_by_ingredient.get(level.ingredient_id)
+        existing = items_by_product.get(level.product_id)
         if existing is None:
             targets.append(
                 ReplenishmentTarget(
-                    ingredient_id=level.ingredient_id,
+                    product_id=level.product_id,
                     amount=shortfall,
                     unit_code=level.unit.code,
                     existing_item_id=None,
@@ -46,7 +46,7 @@ def calculate_replenishment_targets(
             continue
         targets.append(
             ReplenishmentTarget(
-                ingredient_id=level.ingredient_id,
+                product_id=level.product_id,
                 amount=shortfall,
                 unit_code=level.unit.code,
                 existing_item_id=existing.id,

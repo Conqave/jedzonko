@@ -4,8 +4,8 @@ from decimal import Decimal
 
 @dataclass(frozen=True, slots=True)
 class MissingRecipeItem:
-    ingredient_id: int
-    ingredient_name: str
+    name: str
+    normalized_name: str
     amount: Decimal
     unit_code: str
 

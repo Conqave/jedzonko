@@ -6,6 +6,7 @@ from households.application.access import HouseholdAccessPolicy
 from households.application.errors import NotAHouseholdMemberError
 from shopping.application.errors import (
     InvalidShoppingItemError,
+    ProductNotFoundError,
     ShoppingListItemNotFoundError,
     ShoppingListNotFoundError,
 )
@@ -26,6 +27,7 @@ from shopping.tests.fakes import (
     FakeHouseholdInventoryReader,
     FakeHouseholdRepository,
     FakeInventoryWriter,
+    FakeProductResolver,
     FakeRecipeRequirementReader,
     FakeShoppingListRepository,
 )
@@ -80,31 +82,44 @@ def test_get_shopping_list_items_rejects_other_household() -> None:
         use_case.execute(MEMBER_ID, foreign_list_id)
 
 
-def test_add_item_rejects_both_ingredient_and_free_text() -> None:
+def test_add_item_rejects_both_product_and_free_text() -> None:
     repository = FakeShoppingListRepository()
     list_id = repository.seed_list(HOUSEHOLD_ID, "Lista", True)
-    use_case = AddShoppingListItem(repository, _access())
+    use_case = AddShoppingListItem(repository, _access(), FakeProductResolver())
 
     with pytest.raises(InvalidShoppingItemError):
         use_case.execute(MEMBER_ID, list_id, 5, "Ręczniki", Decimal("1"), "szt")
 
 
-def test_add_item_rejects_neither_ingredient_nor_free_text() -> None:
+def test_add_item_rejects_neither_product_nor_free_text() -> None:
     repository = FakeShoppingListRepository()
     list_id = repository.seed_list(HOUSEHOLD_ID, "Lista", True)
-    use_case = AddShoppingListItem(repository, _access())
+    use_case = AddShoppingListItem(repository, _access(), FakeProductResolver())
 
     with pytest.raises(InvalidShoppingItemError):
         use_case.execute(MEMBER_ID, list_id, None, None, Decimal("1"), "szt")
 
 
-def test_add_item_merges_into_existing_unpurchased_catalogue_row() -> None:
+def test_add_item_rejects_a_product_from_another_household() -> None:
     repository = FakeShoppingListRepository()
     list_id = repository.seed_list(HOUSEHOLD_ID, "Lista", True)
-    use_case = AddShoppingListItem(repository, _access())
+    products = FakeProductResolver()
+    foreign_product_id = products.resolve_product_id(99, "Mąka", "g")
+    use_case = AddShoppingListItem(repository, _access(), products)
 
-    first = use_case.execute(MEMBER_ID, list_id, 5, None, Decimal("100"), "g")
-    second = use_case.execute(MEMBER_ID, list_id, 5, None, Decimal("50"), "g")
+    with pytest.raises(ProductNotFoundError):
+        use_case.execute(MEMBER_ID, list_id, foreign_product_id, None, Decimal("1"), "g")
+
+
+def test_add_item_merges_into_existing_unpurchased_product_row() -> None:
+    repository = FakeShoppingListRepository()
+    list_id = repository.seed_list(HOUSEHOLD_ID, "Lista", True)
+    products = FakeProductResolver()
+    product_id = products.resolve_product_id(HOUSEHOLD_ID, "Mąka", "g")
+    use_case = AddShoppingListItem(repository, _access(), products)
+
+    first = use_case.execute(MEMBER_ID, list_id, product_id, None, Decimal("100"), "g")
+    second = use_case.execute(MEMBER_ID, list_id, product_id, None, Decimal("50"), "g")
 
     assert first.id == second.id
     assert second.quantity == Decimal("150")
@@ -114,7 +129,7 @@ def test_add_item_merges_into_existing_unpurchased_catalogue_row() -> None:
 def test_add_free_text_item_is_accepted() -> None:
     repository = FakeShoppingListRepository()
     list_id = repository.seed_list(HOUSEHOLD_ID, "Lista", True)
-    use_case = AddShoppingListItem(repository, _access())
+    use_case = AddShoppingListItem(repository, _access(), FakeProductResolver())
 
     item = use_case.execute(MEMBER_ID, list_id, None, "Ręczniki", Decimal("2"), None)
 
@@ -128,11 +143,13 @@ def test_add_missing_recipe_items_is_idempotent() -> None:
     recipes = FakeRecipeRequirementReader(
         [
             MissingRecipeItem(
-                ingredient_id=5, ingredient_name="Mąka", amount=Decimal("300"), unit_code="g"
+                name="Mąka", normalized_name="maka", amount=Decimal("300"), unit_code="g"
             )
         ]
     )
-    use_case = AddMissingRecipeItemsToShoppingList(repository, _access(), recipes)
+    use_case = AddMissingRecipeItemsToShoppingList(
+        repository, _access(), recipes, FakeProductResolver()
+    )
 
     first = use_case.execute(MEMBER_ID, list_id, 1, 4)
     second = use_case.execute(MEMBER_ID, list_id, 1, 4)
@@ -146,15 +163,17 @@ def test_add_missing_recipe_items_is_idempotent() -> None:
 def test_add_missing_recipe_items_raises_existing_quantity() -> None:
     repository = FakeShoppingListRepository()
     list_id = repository.seed_list(HOUSEHOLD_ID, "Lista", True)
-    repository.add_item(list_id, 5, None, Decimal("100"), "g")
+    products = FakeProductResolver()
+    product_id = products.resolve_product_id(HOUSEHOLD_ID, "Mąka", "g")
+    repository.add_item(list_id, product_id, None, Decimal("100"), "g")
     recipes = FakeRecipeRequirementReader(
         [
             MissingRecipeItem(
-                ingredient_id=5, ingredient_name="Mąka", amount=Decimal("300"), unit_code="g"
+                name="Mąka", normalized_name="maka", amount=Decimal("300"), unit_code="g"
             )
         ]
     )
-    use_case = AddMissingRecipeItemsToShoppingList(repository, _access(), recipes)
+    use_case = AddMissingRecipeItemsToShoppingList(repository, _access(), recipes, products)
 
     items = use_case.execute(MEMBER_ID, list_id, 1, 4)
 
@@ -169,8 +188,8 @@ def test_synchronize_minimum_stock_is_idempotent() -> None:
     inventory = FakeHouseholdInventoryReader(
         [
             InventoryStockLevel(
-                ingredient_id=5,
-                ingredient_name="Mąka",
+                product_id=5,
+                product_name="Mąka",
                 quantity=Decimal("100"),
                 minimum_quantity=Decimal("300"),
                 unit=UNITS["g"],
@@ -196,8 +215,8 @@ def test_synchronize_minimum_stock_targets_the_primary_list() -> None:
     inventory = FakeHouseholdInventoryReader(
         [
             InventoryStockLevel(
-                ingredient_id=5,
-                ingredient_name="Mąka",
+                product_id=5,
+                product_name="Mąka",
                 quantity=Decimal("0"),
                 minimum_quantity=Decimal("300"),
                 unit=UNITS["g"],

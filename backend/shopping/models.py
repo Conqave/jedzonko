@@ -2,8 +2,10 @@ from django.core.validators import MinValueValidator
 from django.db import models
 from django.db.models import Q
 
-from catalog.models import Ingredient, MeasurementUnit
-from households.models import Household
+from households.models import Household, Product
+from shared.measurement_units import MEASUREMENT_UNITS
+
+UNIT_CODE_CHOICES = [(item.code, item.name) for item in MEASUREMENT_UNITS]
 
 
 class ShoppingList(models.Model):
@@ -31,21 +33,15 @@ class PrimaryShoppingList(models.Model):
 
 class ShoppingListItem(models.Model):
     shopping_list = models.ForeignKey(ShoppingList, on_delete=models.CASCADE, related_name="items")
-    ingredient = models.ForeignKey(
-        Ingredient,
+    product = models.ForeignKey(
+        Product,
         null=True,
         blank=True,
         on_delete=models.PROTECT,
         related_name="shopping_list_items",
     )
     free_text = models.CharField(max_length=120, null=True, blank=True)
-    unit = models.ForeignKey(
-        MeasurementUnit,
-        null=True,
-        blank=True,
-        on_delete=models.PROTECT,
-        related_name="shopping_list_items",
-    )
+    unit_code = models.CharField(max_length=16, null=True, blank=True, choices=UNIT_CODE_CHOICES)
     quantity = models.DecimalField(
         max_digits=12, decimal_places=3, validators=[MinValueValidator(0)]
     )
@@ -55,14 +51,14 @@ class ShoppingListItem(models.Model):
         constraints = [
             models.CheckConstraint(
                 condition=(
-                    Q(ingredient__isnull=False, free_text__isnull=True)
-                    | Q(ingredient__isnull=True, free_text__isnull=False)
+                    Q(product__isnull=False, free_text__isnull=True)
+                    | Q(product__isnull=True, free_text__isnull=False)
                 ),
-                name="shopping_item_ingredient_xor_free_text",
+                name="shopping_item_product_xor_free_text",
             ),
             models.UniqueConstraint(
-                fields=["shopping_list", "ingredient"],
-                name="unique_pending_shopping_item_ingredient",
+                fields=["shopping_list", "product"],
+                name="unique_pending_shopping_item_product",
             ),
         ]
         ordering = ["created_at", "id"]
@@ -72,21 +68,15 @@ class PurchasedShoppingItem(models.Model):
     shopping_list = models.ForeignKey(
         ShoppingList, on_delete=models.CASCADE, related_name="purchased_items"
     )
-    ingredient = models.ForeignKey(
-        Ingredient,
+    product = models.ForeignKey(
+        Product,
         null=True,
         blank=True,
         on_delete=models.PROTECT,
         related_name="purchased_shopping_items",
     )
     free_text = models.CharField(max_length=120, null=True, blank=True)
-    unit = models.ForeignKey(
-        MeasurementUnit,
-        null=True,
-        blank=True,
-        on_delete=models.PROTECT,
-        related_name="purchased_shopping_items",
-    )
+    unit_code = models.CharField(max_length=16, null=True, blank=True, choices=UNIT_CODE_CHOICES)
     quantity = models.DecimalField(
         max_digits=12, decimal_places=3, validators=[MinValueValidator(0)]
     )
@@ -97,10 +87,10 @@ class PurchasedShoppingItem(models.Model):
         constraints = [
             models.CheckConstraint(
                 condition=(
-                    Q(ingredient__isnull=False, free_text__isnull=True)
-                    | Q(ingredient__isnull=True, free_text__isnull=False)
+                    Q(product__isnull=False, free_text__isnull=True)
+                    | Q(product__isnull=True, free_text__isnull=False)
                 ),
-                name="purchased_shopping_item_ingredient_xor_free_text",
+                name="purchased_shopping_item_product_xor_free_text",
             )
         ]
         indexes = [models.Index(fields=["shopping_list", "purchased_at"])]

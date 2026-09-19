@@ -4,9 +4,8 @@ from decimal import Decimal
 from django.db.models import Count, Exists, OuterRef
 from django.utils import timezone
 
-from catalog.domain.measurement import MeasurementDimension
-from catalog.domain.measurement import MeasurementUnit as UnitValue
-from catalog.models import MeasurementUnit
+from shared.measurement import MeasurementUnit
+from shared.measurement_units import find_measurement_unit
 from shopping.application.errors import (
     InvalidShoppingItemError,
     ShoppingListItemNotFoundError,
@@ -82,35 +81,31 @@ class DjangoShoppingListRepository(ShoppingListRepository):
     def list_items(self, list_id: int) -> list[ShoppingItemSnapshot]:
         ordered: list[tuple[datetime, int, ShoppingItemSnapshot]] = []
         for row in ShoppingListItem.objects.filter(shopping_list_id=list_id).select_related(
-            "ingredient", "unit"
+            "product"
         ):
             ordered.append((row.created_at, row.pk, self._to_item_snapshot(row)))
         for purchased in PurchasedShoppingItem.objects.filter(
             shopping_list_id=list_id
-        ).select_related("ingredient", "unit"):
+        ).select_related("product"):
             ordered.append(
                 (purchased.created_at, purchased.pk, self._to_purchased_snapshot(purchased))
             )
         return [entry[2] for entry in sorted(ordered, key=lambda entry: (entry[0], entry[1]))]
 
     def list_pending_items(self, list_id: int) -> list[ShoppingItemSnapshot]:
-        rows = ShoppingListItem.objects.filter(shopping_list_id=list_id).select_related(
-            "ingredient", "unit"
-        )
+        rows = ShoppingListItem.objects.filter(shopping_list_id=list_id).select_related("product")
         return [self._to_item_snapshot(row) for row in rows]
 
     def find_pending_item(self, item_id: int) -> ShoppingItemSnapshot | None:
-        row = (
-            ShoppingListItem.objects.filter(pk=item_id).select_related("ingredient", "unit").first()
-        )
+        row = ShoppingListItem.objects.filter(pk=item_id).select_related("product").first()
         return None if row is None else self._to_item_snapshot(row)
 
-    def find_pending_item_by_ingredient(
-        self, list_id: int, ingredient_id: int
+    def find_pending_item_by_product(
+        self, list_id: int, product_id: int
     ) -> ShoppingItemSnapshot | None:
         row = (
-            ShoppingListItem.objects.filter(shopping_list_id=list_id, ingredient_id=ingredient_id)
-            .select_related("ingredient", "unit")
+            ShoppingListItem.objects.filter(shopping_list_id=list_id, product_id=product_id)
+            .select_related("product")
             .first()
         )
         return None if row is None else self._to_item_snapshot(row)
@@ -118,7 +113,7 @@ class DjangoShoppingListRepository(ShoppingListRepository):
     def add_item(
         self,
         list_id: int,
-        ingredient_id: int | None,
+        product_id: int | None,
         free_text: str | None,
         quantity: Decimal,
         unit_code: str | None,
@@ -127,9 +122,9 @@ class DjangoShoppingListRepository(ShoppingListRepository):
             raise ShoppingListNotFoundError
         item = ShoppingListItem.objects.create(
             shopping_list_id=list_id,
-            ingredient_id=ingredient_id,
+            product_id=product_id,
             free_text=free_text,
-            unit=self._find_unit(unit_code),
+            unit_code=self._validated_unit_code(unit_code),
             quantity=quantity,
         )
         return self._read_item(item.pk)
@@ -138,16 +133,14 @@ class DjangoShoppingListRepository(ShoppingListRepository):
         self, item_id: int, quantity: Decimal, unit_code: str | None
     ) -> ShoppingItemSnapshot:
         updated = ShoppingListItem.objects.filter(pk=item_id).update(
-            quantity=quantity, unit=self._find_unit(unit_code)
+            quantity=quantity, unit_code=self._validated_unit_code(unit_code)
         )
         if updated == 0:
             raise ShoppingListItemNotFoundError
         return self._read_item(item_id)
 
     def purchase_item(self, item_id: int) -> ShoppingItemSnapshot:
-        row = (
-            ShoppingListItem.objects.filter(pk=item_id).select_related("ingredient", "unit").first()
-        )
+        row = ShoppingListItem.objects.filter(pk=item_id).select_related("product").first()
         if row is None:
             raise ShoppingListItemNotFoundError
         deleted, _ = ShoppingListItem.objects.filter(pk=item_id).delete()
@@ -155,15 +148,15 @@ class DjangoShoppingListRepository(ShoppingListRepository):
             raise ShoppingListItemNotFoundError
         purchased = PurchasedShoppingItem.objects.create(
             shopping_list_id=row.shopping_list_id,
-            ingredient_id=row.ingredient_id,
+            product_id=row.product_id,
             free_text=row.free_text,
-            unit_id=row.unit_id,
+            unit_code=row.unit_code,
             quantity=row.quantity,
             created_at=row.created_at,
             purchased_at=timezone.now(),
         )
         return self._to_purchased_snapshot(
-            PurchasedShoppingItem.objects.select_related("ingredient", "unit").get(pk=purchased.pk)
+            PurchasedShoppingItem.objects.select_related("product").get(pk=purchased.pk)
         )
 
     def delete_item(self, item_id: int) -> None:
@@ -172,27 +165,25 @@ class DjangoShoppingListRepository(ShoppingListRepository):
             raise ShoppingListItemNotFoundError
 
     def _read_item(self, item_id: int) -> ShoppingItemSnapshot:
-        row = ShoppingListItem.objects.select_related("ingredient", "unit").get(pk=item_id)
+        row = ShoppingListItem.objects.select_related("product").get(pk=item_id)
         return self._to_item_snapshot(row)
 
     @staticmethod
-    def _find_unit(unit_code: str | None) -> MeasurementUnit | None:
+    def _validated_unit_code(unit_code: str | None) -> str | None:
         if unit_code is None:
             return None
-        unit = MeasurementUnit.objects.filter(code=unit_code).first()
+        if find_measurement_unit(unit_code) is None:
+            raise InvalidShoppingItemError
+        return unit_code
+
+    @staticmethod
+    def _to_unit_value(unit_code: str | None) -> MeasurementUnit | None:
+        if unit_code is None:
+            return None
+        unit = find_measurement_unit(unit_code)
         if unit is None:
             raise InvalidShoppingItemError
         return unit
-
-    @staticmethod
-    def _to_unit_value(unit: MeasurementUnit | None) -> UnitValue | None:
-        if unit is None:
-            return None
-        return UnitValue(
-            code=unit.code,
-            dimension=MeasurementDimension(unit.dimension),
-            factor_to_base=unit.factor_to_base,
-        )
 
     @staticmethod
     def _to_list_summary(row: ShoppingList, is_primary: bool) -> ShoppingListSummary:
@@ -207,11 +198,11 @@ class DjangoShoppingListRepository(ShoppingListRepository):
     def _to_item_snapshot(cls, row: ShoppingListItem) -> ShoppingItemSnapshot:
         return ShoppingItemSnapshot(
             id=row.pk,
-            ingredient_id=row.ingredient_id,
-            ingredient_name=None if row.ingredient is None else row.ingredient.name,
+            product_id=row.product_id,
+            product_name=None if row.product is None else row.product.name,
             free_text=row.free_text,
             quantity=row.quantity,
-            unit=cls._to_unit_value(row.unit),
+            unit=cls._to_unit_value(row.unit_code),
             is_purchased=False,
         )
 
@@ -219,10 +210,10 @@ class DjangoShoppingListRepository(ShoppingListRepository):
     def _to_purchased_snapshot(cls, row: PurchasedShoppingItem) -> ShoppingItemSnapshot:
         return ShoppingItemSnapshot(
             id=row.pk,
-            ingredient_id=row.ingredient_id,
-            ingredient_name=None if row.ingredient is None else row.ingredient.name,
+            product_id=row.product_id,
+            product_name=None if row.product is None else row.product.name,
             free_text=row.free_text,
             quantity=row.quantity,
-            unit=cls._to_unit_value(row.unit),
+            unit=cls._to_unit_value(row.unit_code),
             is_purchased=True,
         )

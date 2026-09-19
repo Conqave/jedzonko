@@ -12,7 +12,7 @@ class RecipeStepInput:
 
 @dataclass(frozen=True, slots=True)
 class RecipeIngredientInput:
-    ingredient_id: int
+    name: str
     quantity: Decimal
     unit_code: str
 

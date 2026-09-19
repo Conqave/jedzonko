@@ -101,7 +101,5 @@ class FakeHouseholdInventoryConsumer(HouseholdInventoryConsumer):
     def __init__(self) -> None:
         self.consumed: list[tuple[int, int, Decimal, str]] = []
 
-    def consume(
-        self, household_id: int, ingredient_id: int, amount: Decimal, unit_code: str
-    ) -> None:
-        self.consumed.append((household_id, ingredient_id, amount, unit_code))
+    def consume(self, household_id: int, product_id: int, amount: Decimal, unit_code: str) -> None:
+        self.consumed.append((household_id, product_id, amount, unit_code))

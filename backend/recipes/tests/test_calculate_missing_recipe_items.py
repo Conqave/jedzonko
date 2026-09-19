@@ -44,7 +44,7 @@ def _build(
 
 
 def test_missing_amount_follows_requested_servings() -> None:
-    repository = FakeRecipeRepository([_recipe(2)], {1: [make_requirement(1, "jajko", "2", GRAM)]})
+    repository = FakeRecipeRepository([_recipe(2)], {1: [make_requirement("jajko", "2", GRAM)]})
     use_case = _build(repository, [make_snapshot(1, "jajko", "3", GRAM)])
 
     items = use_case.execute(5, 7, 1, 4)

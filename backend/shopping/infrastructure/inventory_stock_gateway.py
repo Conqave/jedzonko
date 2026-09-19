@@ -8,8 +8,8 @@ class InventoryStockGateway(HouseholdInventoryReader):
         snapshots = build_get_household_inventory().execute(user_id, household_id)
         return [
             InventoryStockLevel(
-                ingredient_id=snapshot.ingredient_id,
-                ingredient_name=snapshot.ingredient_name,
+                product_id=snapshot.product_id,
+                product_name=snapshot.product_name,
                 quantity=snapshot.quantity,
                 minimum_quantity=snapshot.minimum_quantity,
                 unit=snapshot.unit,

@@ -39,8 +39,8 @@ class ShoppingListRepository(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def find_pending_item_by_ingredient(
-        self, list_id: int, ingredient_id: int
+    def find_pending_item_by_product(
+        self, list_id: int, product_id: int
     ) -> ShoppingItemSnapshot | None:
         raise NotImplementedError
 
@@ -48,7 +48,7 @@ class ShoppingListRepository(ABC):
     def add_item(
         self,
         list_id: int,
-        ingredient_id: int | None,
+        product_id: int | None,
         free_text: str | None,
         quantity: Decimal,
         unit_code: str | None,

@@ -46,24 +46,17 @@
             map-options
             label="Rodzaj pozycji"
             :options="[
-              { label: 'Składnik z katalogu', value: 'ingredient' },
+              { label: 'Produkt gospodarstwa', value: 'product' },
               { label: 'Tekst własny', value: 'free_text' },
             ]"
           />
         </div>
         <div class="col-12 col-sm-4">
-          <q-select
-            v-if="itemMode === 'ingredient'"
-            v-model="form.ingredient"
-            dense
-            outlined
-            use-input
-            input-debounce="300"
-            label="Składnik"
-            option-label="name"
-            :options="ingredientOptions"
-            :loading="searchingIngredients"
-            @filter="filterIngredients"
+          <product-picker
+            v-if="itemMode === 'product' && households.selectedId !== null"
+            v-model="form.product"
+            :household-id="households.selectedId"
+            :units="units"
           />
           <q-input v-else v-model="form.freeText" dense outlined label="Pozycja" />
         </div>
@@ -117,7 +110,7 @@
           </q-item-section>
           <q-item-section>
             <q-item-label :class="item.is_purchased ? 'text-strike text-grey' : ''">
-              {{ item.ingredient_name ?? item.free_text }}
+              {{ item.product_name ?? item.free_text }}
             </q-item-label>
             <q-item-label caption>{{ item.quantity }} {{ item.unit_code ?? '' }}</q-item-label>
           </q-item-section>
@@ -163,8 +156,9 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
 import { useQuasar } from 'quasar';
-import { fetchUnits, searchIngredients } from '@/features/catalog/api';
-import type { Ingredient, MeasurementUnit } from '@/features/catalog/models';
+import { fetchUnits } from '@/features/products/api';
+import type { MeasurementUnit, Product } from '@/features/products/models';
+import ProductPicker from '@/features/products/ProductPicker.vue';
 import {
   addShoppingItem,
   buyShoppingItem,
@@ -192,16 +186,14 @@ const savingItem = ref(false);
 const createListDialogOpen = ref(false);
 const newListName = ref('');
 const creatingList = ref(false);
-const itemMode = ref<'ingredient' | 'free_text'>('ingredient');
-const ingredientOptions = ref<Ingredient[]>([]);
-const searchingIngredients = ref(false);
+const itemMode = ref<'product' | 'free_text'>('product');
 
 const form = ref<{
-  ingredient: Ingredient | null;
+  product: Product | null;
   freeText: string;
   quantity: string;
   unitCode: string | null;
-}>({ ingredient: null, freeText: '', quantity: '', unitCode: null });
+}>({ product: null, freeText: '', quantity: '', unitCode: null });
 
 const listOptions = computed(() =>
   lists.value.map((list) => ({
@@ -262,25 +254,6 @@ async function loadUnits(): Promise<void> {
   }
 }
 
-function filterIngredients(search: string, update: (callback: () => void) => void): void {
-  searchingIngredients.value = true;
-  void searchIngredients(search)
-    .then((found) => {
-      update(() => {
-        ingredientOptions.value = found;
-      });
-    })
-    .catch((error: unknown) => {
-      update(() => {
-        ingredientOptions.value = [];
-      });
-      notifyError(error);
-    })
-    .finally(() => {
-      searchingIngredients.value = false;
-    });
-}
-
 function openCreateList(): void {
   newListName.value = '';
   createListDialogOpen.value = true;
@@ -308,10 +281,10 @@ async function submitItem(): Promise<void> {
   if (selectedListId.value === null) {
     return;
   }
-  const ingredient = form.value.ingredient;
+  const product = form.value.product;
   const freeText = form.value.freeText.trim();
-  if (itemMode.value === 'ingredient' && ingredient === null) {
-    quasar.notify({ type: 'warning', message: 'Wybierz składnik.' });
+  if (itemMode.value === 'product' && product === null) {
+    quasar.notify({ type: 'warning', message: 'Wybierz produkt.' });
     return;
   }
   if (itemMode.value === 'free_text' && freeText === '') {
@@ -321,14 +294,14 @@ async function submitItem(): Promise<void> {
   savingItem.value = true;
   try {
     const item = await addShoppingItem(selectedListId.value, {
-      ...(itemMode.value === 'ingredient' && ingredient !== null
-        ? { ingredient_id: ingredient.id }
+      ...(itemMode.value === 'product' && product !== null
+        ? { product_id: product.id }
         : { free_text: freeText }),
       quantity: form.value.quantity.trim(),
       ...(form.value.unitCode === null ? {} : { unit_code: form.value.unitCode }),
     });
     items.value = [...items.value, item];
-    form.value = { ingredient: null, freeText: '', quantity: '', unitCode: null };
+    form.value = { product: null, freeText: '', quantity: '', unitCode: null };
   } catch (error) {
     notifyError(error);
   } finally {
@@ -356,7 +329,7 @@ function confirmDelete(item: ShoppingItem): void {
   quasar
     .dialog({
       title: 'Usunąć pozycję?',
-      message: `Czy usunąć ${item.ingredient_name ?? item.free_text ?? ''} z listy?`,
+      message: `Czy usunąć ${item.product_name ?? item.free_text ?? ''} z listy?`,
       cancel: true,
       persistent: true,
     })

@@ -2,8 +2,8 @@ from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.db import models
 
-from catalog.models import Ingredient, MeasurementUnit
 from recipes.domain.difficulty import RecipeDifficulty
+from shared.measurement_units import MEASUREMENT_UNITS
 
 
 class RecipeCategory(models.Model):
@@ -74,11 +74,10 @@ class RecipeStep(models.Model):
 
 class RecipeIngredient(models.Model):
     recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE, related_name="ingredients")
-    ingredient = models.ForeignKey(
-        Ingredient, on_delete=models.PROTECT, related_name="recipe_ingredients"
-    )
-    unit = models.ForeignKey(
-        MeasurementUnit, on_delete=models.PROTECT, related_name="recipe_ingredients"
+    name = models.CharField(max_length=120)
+    normalized_name = models.CharField(max_length=120)
+    unit_code = models.CharField(
+        max_length=16, choices=[(item.code, item.name) for item in MEASUREMENT_UNITS]
     )
     quantity = models.DecimalField(
         max_digits=12, decimal_places=3, validators=[MinValueValidator(0)]
@@ -87,8 +86,11 @@ class RecipeIngredient(models.Model):
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=["recipe", "ingredient"], name="unique_recipe_ingredient"
+                fields=["recipe", "normalized_name"], name="unique_recipe_ingredient"
             )
         ]
-        indexes = [models.Index(fields=["ingredient"])]
-        ordering = ["recipe_id", "ingredient_id"]
+        indexes = [models.Index(fields=["normalized_name"])]
+        ordering = ["recipe_id", "name"]
+
+    def __str__(self) -> str:
+        return self.name
