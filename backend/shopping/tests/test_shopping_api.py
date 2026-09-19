@@ -2,6 +2,8 @@ from decimal import Decimal
 
 import pytest
 from django.contrib.auth.models import User
+from django.db import transaction
+from django.db.utils import IntegrityError
 from rest_framework.test import APIClient
 
 from catalog.domain.measurement import MeasurementDimension
@@ -14,7 +16,12 @@ from shopping.application.use_cases.add_missing_recipe_items_to_shopping_list im
 )
 from shopping.composition import build_shopping_list_repository
 from shopping.domain.missing_recipe_item import MissingRecipeItem
-from shopping.models import ShoppingList, ShoppingListItem
+from shopping.models import (
+    PrimaryShoppingList,
+    PurchasedShoppingItem,
+    ShoppingList,
+    ShoppingListItem,
+)
 from shopping.presentation import views
 from shopping.tests.fakes import FakeRecipeRequirementReader
 
@@ -110,6 +117,7 @@ def test_list_endpoint_creates_the_primary_list(
     ]
     member_client.get("/api/shopping/lists/", {"household_id": household.pk})
     assert ShoppingList.objects.filter(household=household).count() == 1
+    assert PrimaryShoppingList.objects.filter(household=household).count() == 1
 
 
 def test_non_member_cannot_read_lists(outsider_client: APIClient, household: Household) -> None:
@@ -256,7 +264,8 @@ def test_buying_adds_quantity_to_inventory(
     assert response.status_code == 204
     stored = InventoryItem.objects.get(household=household, ingredient=flour)
     assert stored.quantity == Decimal("250.000")
-    assert ShoppingListItem.objects.get(pk=item_id).is_purchased is True
+    assert ShoppingListItem.objects.filter(pk=item_id).exists() is False
+    assert PurchasedShoppingItem.objects.filter(shopping_list__household=household).count() == 1
 
 
 def test_buying_twice_is_rejected(
@@ -273,8 +282,8 @@ def test_buying_twice_is_rejected(
 
     response = member_client.post(f"/api/shopping/items/{item_id}/buy/")
 
-    assert response.status_code == 400
-    assert response.json()["code"] == "already_purchased"
+    assert response.status_code == 404
+    assert response.json()["code"] == "shopping_item_not_found"
     assert InventoryItem.objects.get(household=household, ingredient=flour).quantity == Decimal(
         "250.000"
     )
@@ -363,3 +372,75 @@ def test_synchronize_minimum_stock_is_idempotent(
     assert ShoppingListItem.objects.filter(shopping_list_id=list_id).count() == 1
     assert second.json()[0]["quantity"] == "200.000"
     assert second.json()[0]["unit_code"] == "g"
+
+
+def test_purchased_items_stay_visible_and_can_be_rebought(
+    member_client: APIClient, household: Household, flour: Ingredient
+) -> None:
+    list_id = _primary_list_id(member_client, household)
+    first = member_client.post(
+        f"/api/shopping/lists/{list_id}/items/",
+        {"ingredient_id": flour.pk, "quantity": "250.000", "unit_code": "g"},
+        format="json",
+    )
+    member_client.post(f"/api/shopping/items/{first.json()['id']}/buy/")
+
+    second = member_client.post(
+        f"/api/shopping/lists/{list_id}/items/",
+        {"ingredient_id": flour.pk, "quantity": "100.000", "unit_code": "g"},
+        format="json",
+    )
+
+    assert second.status_code == 201
+    items = member_client.get(f"/api/shopping/lists/{list_id}/items/").json()
+    assert [item["is_purchased"] for item in items] == [True, False]
+    assert [item["quantity"] for item in items] == ["250.000", "100.000"]
+
+
+def test_database_rejects_a_second_pending_row_for_the_same_ingredient(
+    household: Household, flour: Ingredient, gram: MeasurementUnit
+) -> None:
+    shopping_list = ShoppingList.objects.create(household=household, name="Lista")
+    ShoppingListItem.objects.create(
+        shopping_list=shopping_list, ingredient=flour, unit=gram, quantity=Decimal("1.000")
+    )
+
+    with pytest.raises(IntegrityError), transaction.atomic():
+        ShoppingListItem.objects.create(
+            shopping_list=shopping_list, ingredient=flour, unit=gram, quantity=Decimal("2.000")
+        )
+
+
+def test_database_allows_several_pending_free_text_rows(
+    household: Household,
+) -> None:
+    shopping_list = ShoppingList.objects.create(household=household, name="Lista")
+    ShoppingListItem.objects.create(
+        shopping_list=shopping_list, free_text="Ręczniki", quantity=Decimal("1.000")
+    )
+    ShoppingListItem.objects.create(
+        shopping_list=shopping_list, free_text="Mydło", quantity=Decimal("1.000")
+    )
+
+    assert ShoppingListItem.objects.filter(shopping_list=shopping_list).count() == 2
+
+
+def test_database_rejects_a_second_primary_list_for_one_household(
+    household: Household,
+) -> None:
+    first = ShoppingList.objects.create(household=household, name="Lista")
+    second = ShoppingList.objects.create(household=household, name="Inna")
+    PrimaryShoppingList.objects.create(household=household, shopping_list=first)
+
+    with pytest.raises(IntegrityError), transaction.atomic():
+        PrimaryShoppingList.objects.create(household=household, shopping_list=second)
+
+
+def test_database_rejects_one_list_being_primary_for_two_households(
+    household: Household, other_household: Household
+) -> None:
+    shopping_list = ShoppingList.objects.create(household=household, name="Lista")
+    PrimaryShoppingList.objects.create(household=household, shopping_list=shopping_list)
+
+    with pytest.raises(IntegrityError), transaction.atomic():
+        PrimaryShoppingList.objects.create(household=other_household, shopping_list=shopping_list)

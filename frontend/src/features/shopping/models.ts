@@ -6,7 +6,7 @@ export interface ShoppingList {
 }
 
 export interface ShoppingItem {
-  id: number;
+  id: number | null;
   ingredient_id: number | null;
   ingredient_name: string | null;
   free_text: string | null;

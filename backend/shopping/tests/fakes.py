@@ -102,24 +102,26 @@ class FakeShoppingListRepository(ShoppingListRepository):
 
     def find_household_id_for_item(self, item_id: int) -> int | None:
         found = self.items.get(item_id)
-        if found is None:
+        if found is None or found[1].is_purchased:
             return None
         return self.find_household_id_for_list(found[0])
 
     def list_items(self, list_id: int) -> list[ShoppingItemSnapshot]:
         return [value[1] for value in self.items.values() if value[0] == list_id]
 
-    def list_unpurchased_items(self, list_id: int) -> list[ShoppingItemSnapshot]:
+    def list_pending_items(self, list_id: int) -> list[ShoppingItemSnapshot]:
         return [item for item in self.list_items(list_id) if not item.is_purchased]
 
-    def find_item(self, item_id: int) -> ShoppingItemSnapshot | None:
+    def find_pending_item(self, item_id: int) -> ShoppingItemSnapshot | None:
         found = self.items.get(item_id)
-        return None if found is None else found[1]
+        if found is None or found[1].is_purchased:
+            return None
+        return found[1]
 
-    def find_unpurchased_item_by_ingredient(
+    def find_pending_item_by_ingredient(
         self, list_id: int, ingredient_id: int
     ) -> ShoppingItemSnapshot | None:
-        for item in self.list_unpurchased_items(list_id):
+        for item in self.list_pending_items(list_id):
             if item.ingredient_id == ingredient_id:
                 return item
         return None
@@ -166,7 +168,7 @@ class FakeShoppingListRepository(ShoppingListRepository):
         self.items[item_id] = (found[0], updated)
         return updated
 
-    def mark_purchased(self, item_id: int) -> ShoppingItemSnapshot:
+    def purchase_item(self, item_id: int) -> ShoppingItemSnapshot:
         found = self.items.get(item_id)
         if found is None or found[1].is_purchased:
             raise ShoppingListItemNotFoundError
