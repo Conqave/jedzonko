@@ -1,6 +1,8 @@
 import { api } from '@/boot/api';
 import type {
   ExternalRecipe,
+  ExternalRecipePage,
+  ExternalRecipeSuggestionPage,
   RecipeDetail,
   RecipeInput,
   RecipeShortfall,
@@ -32,6 +34,26 @@ export async function fetchMissingItems(
 ): Promise<RecipeShortfall> {
   const response = await api.get<RecipeShortfall>(`/recipes/${recipeId}/missing-items/`, {
     params: { household_id: householdId, servings },
+  });
+  return response.data;
+}
+
+export async function searchExternalRecipes(
+  query: string,
+  page: number,
+): Promise<ExternalRecipePage> {
+  const response = await api.get<ExternalRecipePage>('/recipes/external/', {
+    params: { query, page },
+  });
+  return response.data;
+}
+
+export async function fetchExternalSuggestions(
+  householdId: number,
+  page: number,
+): Promise<ExternalRecipeSuggestionPage> {
+  const response = await api.get<ExternalRecipeSuggestionPage>('/recipes/external/suggestions/', {
+    params: { household_id: householdId, page },
   });
   return response.data;
 }

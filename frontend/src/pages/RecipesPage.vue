@@ -13,6 +13,7 @@
     <q-tabs v-model="tab" align="left" class="q-mb-md">
       <q-tab name="suggestions" label="Propozycje z zapasów" no-caps />
       <q-tab name="all" label="Wszystkie przepisy" no-caps />
+      <q-tab name="external" label="Ania Gotuje" no-caps />
     </q-tabs>
 
     <q-tab-panels v-model="tab" animated>
@@ -101,6 +102,99 @@
           </q-item>
         </q-list>
       </q-tab-panel>
+
+      <q-tab-panel name="external" class="q-pa-none">
+        <q-form class="row q-col-gutter-sm items-start q-mb-md" @submit.prevent="searchExternal">
+          <div class="col-12 col-sm-7">
+            <q-input
+              v-model="externalQuery"
+              dense
+              outlined
+              clearable
+              label="Szukaj przepisu w Ania Gotuje"
+            />
+          </div>
+          <div class="col-auto">
+            <q-btn
+              type="submit"
+              color="primary"
+              label="Szukaj"
+              no-caps
+              :loading="loadingExternal"
+            />
+          </div>
+          <div class="col-auto">
+            <q-btn
+              outline
+              color="primary"
+              label="Z moich zapasów"
+              no-caps
+              :disable="households.selectedId === null"
+              :loading="loadingExternal"
+              @click="loadExternalSuggestions"
+            />
+          </div>
+        </q-form>
+
+        <q-banner v-if="externalIngredients.length > 0" class="bg-grey-3 q-mb-md">
+          Szukam przepisów zawierających jednocześnie:
+          <q-chip
+            v-for="ingredient in externalIngredients"
+            :key="ingredient"
+            dense
+            square
+            color="primary"
+            text-color="white"
+          >
+            {{ ingredient }}
+          </q-chip>
+          <template v-if="externalInventoryCount > externalIngredients.length">
+            — to {{ externalIngredients.length }} z {{ externalInventoryCount }} produktów w
+            zapasach; źródło wyszukuje po wszystkich naraz, więc pytamy o część.
+          </template>
+        </q-banner>
+
+        <q-banner v-if="externalLoaded && externalRecipes.length === 0" class="bg-grey-3">
+          Brak przepisów dla tego zapytania.
+        </q-banner>
+
+        <q-list v-else-if="externalRecipes.length > 0" bordered separator>
+          <q-item
+            v-for="recipe in externalRecipes"
+            :key="recipe.reference"
+            clickable
+            :to="{ name: 'external-recipe', params: { reference: recipe.reference } }"
+          >
+            <q-item-section avatar>
+              <q-avatar rounded size="56px">
+                <img v-if="recipe.image_url !== null" :src="recipe.image_url" :alt="recipe.name" />
+                <span v-else>🍽️</span>
+              </q-avatar>
+            </q-item-section>
+            <q-item-section>
+              <q-item-label>{{ recipe.name }}</q-item-label>
+              <q-item-label caption lines="2">{{ recipe.description }}</q-item-label>
+              <q-item-label caption>
+                <q-badge color="deep-orange" :label="recipe.source_name" />
+                <span v-if="recipe.total_time_minutes !== null">
+                  · {{ recipe.total_time_minutes }} min
+                </span>
+                <span v-if="recipe.yield_label"> · {{ recipe.yield_label }}</span>
+              </q-item-label>
+            </q-item-section>
+          </q-item>
+        </q-list>
+
+        <div v-if="externalTotalPages > 1" class="row justify-center q-mt-md">
+          <q-pagination
+            v-model="externalPageNumber"
+            :max="externalTotalPages"
+            :max-pages="7"
+            boundary-numbers
+            @update:model-value="reloadExternalPage"
+          />
+        </div>
+      </q-tab-panel>
     </q-tab-panels>
   </q-page>
 </template>
@@ -109,9 +203,19 @@
 import { formatQuantity } from '@/features/shared/formatQuantity';
 import { computed, onMounted, ref, watch } from 'vue';
 import { useQuasar } from 'quasar';
-import { fetchRecipe, fetchRecipes, fetchSuggestions } from '@/features/recipes/api';
+import {
+  fetchExternalSuggestions,
+  fetchRecipe,
+  fetchRecipes,
+  fetchSuggestions,
+  searchExternalRecipes,
+} from '@/features/recipes/api';
 import { describeRecipeError } from '@/features/recipes/errors';
-import type { RecipeSuggestion, RecipeSummary } from '@/features/recipes/models';
+import type {
+  ExternalRecipeSummary,
+  RecipeSuggestion,
+  RecipeSummary,
+} from '@/features/recipes/models';
 import { addRecipeItems, fetchShoppingLists } from '@/features/shopping/api';
 import { describeShoppingError } from '@/features/shopping/errors';
 import { useHouseholdStore } from '@/features/households/store';
@@ -119,13 +223,67 @@ import { useHouseholdStore } from '@/features/households/store';
 const quasar = useQuasar();
 const households = useHouseholdStore();
 
-const tab = ref<'suggestions' | 'all'>('suggestions');
+const tab = ref<'suggestions' | 'all' | 'external'>('suggestions');
 const suggestions = ref<RecipeSuggestion[]>([]);
 const recipes = ref<RecipeSummary[]>([]);
 const loadingSuggestions = ref(false);
 const loadingRecipes = ref(false);
 const addingRecipeId = ref<number | null>(null);
 const onlyReady = ref(false);
+
+const externalQuery = ref('');
+const externalRecipes = ref<ExternalRecipeSummary[]>([]);
+const externalIngredients = ref<string[]>([]);
+const externalInventoryCount = ref(0);
+const externalPageNumber = ref(1);
+const externalTotalPages = ref(0);
+const externalFromInventory = ref(false);
+const loadingExternal = ref(false);
+const externalLoaded = ref(false);
+
+async function loadExternalPage(page: number): Promise<void> {
+  loadingExternal.value = true;
+  try {
+    if (externalFromInventory.value) {
+      if (households.selectedId === null) {
+        return;
+      }
+      const suggested = await fetchExternalSuggestions(households.selectedId, page - 1);
+      externalRecipes.value = suggested.recipes;
+      externalIngredients.value = suggested.ingredient_names;
+      externalInventoryCount.value = suggested.inventory_item_count;
+      externalTotalPages.value = suggested.total_pages;
+    } else {
+      const found = await searchExternalRecipes(externalQuery.value.trim(), page - 1);
+      externalRecipes.value = found.recipes;
+      externalIngredients.value = [];
+      externalInventoryCount.value = 0;
+      externalTotalPages.value = found.total_pages;
+    }
+    externalLoaded.value = true;
+  } catch (error) {
+    externalRecipes.value = [];
+    quasar.notify({ type: 'negative', message: describeRecipeError(error) });
+  } finally {
+    loadingExternal.value = false;
+  }
+}
+
+async function searchExternal(): Promise<void> {
+  externalFromInventory.value = false;
+  externalPageNumber.value = 1;
+  await loadExternalPage(1);
+}
+
+async function loadExternalSuggestions(): Promise<void> {
+  externalFromInventory.value = true;
+  externalPageNumber.value = 1;
+  await loadExternalPage(1);
+}
+
+async function reloadExternalPage(page: number): Promise<void> {
+  await loadExternalPage(page);
+}
 
 const visibleSuggestions = computed<RecipeSuggestion[]>(() =>
   onlyReady.value ? suggestions.value.filter((item) => item.is_ready) : suggestions.value,
