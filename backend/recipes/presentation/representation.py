@@ -3,8 +3,9 @@ from recipes.application.use_cases.suggest_external_recipes_from_inventory impor
 )
 from recipes.domain.external import (
     ExternalRecipeDetail,
-    ExternalRecipePage,
+    ExternalRecipeMatch,
     ExternalRecipeSummary,
+    MatchedExternalRecipePage,
 )
 from recipes.domain.models import RecipeDetail, RecipeSummary
 from recipes.domain.suggestion import MissingRecipeItem, RecipeShortfall, RecipeSuggestion
@@ -68,12 +69,20 @@ def represent_external_summary(summary: ExternalRecipeSummary) -> dict[str, obje
         "image_url": summary.image_url,
         "yield_label": summary.yield_label,
         "total_time_minutes": summary.total_time_minutes,
+        "tags": list(summary.tag_names),
     }
 
 
-def represent_external_page(page: ExternalRecipePage) -> dict[str, object]:
+def represent_external_match(match: ExternalRecipeMatch) -> dict[str, object]:
+    payload = represent_external_summary(match.summary)
+    payload["matched_product_names"] = list(match.matched_product_names)
+    payload["matched_product_count"] = len(match.matched_product_names)
+    return payload
+
+
+def represent_external_page(page: MatchedExternalRecipePage) -> dict[str, object]:
     return {
-        "recipes": [represent_external_summary(item) for item in page.recipes],
+        "recipes": [represent_external_match(match) for match in page.matches],
         "page": page.page,
         "page_size": page.page_size,
         "total_count": page.total_count,
@@ -101,7 +110,7 @@ def represent_external_recipe(detail: ExternalRecipeDetail) -> dict[str, object]
         "total_time_minutes": summary.total_time_minutes,
         "preparation_time_minutes": detail.preparation_time_minutes,
         "cooking_time_minutes": detail.cooking_time_minutes,
-        "tags": list(detail.tag_names),
+        "tags": list(summary.tag_names),
         "steps": list(detail.steps),
         "ingredients": [
             {

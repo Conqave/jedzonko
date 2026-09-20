@@ -24,6 +24,7 @@ def _page() -> ExternalRecipePage:
         image_url=None,
         yield_label="",
         total_time_minutes=15,
+        tag_names=("jajko",),
     )
     return ExternalRecipePage(
         recipes=(summary,), page=0, page_size=12, total_count=1, total_pages=1
@@ -51,6 +52,7 @@ def test_pantry_selection_is_bounded_and_echoed_back() -> None:
     assert suggestions.inventory_item_count == 3
     assert source.search_calls == [("", ("cukier", "jajko"), (), 0, 12)]
     assert suggestions.page.total_count == 1
+    assert suggestions.page.matches[0].matched_product_names == ("jajko",)
 
 
 def test_empty_pantry_does_not_call_the_provider() -> None:
@@ -65,7 +67,7 @@ def test_empty_pantry_does_not_call_the_provider() -> None:
     suggestions = use_case.execute(5, 7, 0, 12)
 
     assert source.search_calls == []
-    assert suggestions.page.recipes == ()
+    assert suggestions.page.matches == ()
     assert suggestions.ingredient_names == ()
     assert suggestions.inventory_item_count == 0
 

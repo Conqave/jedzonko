@@ -3,12 +3,13 @@ from dataclasses import dataclass
 from households.application.access import HouseholdAccessPolicy
 from recipes.application.ports.household_inventory_reader import HouseholdInventoryReader
 from recipes.application.ports.recipe_source import RecipeSource
-from recipes.domain.external import ExternalRecipePage
+from recipes.domain.external import MatchedExternalRecipePage
+from recipes.domain.matching import match_external_recipes
 
 
 @dataclass(frozen=True, slots=True)
 class ExternalRecipeSuggestions:
-    page: ExternalRecipePage
+    page: MatchedExternalRecipePage
     ingredient_names: tuple[str, ...]
     inventory_item_count: int
 
@@ -37,14 +38,15 @@ class SuggestExternalRecipesFromInventory:
         selected = tuple(item.product_name for item in ordered[: self._ingredient_limit])
         if not selected:
             return ExternalRecipeSuggestions(
-                page=ExternalRecipePage(
-                    recipes=(), page=page, page_size=page_size, total_count=0, total_pages=0
+                page=MatchedExternalRecipePage(
+                    matches=(), page=page, page_size=page_size, total_count=0, total_pages=0
                 ),
                 ingredient_names=(),
                 inventory_item_count=0,
             )
+        found = self._source.search_recipes("", selected, (), page, page_size)
         return ExternalRecipeSuggestions(
-            page=self._source.search_recipes("", selected, (), page, page_size),
+            page=match_external_recipes(found, inventory),
             ingredient_names=selected,
             inventory_item_count=len(inventory),
         )

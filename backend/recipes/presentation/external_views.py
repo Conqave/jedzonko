@@ -48,6 +48,7 @@ class ExternalRecipeListView(APIView):
         serializer.is_valid(raise_exception=True)
         payload = serializer.validated_data
         query = ExternalRecipeQuery(
+            household_id=int(payload["household_id"]),
             text=str(payload["query"]),
             ingredient_names=_split_names(str(payload["ingredients"])),
             excluded_ingredient_names=_split_names(str(payload["excluded_ingredients"])),
@@ -56,7 +57,11 @@ class ExternalRecipeListView(APIView):
         )
         with open_recipe_source() as source:
             try:
-                page = build_search_external_recipes(source).execute(query)
+                page = build_search_external_recipes(source).execute(_read_user_id(request), query)
+            except NotAHouseholdMemberError:
+                raise PermissionDenied(
+                    detail="Not a household member.", code="not_a_household_member"
+                )
             except RecipeSourceUnavailable:
                 raise RecipeSourceUnavailableError
             except RecipeSourceContractError:

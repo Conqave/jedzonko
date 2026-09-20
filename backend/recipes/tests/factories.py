@@ -13,6 +13,12 @@ KILOGRAM = MeasurementUnit(
 MILLILITRE = MeasurementUnit(
     code="ml", dimension=MeasurementDimension.VOLUME, factor_to_base=Decimal("1")
 )
+PIECE = MeasurementUnit(
+    code="szt", dimension=MeasurementDimension.COUNT, factor_to_base=Decimal("1")
+)
+PACKAGE = MeasurementUnit(
+    code="opak", dimension=MeasurementDimension.COUNT, factor_to_base=Decimal("1")
+)
 
 
 def make_requirement(name: str, amount: str, unit: MeasurementUnit) -> RecipeRequirement:
@@ -24,15 +30,24 @@ def make_requirement(name: str, amount: str, unit: MeasurementUnit) -> RecipeReq
 
 
 def make_snapshot(
-    product_id: int, name: str, amount: str, unit: MeasurementUnit
+    product_id: int,
+    name: str,
+    amount: str,
+    unit: MeasurementUnit,
+    alias_names: tuple[str, ...] = (),
+    package_quantity: str | None = None,
+    package_unit: MeasurementUnit | None = None,
 ) -> InventoryItemSnapshot:
     return InventoryItemSnapshot(
         id=product_id,
         product_id=product_id,
         product_name=name,
         normalized_name=normalize_text(name),
+        alias_names=tuple(normalize_text(alias) for alias in alias_names),
         quantity=Decimal(amount),
         unit=unit,
+        package_quantity=None if package_quantity is None else Decimal(package_quantity),
+        package_unit=package_unit,
         minimum_quantity=None,
         category_id=None,
         category_name=None,

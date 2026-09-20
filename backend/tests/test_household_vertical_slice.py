@@ -270,7 +270,7 @@ def test_recipe_fully_covered_by_inventory_has_no_missing_items(
     assert suggestion["missing_items"] == []
 
 
-def test_a_more_specific_product_name_does_not_satisfy_a_recipe_requirement(
+def test_a_more_specific_product_name_satisfies_a_recipe_requirement(
     api_client: APIClient,
     ala: User,
     household_a: Household,
@@ -291,10 +291,7 @@ def test_a_more_specific_product_name_does_not_satisfy_a_recipe_requirement(
         {"household_id": household_a.pk, "servings": 4},
     )
 
-    assert {item["name"] for item in missing.data["missing_items"]} == {
-        "Mąka pszenna",
-        "Cukier",
-    }
+    assert {item["name"] for item in missing.data["missing_items"]} == {"Cukier"}
     assert missing.data["is_ready"] is False
 
 

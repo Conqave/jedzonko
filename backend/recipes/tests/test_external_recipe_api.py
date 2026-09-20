@@ -1,5 +1,6 @@
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
+from decimal import Decimal
 from pathlib import Path
 
 import httpx
@@ -7,6 +8,8 @@ import pytest
 from django.contrib.auth.models import User
 from rest_framework.test import APIClient
 
+from households.models import Household, HouseholdMembership, Product, ProductAlias
+from inventory.models import InventoryItem
 from recipes.application.ports.recipe_source import RecipeSource
 from recipes.infrastructure.providers.ania_gotuje.provider import AniaGotujeProvider
 from recipes.models import Recipe, RecipeIngredient
@@ -21,10 +24,33 @@ SLUG = "jak-zrobic-ciasto-na-nalesniki"
 
 
 @pytest.fixture
-def api_client() -> APIClient:
+def user() -> User:
+    return User.objects.create_user(username="ala", password="Ma-Kota-1234")
+
+
+@pytest.fixture
+def api_client(user: User) -> APIClient:
     client = APIClient()
-    client.force_authenticate(User.objects.create_user(username="ala", password="Ma-Kota-1234"))
+    client.force_authenticate(user)
     return client
+
+
+@pytest.fixture
+def household(user: User) -> Household:
+    household = Household.objects.create(name="Dom")
+    HouseholdMembership.objects.create(household=household, user=user)
+    product = Product.objects.create(
+        household=household,
+        name="Jaja ściółkowe (opakowanie)",
+        normalized_name="jaja sciolkowe (opakowanie)",
+        default_unit_code="opak",
+        is_food=True,
+    )
+    ProductAlias.objects.create(product=product, name="jajko", normalized_name="jajko")
+    InventoryItem.objects.create(
+        household=household, product=product, unit_code="opak", quantity=Decimal("1.000")
+    )
+    return household
 
 
 def install_source(monkeypatch: pytest.MonkeyPatch, status_code: int, text: str) -> None:
@@ -62,6 +88,17 @@ def test_external_recipe_is_returned_with_attribution_and_not_stored(
     assert RecipeIngredient.objects.count() == ingredient_count
 
 
+def test_external_search_is_refused_outside_the_household(
+    api_client: APIClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    install_source(monkeypatch, 200, SEARCH)
+
+    response = api_client.get("/api/recipes/external/", {"household_id": "9999"})
+
+    assert response.status_code == 403
+    assert response.data["code"] == "not_a_household_member"
+
+
 def test_unknown_external_recipe_is_reported_as_not_found(
     api_client: APIClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -96,18 +133,23 @@ def test_unexpected_source_payload_is_reported_as_a_bad_gateway(
 
 
 def test_external_search_returns_a_mapped_page_without_storing_anything(
-    api_client: APIClient, monkeypatch: pytest.MonkeyPatch
+    api_client: APIClient, household: Household, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     install_source(monkeypatch, 200, SEARCH)
     recipe_count = Recipe.objects.count()
 
-    response = api_client.get("/api/recipes/external/", {"query": "naleśniki", "page_size": "3"})
+    response = api_client.get(
+        "/api/recipes/external/",
+        {"query": "naleśniki", "page_size": "3", "household_id": str(household.pk)},
+    )
 
     assert response.status_code == 200
     assert response.data["total_count"] == 252
     assert len(response.data["recipes"]) == 3
     assert response.data["recipes"][0]["source_name"] == "Ania Gotuje"
     assert response.data["recipes"][0]["source_url"].startswith("https://aniagotuje.pl/przepis/")
+    assert response.data["recipes"][0]["matched_product_names"] == ["Jaja ściółkowe (opakowanie)"]
+    assert response.data["recipes"][0]["matched_product_count"] == 1
     assert Recipe.objects.count() == recipe_count
 
 

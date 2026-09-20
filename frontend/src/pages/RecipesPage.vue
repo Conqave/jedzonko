@@ -120,6 +120,7 @@
               color="primary"
               label="Szukaj"
               no-caps
+              :disable="households.selectedId === null"
               :loading="loadingExternal"
             />
           </div>
@@ -180,6 +181,19 @@
                   · {{ recipe.total_time_minutes }} min
                 </span>
                 <span v-if="recipe.yield_label"> · {{ recipe.yield_label }}</span>
+              </q-item-label>
+              <q-item-label v-if="recipe.matched_product_count > 0" caption>
+                Wykorzystuje {{ recipe.matched_product_count }} z Twoich produktów:
+                <q-chip
+                  v-for="product in recipe.matched_product_names"
+                  :key="product"
+                  dense
+                  square
+                  color="positive"
+                  text-color="white"
+                >
+                  {{ product }}
+                </q-chip>
               </q-item-label>
             </q-item-section>
           </q-item>
@@ -244,17 +258,21 @@ const externalLoaded = ref(false);
 async function loadExternalPage(page: number): Promise<void> {
   loadingExternal.value = true;
   try {
+    if (households.selectedId === null) {
+      return;
+    }
     if (externalFromInventory.value) {
-      if (households.selectedId === null) {
-        return;
-      }
       const suggested = await fetchExternalSuggestions(households.selectedId, page - 1);
       externalRecipes.value = suggested.recipes;
       externalIngredients.value = suggested.ingredient_names;
       externalInventoryCount.value = suggested.inventory_item_count;
       externalTotalPages.value = suggested.total_pages;
     } else {
-      const found = await searchExternalRecipes(externalQuery.value.trim(), page - 1);
+      const found = await searchExternalRecipes(
+        households.selectedId,
+        externalQuery.value.trim(),
+        page - 1,
+      );
       externalRecipes.value = found.recipes;
       externalIngredients.value = [];
       externalInventoryCount.value = 0;

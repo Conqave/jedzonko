@@ -67,7 +67,6 @@ class AniaGotujeRecipeMapper:
             cooking_time_minutes=parse_iso_duration_minutes(
                 self._read_text(payload, "recipeCookTime")
             ),
-            tag_names=self._read_tag_names(payload),
             steps=tuple(read_paragraphs(self._read_text(payload, "body"))),
             ingredients=self._read_ingredients(payload),
         )
@@ -85,6 +84,7 @@ class AniaGotujeRecipeMapper:
             image_url=self._read_thumbnail_url(payload),
             yield_label=self._read_optional_text(payload, "recipeYield"),
             total_time_minutes=total_time_minutes,
+            tag_names=self._read_tag_names(payload),
         )
 
     def _read_ingredients(self, payload: dict[str, object]) -> tuple[ExternalRecipeIngredient, ...]:

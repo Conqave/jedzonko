@@ -59,7 +59,7 @@ def test_get_recipe_maps_the_provider_payload_with_attribution() -> None:
     assert recipe.summary.yield_label == "do 16 naleśników średnicy 24 cm"
     assert recipe.preparation_time_minutes == 5
     assert recipe.cooking_time_minutes == 25
-    assert recipe.tag_names == ("dla dzieci", "jajka")
+    assert recipe.summary.tag_names == ("dla dzieci", "jajka")
 
 
 def test_get_recipe_reduces_html_to_plain_text() -> None:
@@ -193,6 +193,7 @@ def test_search_maps_the_envelope_and_every_entry_with_attribution() -> None:
     assert first.name == "Omlet twarogowy z jabłkami"
     assert first.total_time_minutes == 30
     assert "<" not in first.description
+    assert "jajko" in first.tag_names
 
 
 def test_search_sends_ingredient_filters_as_comma_separated_tag_names() -> None:
