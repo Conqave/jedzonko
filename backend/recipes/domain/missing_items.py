@@ -1,6 +1,7 @@
 from decimal import Decimal
 
 from inventory.domain.models import InventoryItemSnapshot
+from recipes.domain.matching import find_available_quantity, find_matching_item
 from recipes.domain.models import RecipeRequirement
 from recipes.domain.suggestion import MissingRecipeItem, RecipeShortfall
 from shared.measurement import Quantity
@@ -25,20 +26,20 @@ def scale_requirements(
 def calculate_shortfall(
     requirements: list[RecipeRequirement], inventory: list[InventoryItemSnapshot]
 ) -> RecipeShortfall:
-    available_by_name = {item.normalized_name: item for item in inventory}
     missing: list[MissingRecipeItem] = []
     unmeasured: list[str] = []
     for requirement in requirements:
         required = requirement.quantity
-        available = available_by_name.get(requirement.normalized_name)
-        if available is None:
+        item = find_matching_item(requirement.normalized_name, inventory)
+        if item is None:
             missing.append(_to_missing_item(requirement, required.amount))
             continue
-        if not required.is_compatible_with(available.as_quantity()):
+        available = find_available_quantity(item, required.unit)
+        if available is None:
             unmeasured.append(requirement.name)
             missing.append(_to_missing_item(requirement, required.amount))
             continue
-        remainder = required.subtract(available.as_quantity())
+        remainder = required.subtract(available)
         if remainder.amount > 0:
             missing.append(_to_missing_item(requirement, remainder.amount))
     return RecipeShortfall(

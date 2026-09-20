@@ -20,6 +20,7 @@ class ExternalRecipeSummary:
     image_url: str | None
     yield_label: str
     total_time_minutes: int | None
+    tag_names: tuple[str, ...]
 
 
 @dataclass(frozen=True, slots=True)
@@ -27,7 +28,6 @@ class ExternalRecipeDetail:
     summary: ExternalRecipeSummary
     preparation_time_minutes: int
     cooking_time_minutes: int
-    tag_names: tuple[str, ...]
     steps: tuple[str, ...]
     ingredients: tuple[ExternalRecipeIngredient, ...]
 
@@ -35,6 +35,21 @@ class ExternalRecipeDetail:
 @dataclass(frozen=True, slots=True)
 class ExternalRecipePage:
     recipes: tuple[ExternalRecipeSummary, ...]
+    page: int
+    page_size: int
+    total_count: int
+    total_pages: int
+
+
+@dataclass(frozen=True, slots=True)
+class ExternalRecipeMatch:
+    summary: ExternalRecipeSummary
+    matched_product_names: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class MatchedExternalRecipePage:
+    matches: tuple[ExternalRecipeMatch, ...]
     page: int
     page_size: int
     total_count: int

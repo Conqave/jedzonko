@@ -19,8 +19,10 @@ from shared.measurement_units import find_measurement_unit
 
 class DjangoInventoryRepository(InventoryRepository):
     def list_items(self, household_id: int) -> list[InventoryItemSnapshot]:
-        rows = InventoryItem.objects.filter(household_id=household_id).select_related(
-            "product", "category"
+        rows = (
+            InventoryItem.objects.filter(household_id=household_id)
+            .select_related("product", "category")
+            .prefetch_related("product__aliases")
         )
         return [self._to_snapshot(row) for row in rows]
 
@@ -146,13 +148,25 @@ class DjangoInventoryRepository(InventoryRepository):
             product_id=row.product_id,
             product_name=row.product.name,
             normalized_name=row.product.normalized_name,
+            alias_names=tuple(alias.normalized_name for alias in row.product.aliases.all()),
             quantity=row.quantity,
             unit=cls._to_unit(row.unit_code),
+            package_quantity=row.product.package_quantity,
+            package_unit=cls._to_package_unit(row.product.package_unit_code),
             minimum_quantity=row.minimum_quantity,
             category_id=row.category_id,
             category_name=None if row.category is None else row.category.name,
             photo_url=row.photo.url if row.photo else None,
         )
+
+    @staticmethod
+    def _to_package_unit(unit_code: str) -> MeasurementUnit | None:
+        if not unit_code:
+            return None
+        unit = find_measurement_unit(unit_code)
+        if unit is None:
+            raise MeasurementUnitNotFoundError
+        return unit
 
     @staticmethod
     def _to_unit(unit_code: str) -> MeasurementUnit:

@@ -3,6 +3,7 @@ from rest_framework import serializers
 
 
 class ExternalRecipeSearchSerializer(serializers.Serializer[dict[str, object]]):
+    household_id = serializers.IntegerField(min_value=1)
     query = serializers.CharField(required=False, allow_blank=True, default="", max_length=120)
     ingredients = serializers.CharField(
         required=False, allow_blank=True, default="", max_length=400

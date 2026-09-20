@@ -111,7 +111,9 @@ def build_get_external_recipe(source: RecipeSource) -> GetExternalRecipe:
 
 
 def build_search_external_recipes(source: RecipeSource) -> SearchExternalRecipes:
-    return SearchExternalRecipes(source)
+    return SearchExternalRecipes(
+        source, build_household_inventory_reader(), build_household_access_policy()
+    )
 
 
 def build_suggest_external_recipes_from_inventory(

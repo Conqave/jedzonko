@@ -80,6 +80,9 @@ export interface ExternalRecipeSummary {
   image_url: string | null;
   yield_label: string;
   total_time_minutes: number | null;
+  tags: string[];
+  matched_product_names: string[];
+  matched_product_count: number;
 }
 
 export interface ExternalRecipePage {

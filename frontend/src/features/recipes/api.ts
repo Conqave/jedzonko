@@ -39,11 +39,12 @@ export async function fetchMissingItems(
 }
 
 export async function searchExternalRecipes(
+  householdId: number,
   query: string,
   page: number,
 ): Promise<ExternalRecipePage> {
   const response = await api.get<ExternalRecipePage>('/recipes/external/', {
-    params: { query, page },
+    params: { household_id: householdId, query, page },
   });
   return response.data;
 }
