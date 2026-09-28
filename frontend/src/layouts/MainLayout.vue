@@ -23,14 +23,14 @@
           <q-btn flat dense no-caps :label="accounts.user?.username ?? ''" icon="account_circle">
             <q-menu>
               <q-list style="min-width: 160px">
-                <q-item clickable v-close-popup :to="{ name: 'households' }">
+                <q-item v-close-popup clickable :to="{ name: 'households' }">
                   <q-item-section avatar><q-icon name="home" /></q-item-section>
                   <q-item-section>Dom i członkowie</q-item-section>
                 </q-item>
                 <q-item
                   v-if="accounts.canViewPromotions"
-                  clickable
                   v-close-popup
+                  clickable
                   :to="{ name: 'promotions' }"
                 >
                   <q-item-section avatar><q-icon name="local_offer" /></q-item-section>
@@ -41,7 +41,7 @@
                   <q-item-section>Zmień hasło</q-item-section>
                 </q-item>
                 <q-separator />
-                <q-item clickable v-close-popup @click="signOut">
+                <q-item v-close-popup clickable @click="signOut">
                   <q-item-section avatar><q-icon name="logout" /></q-item-section>
                   <q-item-section>Wyloguj</q-item-section>
                 </q-item>
