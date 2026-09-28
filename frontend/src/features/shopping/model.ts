@@ -11,7 +11,9 @@ export type ShoppingSubject =
   | { kind: 'ingredient'; ingredientId: number }
   | { kind: 'text'; text: string };
 
-export type ShoppingItemStatus = 'pending' | 'purchased';
+export const SHOPPING_ITEM_STATUSES = ['pending', 'purchased'] as const;
+
+export type ShoppingItemStatus = (typeof SHOPPING_ITEM_STATUSES)[number];
 
 export interface ShoppingItem {
   id: number;

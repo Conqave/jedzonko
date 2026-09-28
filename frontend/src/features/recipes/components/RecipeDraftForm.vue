@@ -180,9 +180,9 @@
 <script setup lang="ts">
 import type { MeasurementUnit } from '@/features/catalog/model';
 import { isPositiveDecimal } from '@/shared/decimal';
-import { DIFFICULTY_LABELS, moveItem, type RecipeDifficulty, type RecipeDraft } from '../model';
+import { DIFFICULTY_LABELS, moveItem, RECIPE_DIFFICULTIES, type RecipeDraft } from '../model';
 
-const DIFFICULTY_OPTIONS = (Object.keys(DIFFICULTY_LABELS) as RecipeDifficulty[]).map((value) => ({
+const DIFFICULTY_OPTIONS = RECIPE_DIFFICULTIES.map((value) => ({
   value,
   label: DIFFICULTY_LABELS[value],
 }));

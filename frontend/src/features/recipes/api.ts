@@ -1,19 +1,20 @@
 import { z } from 'zod';
 import { http } from '@/shared/http';
-import type {
-  ExternalRecipe,
-  ExternalRecipeMatch,
-  ExternalRecipePage,
-  ExternalRecipeSuggestions,
-  ExternalRecipeSummary,
-  RecipeDetail,
-  RecipeDraft,
-  RecipeShortfall,
-  RecipeSuggestion,
-  RecipeSummary,
+import {
+  RECIPE_DIFFICULTIES,
+  type ExternalRecipe,
+  type ExternalRecipeMatch,
+  type ExternalRecipePage,
+  type ExternalRecipeSuggestions,
+  type ExternalRecipeSummary,
+  type RecipeDetail,
+  type RecipeDraft,
+  type RecipeShortfall,
+  type RecipeSuggestion,
+  type RecipeSummary,
 } from './model';
 
-const difficultySchema = z.enum(['easy', 'medium', 'hard']);
+const difficultySchema = z.enum(RECIPE_DIFFICULTIES);
 
 const summaryFields = {
   id: z.number().int(),

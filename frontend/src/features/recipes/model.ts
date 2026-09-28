@@ -1,4 +1,6 @@
-export type RecipeDifficulty = 'easy' | 'medium' | 'hard';
+export const RECIPE_DIFFICULTIES = ['easy', 'medium', 'hard'] as const;
+
+export type RecipeDifficulty = (typeof RECIPE_DIFFICULTIES)[number];
 
 export const DIFFICULTY_LABELS: Readonly<Record<RecipeDifficulty, string>> = {
   easy: 'Łatwy',

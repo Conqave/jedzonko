@@ -1,14 +1,17 @@
 import { z } from 'zod';
 import { http } from '@/shared/http';
-import type {
-  Ingredient,
-  MeasurementUnit,
-  NewProduct,
-  Product,
-  ProductChanges,
-  ProductIngredientDecision,
-  ProductListing,
-  ProductPackage,
+import {
+  PRODUCT_INGREDIENT_PROVENANCES,
+  PRODUCT_INGREDIENT_STATUSES,
+  MEASUREMENT_DIMENSIONS,
+  type Ingredient,
+  type MeasurementUnit,
+  type NewProduct,
+  type Product,
+  type ProductChanges,
+  type ProductIngredientDecision,
+  type ProductListing,
+  type ProductPackage,
 } from './model';
 
 const packageSchema = z
@@ -59,8 +62,8 @@ const dateOrNull = z.iso
 const decisionSchema = z
   .object({
     ingredient: ingredientSchema,
-    status: z.enum(['proposed', 'confirmed', 'rejected']),
-    provenance: z.enum(['manual', 'model']),
+    status: z.enum(PRODUCT_INGREDIENT_STATUSES),
+    provenance: z.enum(PRODUCT_INGREDIENT_PROVENANCES),
     model_name: z.string().nullable(),
     proposed_at: dateOrNull,
     decided_at: dateOrNull,
@@ -77,7 +80,7 @@ const decisionSchema = z
 const unitSchema = z.object({
   code: z.string(),
   name: z.string(),
-  dimension: z.enum(['mass', 'volume', 'count']),
+  dimension: z.enum(MEASUREMENT_DIMENSIONS),
 });
 
 function toPackagePayload(value: ProductPackage | null) {
