@@ -257,7 +257,8 @@ import type {
   RecipeSummary,
 } from '@/features/recipes/models';
 import { addRecipeItems, fetchShoppingLists } from '@/features/shopping/api';
-import { describeShoppingError } from '@/features/shopping/errors';
+import { SHOPPING_ERROR_MESSAGES } from '@/features/shopping/errors';
+import { describeApiError } from '@/shared/apiError';
 import { useHouseholdStore } from '@/features/households/store';
 
 const quasar = useQuasar();
@@ -386,7 +387,7 @@ async function addMissingToShoppingList(recipeId: number): Promise<void> {
   addingRecipeId.value = recipeId;
   try {
     const lists = await fetchShoppingLists(households.selectedId);
-    const target = lists.find((list) => list.is_primary) ?? lists[0];
+    const target = lists.find((list) => list.isPrimary) ?? lists[0];
     if (target === undefined) {
       quasar.notify({
         type: 'warning',
@@ -395,13 +396,17 @@ async function addMissingToShoppingList(recipeId: number): Promise<void> {
       return;
     }
     const recipe = await fetchRecipe(recipeId);
-    const items = await addRecipeItems(target.id, recipeId, recipe.servings);
+    const items = await addRecipeItems(target.id, {
+      kind: 'recipe',
+      recipeId,
+      servings: recipe.servings,
+    });
     quasar.notify({
       type: 'positive',
       message: `Dodano ${items.length} pozycji do listy ${target.name}.`,
     });
   } catch (error) {
-    quasar.notify({ type: 'negative', message: describeShoppingError(error) });
+    quasar.notify({ type: 'negative', message: describeApiError(error, SHOPPING_ERROR_MESSAGES) });
   } finally {
     addingRecipeId.value = null;
   }

@@ -1,13 +1,9 @@
-import { describeApiError } from '@/shared/apiError';
+import type { ErrorMessages } from '@/shared/apiError';
 
-const MESSAGES: Record<string, string> = {
+export const PROMOTION_ERROR_MESSAGES: ErrorMessages = {
   promotion_source_unavailable: 'Źródło promocji jest chwilowo niedostępne.',
   promotion_source_contract_invalid: 'Źródło promocji zwróciło nieoczekiwaną odpowiedź.',
   permission_denied: 'Brak dostępu do promocji.',
   unknown_shop: 'Wybrany sklep nie jest obsługiwany.',
-  invalid: 'Nieprawidłowe dane zapytania.',
+  invalid_query: 'Nieprawidłowe zapytanie.',
 };
-
-export function describePromotionError(error: unknown): string {
-  return describeApiError(error, MESSAGES);
-}

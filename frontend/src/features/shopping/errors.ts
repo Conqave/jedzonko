@@ -1,15 +1,21 @@
-import { describeApiError } from '@/shared/apiError';
+import type { ErrorMessages } from '@/shared/apiError';
 
-const MESSAGES: Record<string, string> = {
+export const SHOPPING_ERROR_MESSAGES: ErrorMessages = {
   shopping_list_not_found: 'Nie znaleziono listy zakupów.',
+  primary_shopping_list_not_found: 'To gospodarstwo nie ma głównej listy zakupów.',
+  primary_shopping_list_cannot_be_deleted: 'Głównej listy zakupów nie można usunąć.',
   shopping_item_not_found: 'Nie znaleziono pozycji na liście zakupów.',
   invalid_shopping_item: 'Nieprawidłowa pozycja listy zakupów.',
-  recipe_not_found: 'Nie znaleziono przepisu.',
-  invalid_servings: 'Nieprawidłowa liczba porcji.',
   product_not_found: 'Nie znaleziono wybranego produktu.',
-  measurement_unit_not_found: 'Nie znaleziono wybranej jednostki miary.',
+  ingredient_not_found: 'Nie znaleziono wybranego składnika.',
+  measurement_unit_not_found: 'Nieznana jednostka miary.',
+  shopping_item_already_pending: 'Ta pozycja jest już na liście.',
+  shopping_item_merge_conflict: 'Tej pozycji nie da się połączyć z istniejącą.',
+  recipe_not_found: 'Nie znaleziono przepisu.',
+  external_recipe_not_found: 'Nie znaleziono przepisu w zewnętrznym źródle.',
+  recipe_source_unavailable: 'Zewnętrzne źródło przepisów jest niedostępne.',
+  no_shops_chosen: 'Wybierz co najmniej jeden sklep.',
+  nothing_to_split: 'Na liście nie ma niekupionych pozycji do podziału.',
+  promotions_not_allowed: 'Brak dostępu do promocji.',
+  promotion_source_unavailable: 'Źródło promocji jest chwilowo niedostępne.',
 };
-
-export function describeShoppingError(error: unknown): string {
-  return describeApiError(error, MESSAGES);
-}
