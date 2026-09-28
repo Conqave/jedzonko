@@ -24,16 +24,12 @@ export async function fetchTagProposals(householdId: number): Promise<TagProposa
 }
 
 export async function acceptTagProposal(proposalId: number): Promise<TagProposal> {
-  const response = await api.post<TagProposal>(
-    `/households/tag-proposals/${proposalId}/accept/`,
-  );
+  const response = await api.post<TagProposal>(`/households/tag-proposals/${proposalId}/accept/`);
   return response.data;
 }
 
 export async function rejectTagProposal(proposalId: number): Promise<TagProposal> {
-  const response = await api.post<TagProposal>(
-    `/households/tag-proposals/${proposalId}/reject/`,
-  );
+  const response = await api.post<TagProposal>(`/households/tag-proposals/${proposalId}/reject/`);
   return response.data;
 }
 
@@ -65,13 +61,31 @@ export async function searchProductTags(householdId: number, search: string): Pr
   return response.data;
 }
 
-export async function startTagAnalysis(householdId: number, productId?: number, item?: { id: number; text: string }): Promise<string> {
-  const payload = productId === undefined ? (item === undefined ? {} : { item_id: item.id, text: item.text }) : { product_id: productId };
-  const response = await api.post<{ job_id: string }>(`/products/${householdId}/tag-analysis/`, payload);
+export async function startTagAnalysis(
+  householdId: number,
+  productId?: number,
+  item?: { id: number; text: string },
+): Promise<string> {
+  const payload =
+    productId === undefined
+      ? item === undefined
+        ? {}
+        : { item_id: item.id, text: item.text }
+      : { product_id: productId };
+  const response = await api.post<{ job_id: string }>(
+    `/products/${householdId}/tag-analysis/`,
+    payload,
+  );
   return response.data.job_id;
 }
 
-export interface TagAnalysisStatus { id: string; status: 'running' | 'completed' | 'failed'; processed: number; total: number; error: string | null; }
+export interface TagAnalysisStatus {
+  id: string;
+  status: 'running' | 'completed' | 'failed';
+  processed: number;
+  total: number;
+  error: string | null;
+}
 
 export async function fetchTagAnalysisStatus(jobId: string): Promise<TagAnalysisStatus> {
   const response = await api.get<TagAnalysisStatus>(`/products/tag-analysis/${jobId}/`);

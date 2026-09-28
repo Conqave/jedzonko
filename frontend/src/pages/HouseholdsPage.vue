@@ -72,18 +72,25 @@
       <q-list bordered separator>
         <q-item v-for="member in members" :key="member.user_id">
           <q-item-section>{{ member.username }}</q-item-section>
-            <q-item-section side>
-              <q-btn flat dense round icon="more_vert" :aria-label="`Opcje ${member.username}`">
-                <q-menu>
-                  <q-list>
-                    <q-item clickable v-close-popup class="text-negative" @click="confirmRemoveMember(member)">
-                      <q-item-section avatar><q-icon name="delete" color="negative" /></q-item-section>
-                      <q-item-section>Usuń z domu</q-item-section>
-                    </q-item>
-                  </q-list>
-                </q-menu>
-              </q-btn>
-            </q-item-section>
+          <q-item-section side>
+            <q-btn flat dense round icon="more_vert" :aria-label="`Opcje ${member.username}`">
+              <q-menu>
+                <q-list>
+                  <q-item
+                    clickable
+                    v-close-popup
+                    class="text-negative"
+                    @click="confirmRemoveMember(member)"
+                  >
+                    <q-item-section avatar
+                      ><q-icon name="delete" color="negative"
+                    /></q-item-section>
+                    <q-item-section>Usuń z domu</q-item-section>
+                  </q-item>
+                </q-list>
+              </q-menu>
+            </q-btn>
+          </q-item-section>
         </q-item>
       </q-list>
     </template>

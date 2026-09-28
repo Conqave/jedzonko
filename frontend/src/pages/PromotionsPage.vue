@@ -14,34 +14,34 @@
         </q-banner>
 
         <div class="col-12 col-sm-8">
-            <q-select
-              v-model="favouriteSelection"
-              dense
-              outlined
-              multiple
-              use-chips
-              use-input
-              emit-value
-              map-options
-              input-debounce="0"
-              label="Ulubione sklepy"
-              option-label="name"
-              option-value="slug"
-              :options="filteredShops"
-              options-dense
-              clearable
-              dropdown-icon="expand_more"
-              :loading="store.loading || store.saving"
-              hint="Zmiany zapisują się automatycznie."
-              @filter="filterShops"
-              @update:model-value="saveFavourites"
-            >
-              <template #no-option>
-                <q-item>
-                  <q-item-section class="text-grey">Brak pasujących sklepów.</q-item-section>
-                </q-item>
-              </template>
-            </q-select>
+          <q-select
+            v-model="favouriteSelection"
+            dense
+            outlined
+            multiple
+            use-chips
+            use-input
+            emit-value
+            map-options
+            input-debounce="0"
+            label="Ulubione sklepy"
+            option-label="name"
+            option-value="slug"
+            :options="filteredShops"
+            options-dense
+            clearable
+            dropdown-icon="expand_more"
+            :loading="store.loading || store.saving"
+            hint="Zmiany zapisują się automatycznie."
+            @filter="filterShops"
+            @update:model-value="saveFavourites"
+          >
+            <template #no-option>
+              <q-item>
+                <q-item-section class="text-grey">Brak pasujących sklepów.</q-item-section>
+              </q-item>
+            </template>
+          </q-select>
         </div>
       </q-tab-panel>
 

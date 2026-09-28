@@ -64,3 +64,39 @@ repos:
         files: ^backend/
         pass_filenames: false
         stages: [pre-push]
+
+      - id: frontend-format
+        name: frontend format (prettier)
+        language: system
+        entry: docker compose --env-file .env -f infra/docker-compose.yml run --rm -T frontend-tools sh -c "npm run -s format:check"
+        files: ^frontend/
+        pass_filenames: false
+
+      - id: frontend-lint
+        name: frontend lint (eslint)
+        language: system
+        entry: docker compose --env-file .env -f infra/docker-compose.yml run --rm -T frontend-tools sh -c "quasar prepare --silent && npm run -s lint"
+        files: ^frontend/
+        pass_filenames: false
+
+      - id: frontend-types
+        name: frontend types (vue-tsc)
+        language: system
+        entry: docker compose --env-file .env -f infra/docker-compose.yml run --rm -T frontend-tools sh -c "quasar prepare --silent && npm run -s typecheck"
+        files: ^frontend/
+        pass_filenames: false
+
+      - id: frontend-tests
+        name: frontend unit tests (vitest)
+        language: system
+        entry: docker compose --env-file .env -f infra/docker-compose.yml run --rm -T frontend-tools sh -c "npm run -s test"
+        files: ^frontend/
+        pass_filenames: false
+
+      - id: frontend-build
+        name: frontend production build
+        language: system
+        entry: docker compose --env-file .env -f infra/docker-compose.yml run --rm -T frontend-tools sh -c "quasar prepare --silent && npm run -s build"
+        files: ^frontend/
+        pass_filenames: false
+        stages: [pre-push]

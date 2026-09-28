@@ -33,7 +33,11 @@
               <q-item-section>
                 <q-item-label>{{ suggestion.recipe_name }}</q-item-label>
                 <q-item-label caption>
-                  {{ suggestion.is_ready ? 'Masz wszystkie składniki' : `Brakuje ${suggestion.missing_item_count} składników` }}
+                  {{
+                    suggestion.is_ready
+                      ? 'Masz wszystkie składniki'
+                      : `Brakuje ${suggestion.missing_item_count} składników`
+                  }}
                 </q-item-label>
               </q-item-section>
               <q-item-section side>
@@ -135,7 +139,10 @@
           </div>
         </q-form>
 
-        <q-banner v-if="externalIngredients.length > 0" class="bg-grey-3 q-mb-md pantry-search-banner">
+        <q-banner
+          v-if="externalIngredients.length > 0"
+          class="bg-grey-3 q-mb-md pantry-search-banner"
+        >
           <div class="row items-center q-col-gutter-sm">
             <div class="col-auto text-weight-medium">Szukam po zapasach</div>
             <div class="col text-caption text-grey-8">
@@ -153,24 +160,24 @@
             </div>
           </div>
           <div class="row q-gutter-xs q-mt-xs">
-          <q-chip
-            v-for="ingredient in displayedExternalIngredients"
-            :key="ingredient"
-            dense
-            square
-            color="primary"
-            text-color="white"
-          >
-            {{ ingredient }}
-          </q-chip>
-          <q-chip
-            v-if="!showExternalIngredients && externalIngredients.length > ingredientPreviewLimit"
-            dense
-            outline
-            color="primary"
-          >
-            +{{ externalIngredients.length - ingredientPreviewLimit }} więcej
-          </q-chip>
+            <q-chip
+              v-for="ingredient in displayedExternalIngredients"
+              :key="ingredient"
+              dense
+              square
+              color="primary"
+              text-color="white"
+            >
+              {{ ingredient }}
+            </q-chip>
+            <q-chip
+              v-if="!showExternalIngredients && externalIngredients.length > ingredientPreviewLimit"
+              dense
+              outline
+              color="primary"
+            >
+              +{{ externalIngredients.length - ingredientPreviewLimit }} więcej
+            </q-chip>
           </div>
         </q-banner>
 

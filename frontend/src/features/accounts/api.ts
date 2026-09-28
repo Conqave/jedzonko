@@ -17,7 +17,10 @@ export async function logout(): Promise<void> {
 }
 
 export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {
-  await api.post('/accounts/change-password/', { current_password: currentPassword, new_password: newPassword });
+  await api.post('/accounts/change-password/', {
+    current_password: currentPassword,
+    new_password: newPassword,
+  });
 }
 
 export async function fetchCurrentUserIfSignedIn(): Promise<CurrentUser | null> {

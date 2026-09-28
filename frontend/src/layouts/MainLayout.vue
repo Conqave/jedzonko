@@ -27,7 +27,12 @@
                   <q-item-section avatar><q-icon name="home" /></q-item-section>
                   <q-item-section>Dom i członkowie</q-item-section>
                 </q-item>
-                <q-item v-if="accounts.canViewPromotions" clickable v-close-popup :to="{ name: 'promotions' }">
+                <q-item
+                  v-if="accounts.canViewPromotions"
+                  clickable
+                  v-close-popup
+                  :to="{ name: 'promotions' }"
+                >
                   <q-item-section avatar><q-icon name="local_offer" /></q-item-section>
                   <q-item-section>Promocje i sklepy</q-item-section>
                 </q-item>
@@ -103,8 +108,18 @@
     <q-footer v-if="!quasar.screen.gt.sm" bordered class="bg-white text-primary">
       <q-tabs no-caps active-color="primary" indicator-color="primary" align="justify">
         <q-route-tab name="inventory" icon="kitchen" label="Zapasy" :to="{ name: 'inventory' }" />
-        <q-route-tab name="recipes" icon="restaurant_menu" label="Przepisy" :to="{ name: 'recipes' }" />
-        <q-route-tab name="shopping" icon="shopping_cart" label="Zakupy" :to="{ name: 'shopping' }" />
+        <q-route-tab
+          name="recipes"
+          icon="restaurant_menu"
+          label="Przepisy"
+          :to="{ name: 'recipes' }"
+        />
+        <q-route-tab
+          name="shopping"
+          icon="shopping_cart"
+          label="Zakupy"
+          :to="{ name: 'shopping' }"
+        />
       </q-tabs>
     </q-footer>
   </q-layout>
