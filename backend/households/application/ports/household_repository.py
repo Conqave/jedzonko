@@ -10,6 +10,10 @@ class HouseholdRepository(HouseholdMembershipReader):
         raise NotImplementedError
 
     @abstractmethod
+    def list_active_households(self) -> list[HouseholdSummary]:
+        raise NotImplementedError
+
+    @abstractmethod
     def find_household(self, household_id: int) -> HouseholdSummary | None:
         raise NotImplementedError
 

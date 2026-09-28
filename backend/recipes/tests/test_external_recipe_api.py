@@ -8,7 +8,7 @@ import pytest
 from django.contrib.auth.models import User
 from rest_framework.test import APIClient
 
-from households.models import Household, HouseholdMembership, Product, ProductAlias
+from households.models import Household, HouseholdMembership, IngredientTag, Product, ProductTag
 from inventory.models import InventoryItem
 from recipes.application.ports.recipe_source import RecipeSource
 from recipes.infrastructure.providers.ania_gotuje.provider import AniaGotujeProvider
@@ -46,7 +46,8 @@ def household(user: User) -> Household:
         default_unit_code="opak",
         is_food=True,
     )
-    ProductAlias.objects.create(product=product, name="jajko", normalized_name="jajko")
+    tag = IngredientTag.objects.create(name="jajko", normalized_name="jajko")
+    ProductTag.objects.create(product=product, ingredient_tag=tag, is_verified=True)
     InventoryItem.objects.create(
         household=household, product=product, unit_code="opak", quantity=Decimal("1.000")
     )

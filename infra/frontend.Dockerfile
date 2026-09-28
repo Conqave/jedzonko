@@ -1,8 +1,9 @@
 FROM node:22-alpine AS build
 WORKDIR /srv/app
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN npm ci --ignore-scripts
 COPY . .
+RUN npx quasar prepare --silent
 RUN npm run build
 
 FROM nginx:1.29-alpine

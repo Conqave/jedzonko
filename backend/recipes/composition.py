@@ -16,6 +16,7 @@ from recipes.application.use_cases.create_recipe import CreateRecipe
 from recipes.application.use_cases.delete_recipe import DeleteRecipe
 from recipes.application.use_cases.get_external_recipe import GetExternalRecipe
 from recipes.application.use_cases.get_recipe import GetRecipe
+from recipes.application.use_cases.list_recipe_requirement_names import ListRecipeRequirementNames
 from recipes.application.use_cases.list_recipes import ListRecipes
 from recipes.application.use_cases.search_external_recipes import SearchExternalRecipes
 from recipes.application.use_cases.suggest_external_recipes_from_inventory import (
@@ -44,6 +45,10 @@ def build_household_inventory_reader() -> HouseholdInventoryReader:
 
 def build_list_recipes() -> ListRecipes:
     return ListRecipes(build_recipe_repository())
+
+
+def build_list_recipe_requirement_names() -> ListRecipeRequirementNames:
+    return ListRecipeRequirementNames(build_recipe_repository())
 
 
 def build_get_recipe() -> GetRecipe:

@@ -20,6 +20,8 @@ from shopping.models import (
     ShoppingList,
     ShoppingListItem,
 )
+from households.models import IngredientTag
+from shared.text import normalize_text
 
 PRIMARY_LIST_NAME = "Lista zakupów"
 
@@ -204,6 +206,7 @@ class DjangoShoppingListRepository(ShoppingListRepository):
             quantity=row.quantity,
             unit=cls._to_unit_value(row.unit_code),
             is_purchased=False,
+            tag_names=cls._tag_names(row.product, row.free_text, row.shopping_list.household_id),
         )
 
     @classmethod
@@ -216,4 +219,21 @@ class DjangoShoppingListRepository(ShoppingListRepository):
             quantity=row.quantity,
             unit=cls._to_unit_value(row.unit_code),
             is_purchased=True,
+            tag_names=cls._tag_names(row.product, row.free_text, row.shopping_list.household_id),
         )
+
+    @staticmethod
+    def _tag_names(product: object, free_text: str | None, household_id: int) -> tuple[str, ...]:
+        if product is not None:
+            return tuple(product.ingredient_tags.values_list("name", flat=True))
+        if not free_text:
+            return ()
+        normalized = normalize_text(free_text)
+        tags = IngredientTag.objects.filter(source="ania_gotuje")
+        words = normalized.split()
+        matches = []
+        for tag in tags:
+            tag_words = [word for word in normalize_text(tag.name).split() if len(word) >= 4]
+            if tag_words and all(any(source_word.startswith(tag_word[:4]) for source_word in words) for tag_word in tag_words):
+                matches.append(tag.name)
+        return tuple(sorted(set(matches), key=len)[:3])

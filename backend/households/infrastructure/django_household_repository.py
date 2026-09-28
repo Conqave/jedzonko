@@ -22,6 +22,17 @@ class DjangoHouseholdRepository(HouseholdRepository):
             for row in rows
         ]
 
+    def list_active_households(self) -> list[HouseholdSummary]:
+        rows = (
+            Household.objects.filter(deleted_at__isnull=True)
+            .annotate(number_of_members=Count("memberships"))
+            .order_by("pk")
+        )
+        return [
+            HouseholdSummary(id=row.pk, name=row.name, member_count=row.number_of_members)
+            for row in rows
+        ]
+
     def find_household(self, household_id: int) -> HouseholdSummary | None:
         row = (
             Household.objects.filter(pk=household_id, deleted_at__isnull=True)

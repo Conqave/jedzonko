@@ -1,7 +1,7 @@
 <template>
   <q-page padding>
-    <div class="row items-center q-mb-md">
-      <div class="text-h5 col">Mam w domu</div>
+    <div class="row items-center q-mb-md q-col-gutter-sm">
+      <div class="text-h5 col">Zapasy</div>
       <q-btn
         color="primary"
         icon="add"
@@ -11,6 +11,54 @@
         @click="openAddDialog"
       />
     </div>
+
+    <q-banner v-if="belowMinimumItems.length > 0" class="bg-orange-1 q-mb-md">
+      <div class="text-weight-medium">
+        Kończą się {{ belowMinimumItems.length }} {{ belowMinimumItems.length === 1 ? 'produkt' : 'produkty' }}
+      </div>
+      <div class="text-caption q-mt-xs">{{ belowMinimumItems.map((item) => item.product_name).join(', ') }}</div>
+      <template #action>
+        <q-btn flat no-caps color="primary" label="Dodaj do zakupów" :to="{ name: 'shopping' }" />
+      </template>
+    </q-banner>
+
+    <q-card v-if="proposals.length > 0" flat bordered class="q-mb-md">
+      <q-card-section class="text-subtitle1">Propozycje dopasowania składników</q-card-section>
+      <q-separator />
+      <q-list separator>
+        <q-item v-for="proposal in proposals" :key="proposal.id">
+          <q-item-section>
+            <q-item-label>
+              Czy «{{ proposal.product_name }}» to «{{ proposal.requirement_name }}»?
+            </q-item-label>
+            <q-item-label caption>Sprawdź i zatwierdź mapowanie produktu.</q-item-label>
+          </q-item-section>
+          <q-item-section side>
+            <div class="q-gutter-sm">
+              <q-btn
+                color="positive"
+                icon="check"
+                label="Tak"
+                no-caps
+                dense
+                :loading="resolvingId === proposal.id"
+                @click="acceptProposal(proposal)"
+              />
+              <q-btn
+                flat
+                color="negative"
+                icon="close"
+                label="Nie"
+                no-caps
+                dense
+                :loading="resolvingId === proposal.id"
+                @click="rejectProposal(proposal)"
+              />
+            </div>
+          </q-item-section>
+        </q-item>
+      </q-list>
+    </q-card>
 
     <q-banner v-if="households.selectedId === null" class="bg-grey-3">
       Wybierz gospodarstwo domowe, aby zobaczyć zapasy.
@@ -48,7 +96,33 @@
       </template>
       <template #body-cell-quantity="props">
         <q-td :props="props">
-          {{ formatQuantity(props.row.quantity) }} {{ props.row.unit_code }}
+          <div class="quantity-control row items-center no-wrap">
+            <q-btn
+              round
+              dense
+              flat
+              icon="remove"
+              color="primary"
+              aria-label="Odejmij ilość"
+              :disable="quantitySavingId === props.row.id || Number(props.row.quantity) <= 0"
+              :loading="quantitySavingId === props.row.id && quantitySavingDelta < 0"
+              @click="adjustQuantity(props.row, -1)"
+            />
+            <span class="quantity-value text-center">
+              {{ formatQuantity(props.row.quantity) }} {{ props.row.unit_code }}
+            </span>
+            <q-btn
+              round
+              dense
+              flat
+              icon="add"
+              color="primary"
+              aria-label="Dodaj ilość"
+              :disable="quantitySavingId === props.row.id"
+              :loading="quantitySavingId === props.row.id && quantitySavingDelta > 0"
+              @click="adjustQuantity(props.row, 1)"
+            />
+          </div>
           <q-popup-edit
             #default="scope"
             :model-value="formatQuantity(props.row.quantity)"
@@ -59,6 +133,14 @@
           >
             <q-input v-model="scope.value" dense autofocus type="text" label="Ilość" />
           </q-popup-edit>
+        </q-td>
+      </template>
+      <template #body-cell-tags="props">
+        <q-td :props="props">
+          <q-chip v-for="tag in props.row.tags" :key="tag" dense square color="grey-3">
+            {{ tag }}
+          </q-chip>
+          <span v-if="props.row.tags.length === 0">—</span>
         </q-td>
       </template>
       <template #body-cell-category_name="props">
@@ -101,19 +183,26 @@
             flat
             dense
             round
-            icon="photo_camera"
-            aria-label="Zdjęcie"
-            @click="openPhotoDialog(props.row)"
-          />
-          <q-btn
-            flat
-            dense
-            round
-            color="negative"
-            icon="delete"
-            aria-label="Usuń"
-            @click="confirmDelete(props.row)"
-          />
+            icon="more_vert"
+            aria-label="Więcej"
+          >
+            <q-menu>
+              <q-list style="min-width: 160px">
+                <q-item clickable v-close-popup @click="openPhotoDialog(props.row)">
+                  <q-item-section avatar><q-icon name="photo_camera" /></q-item-section>
+                  <q-item-section>Zdjęcie</q-item-section>
+                </q-item>
+                <q-item clickable v-close-popup @click="reanalyzeProductTag(props.row)">
+                  <q-item-section avatar><q-icon name="refresh" color="primary" /></q-item-section>
+                  <q-item-section>Ponów analizę tagu</q-item-section>
+                </q-item>
+                <q-item clickable v-close-popup class="text-negative" @click="confirmDelete(props.row)">
+                  <q-item-section avatar><q-icon name="delete" color="negative" /></q-item-section>
+                  <q-item-section>Usuń produkt</q-item-section>
+                </q-item>
+              </q-list>
+            </q-menu>
+          </q-btn>
         </q-td>
       </template>
     </q-table>
@@ -220,6 +309,18 @@
               :options="units"
               :rules="[(value) => !!value || 'Wybierz jednostkę']"
             />
+            <q-select
+              v-model="editForm.tags"
+              dense
+              outlined
+              multiple
+              use-input
+              use-chips
+              label="Tagi produktu"
+              hint="Wybierz wyłącznie tag z katalogu Ania Gotuje"
+              :options="tagOptions"
+              @filter="filterTagOptions"
+            />
           </q-card-section>
           <q-card-actions align="right">
             <q-btn v-close-popup flat label="Anuluj" no-caps />
@@ -278,8 +379,20 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
 import { useQuasar, type QTableColumn } from 'quasar';
-import { fetchUnits } from '@/features/products/api';
-import type { MeasurementUnit, Product } from '@/features/products/models';
+import {
+  addProductTag,
+  acceptTagProposal,
+  fetchTagProposals,
+  fetchProductTags,
+  deleteProductTag,
+  searchProductTags,
+  fetchTagAnalysisStatus,
+  startTagAnalysis,
+  fetchUnits,
+  rejectTagProposal,
+} from '@/features/products/api';
+import type { TagProposal, MeasurementUnit, Product } from '@/features/products/models';
+import { describeProductError } from '@/features/products/errors';
 import ProductPicker from '@/features/products/ProductPicker.vue';
 import {
   addInventoryItem,
@@ -310,6 +423,7 @@ const columns: QTableColumn<InventoryItem>[] = [
     align: 'left',
     sortable: true,
   },
+  { name: 'tags', label: 'Tagi', field: 'tags', align: 'left' },
   { name: 'quantity', label: 'Ilość', field: 'quantity', align: 'left' },
   {
     name: 'category_name',
@@ -327,13 +441,18 @@ const columns: QTableColumn<InventoryItem>[] = [
   { name: 'actions', label: '', field: 'id', align: 'right' },
 ];
 
-const MOBILE_COLUMNS = ['photo', 'product_name', 'quantity', 'actions'];
+const PRIMARY_COLUMNS = ['photo', 'product_name', 'tags', 'quantity', 'actions'];
 
 const visibleColumns = computed(() =>
-  quasar.screen.lt.md ? MOBILE_COLUMNS : columns.map((column) => column.name),
+  PRIMARY_COLUMNS,
 );
 
 const items = ref<InventoryItem[]>([]);
+const belowMinimumItems = computed(() => items.value.filter((item) => item.below_minimum));
+const proposals = ref<TagProposal[]>([]);
+const resolvingId = ref<number | null>(null);
+const quantitySavingId = ref<number | null>(null);
+const quantitySavingDelta = ref(0);
 const categories = ref<InventoryCategory[]>([]);
 const loading = ref(false);
 const units = ref<MeasurementUnit[]>([]);
@@ -346,12 +465,13 @@ const photoSaving = ref(false);
 const editDialogOpen = ref(false);
 const editSaving = ref(false);
 const editItem = ref<InventoryItem | null>(null);
-const editForm = ref<{ productName: string; quantity: string; unitCode: string }>({
+const editForm = ref<{ productName: string; quantity: string; unitCode: string; tags: string[] }>({
   productName: '',
   quantity: '',
   unitCode: '',
+  tags: [],
 });
-
+const tagOptions = ref<string[]>([]);
 const form = ref<{
   product: Product | null;
   quantity: string;
@@ -389,6 +509,48 @@ async function loadItems(): Promise<void> {
     notifyError(error);
   } finally {
     loading.value = false;
+  }
+}
+
+async function loadProposals(): Promise<void> {
+  if (households.selectedId === null) {
+    proposals.value = [];
+    return;
+  }
+  try {
+    proposals.value = await fetchTagProposals(households.selectedId);
+  } catch (error) {
+    proposals.value = [];
+    notifyError(error);
+  }
+}
+
+function dropProposal(proposalId: number): void {
+  proposals.value = proposals.value.filter((entry) => entry.id !== proposalId);
+}
+
+async function acceptProposal(proposal: TagProposal): Promise<void> {
+  resolvingId.value = proposal.id;
+  try {
+    await acceptTagProposal(proposal.id);
+    dropProposal(proposal.id);
+    await loadItems();
+  } catch (error) {
+    quasar.notify({ type: 'negative', message: describeProductError(error) });
+  } finally {
+    resolvingId.value = null;
+  }
+}
+
+async function rejectProposal(proposal: TagProposal): Promise<void> {
+  resolvingId.value = proposal.id;
+  try {
+    await rejectTagProposal(proposal.id);
+    dropProposal(proposal.id);
+  } catch (error) {
+    quasar.notify({ type: 'negative', message: describeProductError(error) });
+  } finally {
+    resolvingId.value = null;
   }
 }
 
@@ -474,6 +636,7 @@ async function submitItem(): Promise<void> {
     const created = photo === null ? item : await uploadInventoryItemPhoto(item.id, photo);
     items.value = [...items.value, created];
     addDialogOpen.value = false;
+    void analyzeProductTag(created);
   } catch (error) {
     notifyError(error);
     await loadItems();
@@ -491,14 +654,82 @@ async function saveQuantity(item: InventoryItem, quantity: string): Promise<void
   }
 }
 
+async function analyzeProductTag(item: InventoryItem): Promise<void> {
+  if (households.selectedId === null) return;
+  try {
+    const jobId = await startTagAnalysis(households.selectedId, item.product_id);
+    const progress = quasar.notify({
+      type: 'info',
+      message: `Analiza tagu: ${item.product_name}…`,
+      timeout: 0,
+      group: 'inventory-tag-analysis',
+      actions: [{ label: 'Zamknij', color: 'white', handler: () => undefined }],
+    });
+    let status = await fetchTagAnalysisStatus(jobId);
+    while (status.status === 'running') {
+      await new Promise((resolve) => window.setTimeout(resolve, 400));
+      status = await fetchTagAnalysisStatus(jobId);
+    }
+    progress();
+    if (status.status === 'completed') {
+      await loadItems();
+      quasar.notify({ type: 'positive', message: `Zakończono analizę tagu: ${item.product_name}.` });
+    } else {
+      quasar.notify({ type: 'negative', message: `Analiza tagu nie powiodła się: ${item.product_name}.` });
+    }
+  } catch (error) {
+    notifyError(error);
+  }
+}
+
+function reanalyzeProductTag(item: InventoryItem): void {
+  void analyzeProductTag(item);
+}
+
+async function adjustQuantity(item: InventoryItem, direction: -1 | 1): Promise<void> {
+  const current = Number(item.quantity);
+  if (!Number.isFinite(current)) {
+    return;
+  }
+  const step = item.unit_code === 'szt' || item.unit_code === 'opak' ? 1 : 0.1;
+  const next = Math.max(0, Math.round((current + direction * step) * 1000) / 1000);
+  quantitySavingId.value = item.id;
+  quantitySavingDelta.value = direction;
+  try {
+    replaceItem(await updateInventoryItem(item.id, { quantity: String(next) }));
+  } catch (error) {
+    notifyError(error);
+    await loadItems();
+  } finally {
+    quantitySavingId.value = null;
+    quantitySavingDelta.value = 0;
+  }
+}
+
 function openEditDialog(item: InventoryItem): void {
   editItem.value = item;
   editForm.value = {
     productName: item.product_name,
     quantity: formatQuantity(item.quantity),
     unitCode: item.unit_code,
+    tags: [],
   };
+  void fetchProductTags(item.product_id).then((tags) => {
+    editForm.value.tags = tags.map((tag) => tag.name);
+  });
   editDialogOpen.value = true;
+}
+
+function filterTagOptions(
+  value: string,
+  update: (callback: () => void) => void,
+): void {
+  if (households.selectedId === null) return;
+  void searchProductTags(households.selectedId, value).then((tags) => {
+    update(() => {
+      tagOptions.value = tags;
+    });
+  });
 }
 
 async function submitEdit(): Promise<void> {
@@ -515,6 +746,16 @@ async function submitEdit(): Promise<void> {
         unit_code: editForm.value.unitCode,
       }),
     );
+    const desiredTags = editForm.value.tags.map((tag) => tag.trim()).filter(Boolean);
+    const currentTags = await fetchProductTags(item.product_id);
+    for (const tag of desiredTags) {
+      if (!currentTags.some((current) => current.name === tag)) {
+        await addProductTag(item.product_id, tag);
+      }
+    }
+    for (const tag of currentTags) {
+      if (!desiredTags.includes(tag.name)) await deleteProductTag(tag.id);
+    }
     editDialogOpen.value = false;
   } catch (error) {
     notifyError(error);
@@ -600,6 +841,7 @@ onMounted(() => {
   void loadUnits();
   void loadItems();
   void loadCategories();
+  void loadProposals();
 });
 
 watch(
@@ -607,6 +849,29 @@ watch(
   () => {
     void loadItems();
     void loadCategories();
+    void loadProposals();
   },
 );
 </script>
+
+<style scoped>
+.quantity-control {
+  min-width: 150px;
+}
+
+.quantity-value {
+  min-width: 76px;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 599px) {
+  .quantity-control {
+    min-width: 138px;
+  }
+
+  .quantity-control :deep(.q-btn) {
+    min-width: 42px;
+    min-height: 42px;
+  }
+}
+</style>

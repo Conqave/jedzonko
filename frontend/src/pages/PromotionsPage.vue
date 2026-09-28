@@ -13,8 +13,7 @@
           sklepy.
         </q-banner>
 
-        <q-form class="row q-col-gutter-sm items-start" @submit.prevent="saveFavourites">
-          <div class="col-12 col-sm-8">
+        <div class="col-12 col-sm-8">
             <q-select
               v-model="favouriteSelection"
               dense
@@ -29,8 +28,13 @@
               option-label="name"
               option-value="slug"
               :options="filteredShops"
-              :loading="store.loading"
+              options-dense
+              clearable
+              dropdown-icon="expand_more"
+              :loading="store.loading || store.saving"
+              hint="Zmiany zapisują się automatycznie."
               @filter="filterShops"
+              @update:model-value="saveFavourites"
             >
               <template #no-option>
                 <q-item>
@@ -38,18 +42,7 @@
                 </q-item>
               </template>
             </q-select>
-          </div>
-          <div class="col-12 col-sm-4">
-            <q-btn
-              type="submit"
-              color="primary"
-              label="Zapisz"
-              no-caps
-              :loading="store.saving"
-              :disable="store.loading"
-            />
-          </div>
-        </q-form>
+        </div>
       </q-tab-panel>
 
       <q-tab-panel name="search" class="q-pa-none">
@@ -276,7 +269,7 @@ function formatPrice(price: string | null): string {
   return price === null ? 'brak ceny' : `${price} zł`;
 }
 
-const tab = ref<'favourites' | 'search' | 'coverage'>('search');
+const tab = ref<'favourites' | 'search' | 'coverage'>('favourites');
 
 const favouriteSelection = ref<string[]>([]);
 const filteredShops = ref<Shop[]>([]);
@@ -404,9 +397,9 @@ onMounted(async () => {
   }
 });
 
-async function saveFavourites(): Promise<void> {
+async function saveFavourites(selection: string[]): Promise<void> {
   try {
-    await store.saveFavourites(favouriteSelection.value);
+    await store.saveFavourites(selection);
     quasar.notify({ type: 'positive', message: 'Zapisano ulubione sklepy.' });
   } catch (error) {
     quasar.notify({

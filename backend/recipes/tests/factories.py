@@ -43,7 +43,7 @@ def make_snapshot(
         product_id=product_id,
         product_name=name,
         normalized_name=normalize_text(name),
-        alias_names=tuple(normalize_text(alias) for alias in alias_names),
+        tag_names=tuple(normalize_text(alias) for alias in alias_names),
         quantity=Decimal(amount),
         unit=unit,
         package_quantity=None if package_quantity is None else Decimal(package_quantity),

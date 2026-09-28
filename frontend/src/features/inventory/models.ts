@@ -2,6 +2,7 @@ export interface InventoryItem {
   id: number;
   product_id: number;
   product_name: string;
+  tags: string[];
   quantity: string;
   unit_code: string;
   minimum_quantity: string | null;

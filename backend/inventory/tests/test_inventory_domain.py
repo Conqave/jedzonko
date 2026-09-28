@@ -25,7 +25,7 @@ def _snapshot(quantity: str, minimum: str | None) -> InventoryItemSnapshot:
         product_id=1,
         product_name="Mąka",
         normalized_name="maka",
-        alias_names=(),
+            tag_names=(),
         quantity=Decimal(quantity),
         unit=KILOGRAM,
         package_quantity=None,

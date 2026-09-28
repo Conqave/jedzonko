@@ -10,7 +10,7 @@ class InventoryItemSnapshot:
     product_id: int
     product_name: str
     normalized_name: str
-    alias_names: tuple[str, ...]
+    tag_names: tuple[str, ...]
     quantity: Decimal
     unit: MeasurementUnit
     package_quantity: Decimal | None

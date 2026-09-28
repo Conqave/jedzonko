@@ -1,11 +1,16 @@
 from abc import ABC, abstractmethod
 
 from households.domain.product import ProductSummary
+from households.domain.product_names import ProductNames
 
 
 class ProductRepository(ABC):
     @abstractmethod
     def list_products(self, household_id: int, name_query: str | None) -> list[ProductSummary]:
+        raise NotImplementedError
+
+    @abstractmethod
+    def list_product_names(self, household_id: int) -> list[ProductNames]:
         raise NotImplementedError
 
     @abstractmethod

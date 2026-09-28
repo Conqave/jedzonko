@@ -35,5 +35,5 @@ class InventoryPhotoUpload:
             with Image.open(io.BytesIO(content)) as image:
                 image.verify()
                 return str(image.format)
-        except UnidentifiedImageError, OSError, ValueError:
+        except (UnidentifiedImageError, OSError, ValueError):
             raise ValidationError(detail="The file is not an image.", code="invalid_photo")

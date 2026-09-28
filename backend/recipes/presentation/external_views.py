@@ -4,6 +4,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from households.application.errors import NotAHouseholdMemberError
+from households.models import IngredientTag
+from shared.text import normalize_text
 from recipes.application.ports.recipe_source import (
     RecipeNotFoundAtSourceError,
     RecipeSourceContractError,
@@ -42,6 +44,16 @@ def _split_names(value: str) -> tuple[str, ...]:
     return tuple(part.strip() for part in value.split(",") if part.strip())
 
 
+def _remember_ania_tags(page: object) -> None:
+    summaries = tuple(match.summary for match in page.matches)
+    for summary in summaries:
+        for name in summary.tag_names:
+            IngredientTag.objects.get_or_create(
+                normalized_name=normalize_text(name),
+                defaults={"name": name, "source": "ania_gotuje"},
+            )
+
+
 class ExternalRecipeListView(APIView):
     def get(self, request: Request) -> Response:
         serializer = ExternalRecipeSearchSerializer(data=request.query_params)
@@ -58,6 +70,7 @@ class ExternalRecipeListView(APIView):
         with open_recipe_source() as source:
             try:
                 page = build_search_external_recipes(source).execute(_read_user_id(request), query)
+                _remember_ania_tags(page)
             except NotAHouseholdMemberError:
                 raise PermissionDenied(
                     detail="Not a household member.", code="not_a_household_member"
@@ -82,6 +95,7 @@ class ExternalRecipeSuggestionListView(APIView):
                     int(payload["page"]),
                     int(payload["page_size"]),
                 )
+                _remember_ania_tags(suggestions.page)
             except NotAHouseholdMemberError:
                 raise PermissionDenied(
                     detail="Not a household member.", code="not_a_household_member"

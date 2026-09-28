@@ -5,17 +5,12 @@ from recipes.domain.external import (
     MatchedExternalRecipePage,
 )
 from shared.measurement import MeasurementDimension, MeasurementUnit, Quantity
+from shared.name_matching import matches_name
 from shared.text import normalize_text
 
 
 def matches_product(normalized_name: str, item: InventoryItemSnapshot) -> bool:
-    if normalized_name in item.alias_names:
-        return True
-    required_words = normalized_name.split()
-    if not required_words:
-        return False
-    product_words = set(item.normalized_name.split())
-    return all(word in product_words for word in required_words)
+    return matches_name(normalized_name, item.normalized_name, item.tag_names)
 
 
 def find_matching_item(
@@ -81,7 +76,7 @@ def match_external_recipes(
 
 def _match_order(normalized_name: str, item: InventoryItemSnapshot) -> tuple[bool, int, str, int]:
     return (
-        normalized_name not in item.alias_names,
+        normalized_name not in item.tag_names,
         len(item.normalized_name),
         item.normalized_name,
         item.id,
