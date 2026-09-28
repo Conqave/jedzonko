@@ -131,7 +131,7 @@ import { fetchExternalRecipe } from '@/features/recipes/api';
 import { fetchInventory } from '@/features/inventory/api';
 import type { InventoryItem } from '@/features/inventory/models';
 import { addShoppingItem, createShoppingList, fetchShoppingLists } from '@/features/shopping/api';
-import type { ShoppingList } from '@/features/shopping/models';
+import type { ShoppingList } from '@/features/shopping/model';
 import { useHouseholdStore } from '@/features/households/store';
 import { describeRecipeError } from '@/features/recipes/errors';
 import type { ExternalRecipe } from '@/features/recipes/models';
@@ -173,7 +173,7 @@ const shoppingIngredients = computed(() =>
 
 const shoppingListOptions = computed(() =>
   shoppingLists.value.map((list) => ({
-    label: `${list.name} (${list.item_count})`,
+    label: `${list.name} (${list.itemCount})`,
     value: list.id,
   })),
 );
@@ -188,7 +188,7 @@ function normalize(value: string): string {
 async function openShoppingDialog(): Promise<void> {
   if (households.selectedId === null) return;
   shoppingLists.value = await fetchShoppingLists(households.selectedId);
-  selectedListId.value = shoppingLists.value.find((list) => list.is_primary)?.id ?? null;
+  selectedListId.value = shoppingLists.value.find((list) => list.isPrimary)?.id ?? null;
   newListName.value = '';
   shoppingDialogOpen.value = true;
 }
@@ -231,9 +231,9 @@ async function addMissingToShoppingList(): Promise<void> {
     if (listId === null) return;
     for (const ingredient of shoppingIngredients.value) {
       await addShoppingItem(listId, {
-        free_text: ingredient.name,
+        subject: { kind: 'text', text: ingredient.name },
         quantity: ingredient.quantity ?? '1',
-        ...(ingredient.unit_code === null ? {} : { unit_code: ingredient.unit_code }),
+        unitCode: ingredient.unit_code,
       });
       shoppingProgress.value += 1;
       progressNotification?.();
