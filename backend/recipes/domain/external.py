@@ -26,8 +26,8 @@ class ExternalRecipeSummary:
 @dataclass(frozen=True, slots=True)
 class ExternalRecipeDetail:
     summary: ExternalRecipeSummary
-    preparation_time_minutes: int
-    cooking_time_minutes: int
+    preparation_time_minutes: int | None
+    cooking_time_minutes: int | None
     steps: tuple[str, ...]
     ingredients: tuple[ExternalRecipeIngredient, ...]
 

@@ -112,8 +112,8 @@ export interface ExternalRecipeIngredient {
 }
 
 export interface ExternalRecipe extends ExternalRecipeSummary {
-  preparationTimeMinutes: number;
-  cookingTimeMinutes: number;
+  preparationTimeMinutes: number | null;
+  cookingTimeMinutes: number | null;
   steps: string[];
   ingredients: ExternalRecipeIngredient[];
 }
