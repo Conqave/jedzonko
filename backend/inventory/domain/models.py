@@ -8,13 +8,10 @@ from shared.measurement import MeasurementUnit, Quantity
 class InventoryItemSnapshot:
     id: int
     product_id: int
+    household_id: int
     product_name: str
-    normalized_name: str
-    tag_names: tuple[str, ...]
     quantity: Decimal
     unit: MeasurementUnit
-    package_quantity: Decimal | None
-    package_unit: MeasurementUnit | None
     minimum_quantity: Decimal | None
     category_id: int | None
     category_name: str | None
@@ -22,11 +19,6 @@ class InventoryItemSnapshot:
 
     def as_quantity(self) -> Quantity:
         return Quantity(amount=self.quantity, unit=self.unit)
-
-    def package_content(self) -> Quantity | None:
-        if self.package_quantity is None or self.package_unit is None:
-            return None
-        return Quantity(amount=self.package_quantity, unit=self.package_unit)
 
     def is_below_minimum(self) -> bool:
         if self.minimum_quantity is None:

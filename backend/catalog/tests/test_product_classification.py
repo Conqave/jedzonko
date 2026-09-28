@@ -53,9 +53,6 @@ def classification(*links: ProductIngredient) -> ProductClassification:
     return ProductClassification(product_id=PRODUCT, household_id=7, links=links)
 
 
-# ProductIngredient
-
-
 def test_a_model_proposal_needs_the_model_name() -> None:
     with pytest.raises(InvalidProductIngredientError):
         ProductIngredient(
@@ -111,9 +108,6 @@ def test_a_decision_has_a_decision_time(status: ProductIngredientStatus) -> None
         )
 
 
-# ProductClassification invariants
-
-
 def test_a_product_cannot_have_two_confirmed_ingredients() -> None:
     with pytest.raises(InvalidProductClassificationError):
         classification(
@@ -140,9 +134,6 @@ def test_links_of_another_product_are_rejected() -> None:
 
     with pytest.raises(InvalidProductClassificationError):
         classification(foreign)
-
-
-# propose
 
 
 def test_proposing_for_an_unclassified_product_records_a_model_proposal() -> None:
@@ -182,9 +173,6 @@ def test_a_rejected_pair_is_never_proposed_again() -> None:
 def test_an_open_proposal_is_not_proposed_twice() -> None:
     with pytest.raises(ProductIngredientAlreadyRecordedError):
         classification(proposed(EGGS)).propose(EGGS, "gpt-oss:20b", NOW)
-
-
-# confirm
 
 
 def test_confirming_a_new_pair_records_a_manual_decision() -> None:
@@ -247,9 +235,6 @@ def test_confirming_leaves_unrelated_proposals_open() -> None:
     assert after.find(MILK) == proposed(MILK)
     confirmed = after.confirmed()
     assert confirmed is not None and confirmed.ingredient_id == EGGS
-
-
-# reject
 
 
 def test_rejecting_a_proposal_keeps_it_as_a_remembered_rejection() -> None:

@@ -1,83 +1,47 @@
-from decimal import Decimal
-
 from rest_framework import status
-from rest_framework.exceptions import (
-    NotAuthenticated,
-    NotFound,
-    PermissionDenied,
-    ValidationError,
-)
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from households.application.errors import NotAHouseholdMemberError
+from config.api import current_user_id
+from config.composition import container
 from recipes.application.commands import RecipeIngredientInput, RecipeInput, RecipeStepInput
-from recipes.application.errors import (
-    DuplicateRecipeIngredientError,
-    InvalidServingsError,
-    MeasurementUnitNotFoundError,
-    RecipeCategoryNotFoundError,
-    RecipeNotFoundError,
-)
-from recipes.composition import (
-    build_calculate_missing_recipe_items,
-    build_confirm_recipe_preparation,
-    build_create_recipe,
-    build_delete_recipe,
-    build_get_recipe,
-    build_list_recipes,
-    build_suggest_recipes_from_inventory,
-    build_update_recipe,
-)
 from recipes.domain.difficulty import RecipeDifficulty
-from recipes.presentation.representation import (
-    represent_detail,
-    represent_shortfall,
-    represent_suggestion,
-    represent_summary,
-)
 from recipes.presentation.serializers import (
     ConfirmPreparationSerializer,
     MissingItemsQuerySerializer,
+    RecipeDetailSerializer,
+    RecipeShortfallSerializer,
+    RecipeSuggestionSerializer,
+    RecipeSummarySerializer,
     RecipeWriteSerializer,
     SuggestionQuerySerializer,
 )
 
 
-def _read_user_id(request: Request) -> int:
-    user_id = request.user.pk
-    if user_id is None:
-        raise NotAuthenticated
-    return user_id
-
-
 def _read_recipe_input(request: Request) -> RecipeInput:
-    serializer = RecipeWriteSerializer(data=request.data)
-    serializer.is_valid(raise_exception=True)
-    payload = serializer.validated_data
+    payload = RecipeWriteSerializer(data=request.data)
+    payload.is_valid(raise_exception=True)
+    data = payload.validated_data
     steps = tuple(
-        RecipeStepInput(position=int(step["position"]), text=str(step["text"]))
-        for step in payload["steps"]
+        RecipeStepInput(position=step["position"], text=step["text"]) for step in data["steps"]
     )
     ingredients = tuple(
         RecipeIngredientInput(
-            name=str(item["name"]),
-            quantity=Decimal(item["quantity"]),
-            unit_code=str(item["unit_code"]),
+            name=line["name"], quantity=line["quantity"], unit_code=line["unit_code"]
         )
-        for item in payload["ingredients"]
+        for line in data["ingredients"]
     )
-    category_id = payload.get("category_id")
+    difficulty = RecipeDifficulty(data["difficulty"])
     return RecipeInput(
-        name=str(payload["name"]),
-        description=str(payload["description"]),
-        servings=int(payload["servings"]),
-        preparation_time_minutes=int(payload["preparation_time_minutes"]),
-        cooking_time_minutes=int(payload["cooking_time_minutes"]),
-        difficulty=RecipeDifficulty(payload["difficulty"]),
-        category_id=None if category_id is None else int(category_id),
-        tag_names=tuple(str(name) for name in payload.get("tag_names", [])),
+        name=data["name"],
+        description=data["description"],
+        servings=data["servings"],
+        preparation_time_minutes=data["preparation_time_minutes"],
+        cooking_time_minutes=data["cooking_time_minutes"],
+        difficulty=difficulty,
+        category_id=data.get("category_id"),
+        tag_names=tuple(data["tag_names"]),
         steps=steps,
         ingredients=ingredients,
     )
@@ -85,117 +49,77 @@ def _read_recipe_input(request: Request) -> RecipeInput:
 
 class RecipeListView(APIView):
     def get(self, request: Request) -> Response:
-        recipes = build_list_recipes().execute()
-        return Response([represent_summary(item) for item in recipes])
+        use_case = container().recipes.list_recipes
+        recipes = use_case.execute()
+        serializer = RecipeSummarySerializer(recipes, many=True)
+        return Response(serializer.data)
 
     def post(self, request: Request) -> Response:
+        user_id = current_user_id(request)
         command = _read_recipe_input(request)
-        try:
-            recipe = build_create_recipe().execute(_read_user_id(request), command)
-        except DuplicateRecipeIngredientError:
-            raise ValidationError(
-                detail="The recipe lists the same ingredient twice.",
-                code="duplicate_recipe_ingredient",
-            )
-        except MeasurementUnitNotFoundError:
-            raise ValidationError(
-                detail="Measurement unit not found.", code="measurement_unit_not_found"
-            )
-        except RecipeCategoryNotFoundError:
-            raise ValidationError(
-                detail="Recipe category not found.", code="recipe_category_not_found"
-            )
-        return Response(represent_detail(recipe), status=status.HTTP_201_CREATED)
+        use_case = container().recipes.create_recipe
+        recipe = use_case.execute(user_id, command)
+        serializer = RecipeDetailSerializer(recipe)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
 class RecipeDetailView(APIView):
     def get(self, request: Request, recipe_id: int) -> Response:
-        try:
-            recipe = build_get_recipe().execute(recipe_id)
-        except RecipeNotFoundError:
-            raise NotFound(detail="Recipe not found.", code="recipe_not_found")
-        return Response(represent_detail(recipe))
+        use_case = container().recipes.get_recipe
+        recipe = use_case.execute(recipe_id)
+        serializer = RecipeDetailSerializer(recipe)
+        return Response(serializer.data)
 
     def put(self, request: Request, recipe_id: int) -> Response:
         command = _read_recipe_input(request)
-        try:
-            recipe = build_update_recipe().execute(recipe_id, command)
-        except RecipeNotFoundError:
-            raise NotFound(detail="Recipe not found.", code="recipe_not_found")
-        except DuplicateRecipeIngredientError:
-            raise ValidationError(
-                detail="The recipe lists the same ingredient twice.",
-                code="duplicate_recipe_ingredient",
-            )
-        except MeasurementUnitNotFoundError:
-            raise ValidationError(
-                detail="Measurement unit not found.", code="measurement_unit_not_found"
-            )
-        except RecipeCategoryNotFoundError:
-            raise ValidationError(
-                detail="Recipe category not found.", code="recipe_category_not_found"
-            )
-        return Response(represent_detail(recipe))
+        use_case = container().recipes.update_recipe
+        recipe = use_case.execute(recipe_id, command)
+        serializer = RecipeDetailSerializer(recipe)
+        return Response(serializer.data)
 
     def delete(self, request: Request, recipe_id: int) -> Response:
-        try:
-            build_delete_recipe().execute(recipe_id)
-        except RecipeNotFoundError:
-            raise NotFound(detail="Recipe not found.", code="recipe_not_found")
+        use_case = container().recipes.delete_recipe
+        use_case.execute(recipe_id)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class RecipeSuggestionListView(APIView):
     def get(self, request: Request) -> Response:
-        serializer = SuggestionQuerySerializer(data=request.query_params)
-        serializer.is_valid(raise_exception=True)
-        household_id = int(serializer.validated_data["household_id"])
-        try:
-            suggestions = build_suggest_recipes_from_inventory().execute(
-                _read_user_id(request), household_id
-            )
-        except NotAHouseholdMemberError:
-            raise PermissionDenied(detail="Not a household member.", code="not_a_household_member")
-        return Response([represent_suggestion(item) for item in suggestions])
+        user_id = current_user_id(request)
+        query = SuggestionQuerySerializer(data=request.query_params)
+        query.is_valid(raise_exception=True)
+        use_case = container().recipes.suggest_recipes_from_inventory
+        suggestions = use_case.execute(user_id, query.validated_data["household_id"])
+        serializer = RecipeSuggestionSerializer(suggestions, many=True)
+        return Response(serializer.data)
 
 
 class RecipeMissingItemListView(APIView):
     def get(self, request: Request, recipe_id: int) -> Response:
-        serializer = MissingItemsQuerySerializer(data=request.query_params)
-        serializer.is_valid(raise_exception=True)
-        household_id = int(serializer.validated_data["household_id"])
-        servings = int(serializer.validated_data["servings"])
-        try:
-            shortfall = build_calculate_missing_recipe_items().execute(
-                _read_user_id(request), household_id, recipe_id, servings
-            )
-        except NotAHouseholdMemberError:
-            raise PermissionDenied(detail="Not a household member.", code="not_a_household_member")
-        except InvalidServingsError:
-            raise ValidationError(detail="Servings must be at least 1.", code="invalid_servings")
-        except RecipeNotFoundError:
-            raise NotFound(detail="Recipe not found.", code="recipe_not_found")
-        return Response(represent_shortfall(shortfall))
+        user_id = current_user_id(request)
+        query = MissingItemsQuerySerializer(data=request.query_params)
+        query.is_valid(raise_exception=True)
+        use_case = container().recipes.calculate_missing_recipe_items
+        shortfall = use_case.execute(
+            user_id,
+            query.validated_data["household_id"],
+            recipe_id,
+            query.validated_data["servings"],
+        )
+        serializer = RecipeShortfallSerializer(shortfall)
+        return Response(serializer.data)
 
 
 class RecipePreparationView(APIView):
     def post(self, request: Request, recipe_id: int) -> Response:
-        serializer = ConfirmPreparationSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        household_id = int(serializer.validated_data["household_id"])
-        servings = int(serializer.validated_data["servings"])
-        try:
-            build_confirm_recipe_preparation().execute(
-                _read_user_id(request), household_id, recipe_id, servings
-            )
-        except NotAHouseholdMemberError:
-            raise PermissionDenied(detail="Not a household member.", code="not_a_household_member")
-        except InvalidServingsError:
-            raise ValidationError(detail="Servings must be at least 1.", code="invalid_servings")
-        except RecipeNotFoundError:
-            raise NotFound(detail="Recipe not found.", code="recipe_not_found")
-        except MeasurementUnitNotFoundError:
-            raise ValidationError(
-                detail="Measurement unit not found.", code="measurement_unit_not_found"
-            )
+        user_id = current_user_id(request)
+        payload = ConfirmPreparationSerializer(data=request.data)
+        payload.is_valid(raise_exception=True)
+        use_case = container().recipes.confirm_recipe_preparation
+        use_case.execute(
+            user_id,
+            payload.validated_data["household_id"],
+            recipe_id,
+            payload.validated_data["servings"],
+        )
         return Response(status=status.HTTP_204_NO_CONTENT)

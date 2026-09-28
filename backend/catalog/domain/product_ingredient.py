@@ -14,7 +14,6 @@ class ProductIngredientStatus(StrEnum):
 class ProductIngredientSource(StrEnum):
     MANUAL = "manual"
     MODEL = "model"
-    LEGACY = "legacy"
 
 
 @dataclass(frozen=True, slots=True)

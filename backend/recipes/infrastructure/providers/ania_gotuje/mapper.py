@@ -44,47 +44,60 @@ class AniaGotujeRecipeMapper:
         for entry in content:
             if not isinstance(entry, dict):
                 raise RecipeSourceContractError("Search result entry is not a JSON object.")
-            recipes.append(
-                self._build_summary(entry, self._read_optional_int(entry, "recipeTotalTimeMinutes"))
-            )
+            total_time_minutes = self._read_optional_int(entry, "recipeTotalTimeMinutes")
+            summary = self._build_summary(entry, total_time_minutes)
+            recipes.append(summary)
+        page = self._read_int(payload, "number")
+        page_size = self._read_int(payload, "size")
+        total_count = self._read_int(payload, "totalElements")
+        total_pages = self._read_int(payload, "totalPages")
         return ExternalRecipePage(
             recipes=tuple(recipes),
-            page=self._read_int(payload, "number"),
-            page_size=self._read_int(payload, "size"),
-            total_count=self._read_int(payload, "totalElements"),
-            total_pages=self._read_int(payload, "totalPages"),
+            page=page,
+            page_size=page_size,
+            total_count=total_count,
+            total_pages=total_pages,
         )
 
     def _build_detail(self, payload: dict[str, object]) -> ExternalRecipeDetail:
+        total_time = self._read_text(payload, "recipeTotalTime")
+        preparation_time = self._read_text(payload, "recipePrepTime")
+        cooking_time = self._read_text(payload, "recipeCookTime")
+        body = self._read_text(payload, "body")
+        total_time_minutes = parse_iso_duration_minutes(total_time)
+        summary = self._build_summary(payload, total_time_minutes)
+        preparation_time_minutes = parse_iso_duration_minutes(preparation_time)
+        cooking_time_minutes = parse_iso_duration_minutes(cooking_time)
+        steps = read_paragraphs(body)
+        ingredients = self._read_ingredients(payload)
         return ExternalRecipeDetail(
-            summary=self._build_summary(
-                payload,
-                parse_iso_duration_minutes(self._read_text(payload, "recipeTotalTime")),
-            ),
-            preparation_time_minutes=parse_iso_duration_minutes(
-                self._read_text(payload, "recipePrepTime")
-            ),
-            cooking_time_minutes=parse_iso_duration_minutes(
-                self._read_text(payload, "recipeCookTime")
-            ),
-            steps=tuple(read_paragraphs(self._read_text(payload, "body"))),
-            ingredients=self._read_ingredients(payload),
+            summary=summary,
+            preparation_time_minutes=preparation_time_minutes,
+            cooking_time_minutes=cooking_time_minutes,
+            steps=tuple(steps),
+            ingredients=ingredients,
         )
 
     def _build_summary(
         self, payload: dict[str, object], total_time_minutes: int | None
     ) -> ExternalRecipeSummary:
         slug = self._read_text(payload, "slug")
+        name = self._read_text(payload, "title")
+        intro = self._read_optional_text(payload, "intro")
+        description = read_plain_text(intro)
+        image_url = self._read_thumbnail_url(payload)
+        yield_label = self._read_optional_text(payload, "recipeYield")
+        tag_names = self._read_tag_names(payload)
         return ExternalRecipeSummary(
             source_name=SOURCE_NAME,
             source_url=f"{RECIPE_PAGE_BASE_URL}/{slug}",
             reference=slug,
-            name=self._read_text(payload, "title"),
-            description=read_plain_text(self._read_optional_text(payload, "intro")),
-            image_url=self._read_thumbnail_url(payload),
-            yield_label=self._read_optional_text(payload, "recipeYield"),
+            name=name,
+            description=description,
+            image_url=image_url,
+            yield_label=yield_label,
             total_time_minutes=total_time_minutes,
-            tag_names=self._read_tag_names(payload),
+            tag_names=tag_names,
         )
 
     def _read_ingredients(self, payload: dict[str, object]) -> tuple[ExternalRecipeIngredient, ...]:
@@ -101,7 +114,9 @@ class AniaGotujeRecipeMapper:
             for item in items:
                 if not isinstance(item, dict):
                     raise RecipeSourceContractError("Ingredient item is not a JSON object.")
-                ingredients.append(parse_ingredient_line(self._read_text(item, "name")))
+                line = self._read_text(item, "name")
+                ingredient = parse_ingredient_line(line)
+                ingredients.append(ingredient)
         if not ingredients:
             raise RecipeSourceContractError("Recipe payload has no ingredients.")
         return tuple(ingredients)

@@ -9,7 +9,8 @@ from django.test import override_settings
 from PIL import Image
 from rest_framework.test import APIClient
 
-from households.models import Household, HouseholdMembership, Product
+from catalog.models import Product
+from households.models import Household, HouseholdMembership
 from inventory.models import InventoryItem
 from inventory.presentation.photo_upload import MAX_PHOTO_BYTES
 
@@ -59,9 +60,7 @@ def item(household: Household) -> InventoryItem:
         default_unit_code="kg",
         is_food=True,
     )
-    return InventoryItem.objects.create(
-        household=household, product=product, unit_code="kg", quantity="2.000"
-    )
+    return InventoryItem.objects.create(product=product, unit_code="kg", quantity="2.000")
 
 
 def test_member_uploads_replaces_and_deletes_a_photo(
@@ -176,7 +175,7 @@ def test_a_photo_url_is_not_readable_without_membership(
     api_client.put(f"/api/inventory/{item.pk}/photo/", {"photo": upload}, format="multipart")
     api_client.force_login(ola)
 
-    response = api_client.get("/api/inventory/", {"household_id": item.household_id})
+    response = api_client.get("/api/inventory/", {"household_id": item.product.household_id})
 
     assert response.status_code == 403
     assert response.data["code"] == "not_a_household_member"

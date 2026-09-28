@@ -1,3 +1,4 @@
+from promotions.application.errors import InvalidPromotionQueryError
 from promotions.application.ports.promotion_source import PromotionSource
 from promotions.application.shop_selection import ShopSelection
 from promotions.domain.models import PromotionOffer
@@ -17,7 +18,7 @@ class SearchPromotions:
     ) -> list[PromotionOffer]:
         normalized_query = query.strip()
         if not normalized_query:
-            raise ValueError("query must not be empty")
+            raise InvalidPromotionQueryError("query must not be empty")
         shop_slugs = self._shop_selection.resolve(user_id, requested_shop_slugs)
         offers = self._source.search_promotions(normalized_query, shop_slugs)
         return build_search_results(offers, self._result_limit)

@@ -1,12 +1,12 @@
 from datetime import datetime
 
-from catalog.application.errors import NotAHouseholdMemberError, ProductNotFoundError
-from catalog.application.ports.household_membership_reader import HouseholdMembershipReader
+from catalog.application.errors import ProductNotFoundError
 from catalog.application.ports.product_classification_repository import (
     ProductClassificationRepository,
 )
-from catalog.application.ports.transaction_manager import TransactionManager
 from catalog.domain.product_ingredient import ProductIngredient
+from shared.household_membership import HouseholdMembershipReader, require_membership
+from shared.transactions import TransactionManager
 
 
 class RejectProductIngredient:
@@ -27,8 +27,7 @@ class RejectProductIngredient:
             classification = self._classifications.find(product_id)
             if classification is None:
                 raise ProductNotFoundError
-            if not self._memberships.is_member(user_id, classification.household_id):
-                raise NotAHouseholdMemberError
+            require_membership(self._memberships, user_id, classification.household_id)
             rejection = classification.reject(ingredient_id, now)
             self._classifications.save((rejection,))
             return rejection

@@ -2,11 +2,14 @@ from collections.abc import Mapping
 from datetime import date, datetime
 from decimal import Decimal
 from urllib.parse import urljoin
+from zoneinfo import ZoneInfo
 
 from promotions.application.ports.promotion_source import PromotionSourceContractError
 from promotions.domain.matching import matches_query
 from promotions.domain.models import PromotionOffer
 from promotions.infrastructure.providers.blix.parser import BlixLeafletHit
+
+_WARSAW = ZoneInfo("Europe/Warsaw")
 
 
 class BlixLeafletParser:
@@ -28,13 +31,12 @@ class BlixLeafletParser:
         for item in product_offers:
             if not isinstance(item, dict):
                 raise PromotionSourceContractError("Blix product offer entry is not an object")
-            if not matches_query(
-                self._required_str(item, "name"),
-                self._optional_str(item, "brandName"),
-                query,
-            ):
+            name = self._required_str(item, "name")
+            brand_name = self._optional_str(item, "brandName")
+            if not matches_query(name, brand_name, query):
                 continue
-            offers.append(self._map_offer(item, hit))
+            offer = self._map_offer(item, hit)
+            offers.append(offer)
         return offers
 
     def _map_offer(self, offer: Mapping[str, object], hit: BlixLeafletHit) -> PromotionOffer:
@@ -48,20 +50,27 @@ class BlixLeafletParser:
             f"sklep/{hit.shop_slug}/gazetka/{leaflet_id}/?pageNumber={page_number}",
         )
 
+        provider_offer_id = self._optional_str(offer, "hash")
+        name = self._required_str(offer, "name")
+        image_url = self._required_str(offer, "image")
+        brand_name = self._optional_str(offer, "brandName")
+        price = None if price_grosze is None else Decimal(price_grosze) / Decimal(100)
+        valid_from = self._required_date(offer, "dateStart")
+        valid_until = self._required_date(offer, "dateEnd")
         return PromotionOffer(
-            provider_offer_id=self._optional_str(offer, "hash"),
-            name=self._required_str(offer, "name"),
+            provider_offer_id=provider_offer_id,
+            name=name,
             shop_name=hit.shop_name,
             shop_slug=hit.shop_slug,
             shop_url=shop_url,
-            image_url=self._required_str(offer, "image"),
-            product_brand_name=self._optional_str(offer, "brandName"),
-            price=None if price_grosze is None else Decimal(price_grosze) / Decimal(100),
+            image_url=image_url,
+            product_brand_name=brand_name,
+            price=price,
             leaflet_provider_id=str(leaflet_id),
             leaflet_url=leaflet_url,
             page_number=page_number,
-            valid_from=self._required_date(offer, "dateStart"),
-            valid_until=self._required_date(offer, "dateEnd"),
+            valid_from=valid_from,
+            valid_until=valid_until,
         )
 
     @staticmethod
@@ -103,7 +112,8 @@ class BlixLeafletParser:
             raise PromotionSourceContractError(f"Blix field {key} must be an object")
         date_text = cls._required_str(value, "date")
         try:
-            return datetime.strptime(date_text, "%Y-%m-%d %H:%M:%S.%f").date()
+            local = datetime.strptime(date_text, "%Y-%m-%d %H:%M:%S.%f").replace(tzinfo=_WARSAW)
+            return local.date()
         except ValueError as error:
             raise PromotionSourceContractError(
                 f"Blix field {key}.date has unsupported format: {date_text}"

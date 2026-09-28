@@ -6,15 +6,13 @@ from recipes.application.ports.recipe_source import (
     RecipeNotFoundAtSourceError,
     RecipeSource,
     RecipeSourceContractError,
-    RecipeSourceUnavailable,
+    RecipeSourceUnavailableError,
 )
 from recipes.domain.external import ExternalRecipeDetail, ExternalRecipePage
 from recipes.infrastructure.providers.ania_gotuje.mapper import AniaGotujeRecipeMapper
 
 _REQUEST_HEADERS = {"Accept": "application/json", "Referer": "https://aniagotuje.pl/"}
 
-# The search endpoint answers 403 with an empty body unless both `page` and
-# `sort` are present, which is how the site's own client always calls it.
 _SEARCH_SORT = "score,desc"
 
 
@@ -59,11 +57,13 @@ class AniaGotujeProvider(RecipeSource):
         try:
             response = self._client.get(url, params=params, headers=_REQUEST_HEADERS)
         except httpx.HTTPError as error:
-            raise RecipeSourceUnavailable(f"Ania Gotuje request failed: {url}") from error
+            raise RecipeSourceUnavailableError(f"Ania Gotuje request failed: {url}") from error
         if response.status_code == httpx.codes.NOT_FOUND:
             raise RecipeNotFoundAtSourceError(f"Ania Gotuje has no resource at {url}")
         if response.status_code >= httpx.codes.BAD_REQUEST:
-            raise RecipeSourceUnavailable(f"Ania Gotuje responded {response.status_code} for {url}")
+            raise RecipeSourceUnavailableError(
+                f"Ania Gotuje responded {response.status_code} for {url}"
+            )
         try:
             return response.json()
         except json.JSONDecodeError as error:

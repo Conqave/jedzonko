@@ -1,0 +1,2 @@
+class InvalidShoppingSubjectError(Exception):
+    pass

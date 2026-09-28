@@ -1,136 +1,106 @@
 from decimal import Decimal
 
-from inventory.domain.models import InventoryItemSnapshot
 from recipes.domain.external import ExternalRecipePage, ExternalRecipeSummary
 from recipes.domain.matching import (
-    find_available_quantity,
-    find_matched_product_names,
-    find_matching_item,
+    available_quantity,
+    consumption_in_stock_unit,
+    find_stock,
     match_external_recipes,
-    matches_product,
 )
 from recipes.domain.missing_items import calculate_shortfall
+from recipes.domain.stock import StockedProduct
 from recipes.tests.factories import (
+    EGGS,
+    FLOUR,
     GRAM,
     KILOGRAM,
     MILLILITRE,
     PACKAGE,
     PIECE,
     make_requirement,
-    make_snapshot,
+    make_stock,
 )
+from shared.measurement import Quantity
 
 
-def _eggs_in_a_package() -> InventoryItemSnapshot:
-    return make_snapshot(
-        1,
-        "Jaja ściółkowe (opakowanie)",
-        "1",
-        PACKAGE,
-        alias_names=("jajko", "jajka", "jaja"),
-        package_quantity="10",
-        package_unit=PIECE,
-    )
+def _eggs_in_packages(packages: str = "1") -> StockedProduct:
+    ten_pieces = Quantity(amount=Decimal("10"), unit=PIECE)
+    return make_stock(1, "Jaja ściółkowe (opakowanie)", packages, PACKAGE, EGGS, ten_pieces)
 
 
-def test_every_requirement_word_must_appear_in_the_product_name() -> None:
-    product = make_snapshot(1, "Mąka pszenna typ 500", "1", KILOGRAM)
+def test_a_requirement_matches_only_products_confirmed_as_its_ingredient() -> None:
+    flour = make_stock(1, "Mąka pszenna typ 500", "1", KILOGRAM, FLOUR)
+    unclassified = make_stock(2, "Mąka pszenna", "1", KILOGRAM, None)
 
-    assert matches_product("maka pszenna", product) is True
-    assert matches_product("maka", product) is True
+    match = find_stock(FLOUR, GRAM, [unclassified, flour])
 
-
-def test_a_requirement_word_is_never_matched_as_a_substring() -> None:
-    assert matches_product("ser", make_snapshot(1, "Deser", "1", GRAM)) is False
+    assert match is not None and match.product.product_id == 1
 
 
-def test_a_two_word_requirement_needs_both_words() -> None:
-    product = make_snapshot(1, "Mąka ziemniaczana", "1", KILOGRAM)
+def test_an_unresolved_requirement_matches_nothing() -> None:
+    flour = make_stock(1, "Mąka pszenna", "1", KILOGRAM, FLOUR)
 
-    assert matches_product("maka pszenna", product) is False
-
-
-def test_an_alias_matches_the_requirement_name_exactly() -> None:
-    with_alias = make_snapshot(1, "Jaja ściółkowe", "1", PIECE, alias_names=("jajko",))
-    without_alias = make_snapshot(2, "Jaja ściółkowe", "1", PIECE)
-
-    assert matches_product("jajko", with_alias) is True
-    assert matches_product("jajko", without_alias) is False
+    assert find_stock(None, GRAM, [flour]) is None
 
 
-def test_the_alias_holder_wins_over_a_word_match() -> None:
-    by_words = make_snapshot(1, "Mleko kozie", "1", MILLILITRE)
-    by_alias = make_snapshot(2, "Napój roślinny", "1", MILLILITRE, alias_names=("mleko",))
+def test_the_product_with_most_comparable_stock_covers_the_requirement() -> None:
+    small = make_stock(1, "Mąka tortowa", "200", GRAM, FLOUR)
+    large = make_stock(2, "Mąka typ 500", "1", KILOGRAM, FLOUR)
 
-    chosen = find_matching_item("mleko", [by_words, by_alias])
+    match = find_stock(FLOUR, GRAM, [small, large])
 
-    assert chosen is not None
-    assert chosen.id == 2
-
-
-def test_the_shortest_product_name_wins_between_two_word_matches() -> None:
-    chosen = find_matching_item(
-        "maka",
-        [
-            make_snapshot(1, "Mąka pszenna typ 500", "1", KILOGRAM),
-            make_snapshot(2, "Mąka", "1", KILOGRAM),
-        ],
-    )
-
-    assert chosen is not None
-    assert chosen.id == 2
+    assert match is not None
+    assert match.product.product_id == 2
+    assert match.available == Quantity(amount=Decimal("1000"), unit=GRAM)
 
 
-def test_no_product_matches_an_unrelated_requirement() -> None:
-    assert find_matching_item("kakao", [make_snapshot(1, "Mąka", "1", KILOGRAM)]) is None
+def test_a_product_that_cannot_be_measured_is_reported_without_an_amount() -> None:
+    no_content = make_stock(1, "Jaja", "1", PACKAGE, EGGS)
+
+    match = find_stock(EGGS, PIECE, [no_content])
+
+    assert match is not None and match.available is None
 
 
-def test_package_content_expresses_a_package_in_pieces() -> None:
-    available = find_available_quantity(_eggs_in_a_package(), PIECE)
+def test_package_content_expresses_packages_in_pieces() -> None:
+    available = available_quantity(_eggs_in_packages("2"), PIECE)
 
-    assert available is not None
-    assert available.amount == Decimal("10")
-    assert available.unit == PIECE
-
-
-def test_a_package_without_content_is_not_comparable_with_pieces() -> None:
-    product = make_snapshot(1, "Jaja ściółkowe (opakowanie)", "1", PACKAGE)
-
-    assert find_available_quantity(product, PIECE) is None
+    assert available == Quantity(amount=Decimal("20"), unit=PIECE)
 
 
 def test_no_conversion_is_invented_across_dimensions() -> None:
-    product = make_snapshot(1, "Mleko", "1", KILOGRAM)
+    flour = make_stock(1, "Mąka", "1", KILOGRAM, FLOUR)
 
-    assert find_available_quantity(product, MILLILITRE) is None
-
-
-def test_a_package_of_eggs_satisfies_a_requirement_in_pieces() -> None:
-    shortfall = calculate_shortfall([make_requirement("Jajko", "3", PIECE)], [_eggs_in_a_package()])
-
-    assert shortfall.missing_items == ()
-    assert shortfall.available_item_count == 1
-    assert shortfall.is_ready is True
+    assert available_quantity(flour, MILLILITRE) is None
 
 
-def test_the_same_product_without_package_content_stays_incomparable() -> None:
-    product = make_snapshot(1, "Jaja ściółkowe (opakowanie)", "1", PACKAGE, alias_names=("jajko",))
+def test_a_requirement_is_consumed_in_the_products_own_unit() -> None:
+    three_pieces = Quantity(amount=Decimal("5"), unit=PIECE)
 
-    shortfall = calculate_shortfall([make_requirement("Jajko", "3", PIECE)], [product])
+    used = consumption_in_stock_unit(_eggs_in_packages(), three_pieces)
 
-    assert shortfall.unmeasured_ingredient_names == ("Jajko",)
-    assert shortfall.is_ready is False
+    assert used == Quantity(amount=Decimal("0.5"), unit=PACKAGE)
+
+
+def test_consumption_is_not_invented_without_package_content() -> None:
+    no_content = make_stock(1, "Jaja", "1", PACKAGE, EGGS)
+    three_pieces = Quantity(amount=Decimal("3"), unit=PIECE)
+
+    assert consumption_in_stock_unit(no_content, three_pieces) is None
 
 
 def test_readiness_follows_the_pantry() -> None:
     requirements = [
-        make_requirement("Jajko", "3", PIECE),
-        make_requirement("Mąka pszenna", "500", GRAM),
+        make_requirement("Jajko", "3", PIECE, EGGS),
+        make_requirement("Mąka pszenna", "500", GRAM, FLOUR),
     ]
-    flour = make_snapshot(2, "Mąka pszenna typ 500", "1", KILOGRAM)
+    flour = make_stock(2, "Mąka pszenna typ 500", "1", KILOGRAM, FLOUR)
 
-    assert calculate_shortfall(requirements, [_eggs_in_a_package(), flour]).is_ready is True
-    assert calculate_shortfall(requirements, [_eggs_in_a_package()]).is_ready is False
+    with_flour = calculate_shortfall(requirements, [_eggs_in_packages(), flour])
+    without_flour = calculate_shortfall(requirements, [_eggs_in_packages()])
+
+    assert with_flour.is_ready is True
+    assert without_flour.is_ready is False
 
 
 def _summary(reference: str, name: str, tag_names: tuple[str, ...]) -> ExternalRecipeSummary:
@@ -147,29 +117,22 @@ def _summary(reference: str, name: str, tag_names: tuple[str, ...]) -> ExternalR
     )
 
 
-def test_matched_pantry_products_come_from_the_provider_tags() -> None:
-    inventory = [_eggs_in_a_package(), make_snapshot(2, "Mąka pszenna typ 500", "1", KILOGRAM)]
-
-    matched = find_matched_product_names(("dla dzieci", "jajko", "mąka pszenna"), inventory)
-
-    assert matched == ("Jaja ściółkowe (opakowanie)", "Mąka pszenna typ 500")
-
-
-def test_recipes_matching_more_of_the_pantry_come_first() -> None:
-    inventory = [_eggs_in_a_package(), make_snapshot(2, "Mąka pszenna typ 500", "1", KILOGRAM)]
+def test_external_recipes_matching_more_of_the_pantry_come_first() -> None:
+    stock = [_eggs_in_packages(), make_stock(2, "Mąka pszenna typ 500", "1", KILOGRAM, FLOUR)]
     page = ExternalRecipePage(
         recipes=(
             _summary("zupa", "Zupa", ("woda", "sól")),
-            _summary("nalesniki", "Naleśniki", ("jajko", "mąka pszenna", "dla dzieci")),
-            _summary("omlet", "Omlet", ("jajko",)),
+            _summary("nalesniki", "Naleśniki", ("jajka", "mąka pszenna", "dla dzieci")),
+            _summary("omlet", "Omlet", ("jajka",)),
         ),
         page=0,
         page_size=12,
         total_count=3,
         total_pages=1,
     )
+    resolved = {"jajka": EGGS, "mąka pszenna": FLOUR}
 
-    matched = match_external_recipes(page, inventory)
+    matched = match_external_recipes(page, stock, resolved)
 
     assert [item.summary.reference for item in matched.matches] == ["nalesniki", "omlet", "zupa"]
     assert matched.matches[0].matched_product_names == (

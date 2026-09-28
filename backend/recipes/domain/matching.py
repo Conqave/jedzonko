@@ -1,63 +1,72 @@
-from inventory.domain.models import InventoryItemSnapshot
+from dataclasses import dataclass
+
 from recipes.domain.external import (
     ExternalRecipeMatch,
     ExternalRecipePage,
     MatchedExternalRecipePage,
 )
+from recipes.domain.stock import StockedProduct
 from shared.measurement import MeasurementDimension, MeasurementUnit, Quantity
-from shared.name_matching import matches_name
-from shared.text import normalize_text
 
 
-def matches_product(normalized_name: str, item: InventoryItemSnapshot) -> bool:
-    return matches_name(normalized_name, item.normalized_name, item.tag_names)
+@dataclass(frozen=True, slots=True)
+class StockMatch:
+    product: StockedProduct
+    available: Quantity | None
 
 
-def find_matching_item(
-    normalized_name: str, inventory: list[InventoryItemSnapshot]
-) -> InventoryItemSnapshot | None:
-    matches = [item for item in inventory if matches_product(normalized_name, item)]
-    if not matches:
+def find_stock(
+    ingredient_id: int | None, target: MeasurementUnit, stock: list[StockedProduct]
+) -> StockMatch | None:
+    if ingredient_id is None:
         return None
-    return min(matches, key=lambda item: _match_order(normalized_name, item))
+    candidates = [product for product in stock if product.ingredient_id == ingredient_id]
+    if not candidates:
+        return None
+    ordered = sorted(candidates, key=lambda product: (product.product_name, product.product_id))
+    best: StockMatch | None = None
+    for product in ordered:
+        available = available_quantity(product, target)
+        if available is None:
+            continue
+        if best is None or best.available is None or available.amount > best.available.amount:
+            best = StockMatch(product=product, available=available)
+    if best is None:
+        return StockMatch(product=ordered[0], available=None)
+    return best
 
 
-def find_available_quantity(
-    item: InventoryItemSnapshot, target: MeasurementUnit
-) -> Quantity | None:
-    stock = item.as_quantity()
+def available_quantity(product: StockedProduct, target: MeasurementUnit) -> Quantity | None:
+    stock = product.quantity
     if _is_directly_comparable(stock.unit, target):
         return stock.convert_to(target)
-    package = item.package_content()
-    if package is None:
+    package = product.package_content
+    if package is None or not _is_directly_comparable(package.unit, target):
         return None
-    content = Quantity(amount=stock.amount * package.amount, unit=package.unit)
-    if not _is_directly_comparable(content.unit, target):
-        return None
-    return content.convert_to(target)
+    return Quantity(amount=stock.amount * package.amount, unit=package.unit).convert_to(target)
 
 
-def find_matched_product_names(
-    tag_names: tuple[str, ...], inventory: list[InventoryItemSnapshot]
-) -> tuple[str, ...]:
-    matched: set[str] = set()
-    for tag_name in tag_names:
-        item = find_matching_item(normalize_text(tag_name), inventory)
-        if item is not None:
-            matched.add(item.product_name)
-    return tuple(sorted(matched))
+def consumption_in_stock_unit(product: StockedProduct, required: Quantity) -> Quantity | None:
+    stock_unit = product.quantity.unit
+    if _is_directly_comparable(required.unit, stock_unit):
+        return required.convert_to(stock_unit)
+    package = product.package_content
+    if package is None or not _is_directly_comparable(required.unit, package.unit):
+        return None
+    packages = required.convert_to(package.unit).amount / package.amount
+    return Quantity(amount=packages, unit=stock_unit)
 
 
 def match_external_recipes(
-    page: ExternalRecipePage, inventory: list[InventoryItemSnapshot]
+    page: ExternalRecipePage, stock: list[StockedProduct], ingredient_ids: dict[str, int]
 ) -> MatchedExternalRecipePage:
-    matches = [
-        ExternalRecipeMatch(
-            summary=summary,
-            matched_product_names=find_matched_product_names(summary.tag_names, inventory),
+    matches = []
+    for summary in page.recipes:
+        wanted = {ingredient_ids[name] for name in summary.tag_names if name in ingredient_ids}
+        matched = sorted(
+            {product.product_name for product in stock if product.ingredient_id in wanted}
         )
-        for summary in page.recipes
-    ]
+        matches.append(ExternalRecipeMatch(summary=summary, matched_product_names=tuple(matched)))
     matches.sort(
         key=lambda match: (
             -len(match.matched_product_names),
@@ -71,15 +80,6 @@ def match_external_recipes(
         page_size=page.page_size,
         total_count=page.total_count,
         total_pages=page.total_pages,
-    )
-
-
-def _match_order(normalized_name: str, item: InventoryItemSnapshot) -> tuple[bool, int, str, int]:
-    return (
-        normalized_name not in item.tag_names,
-        len(item.normalized_name),
-        item.normalized_name,
-        item.id,
     )
 
 

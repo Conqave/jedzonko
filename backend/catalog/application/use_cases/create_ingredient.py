@@ -1,8 +1,8 @@
 from catalog.application.errors import DuplicateIngredientNameError
 from catalog.application.ports.ingredient_repository import IngredientRepository
-from catalog.application.ports.transaction_manager import TransactionManager
 from catalog.domain.ingredient import Ingredient, IngredientNameSource
-from catalog.domain.names import IngredientNameText
+from catalog.domain.names import CatalogName
+from shared.transactions import TransactionManager
 
 
 class CreateIngredient:
@@ -11,7 +11,7 @@ class CreateIngredient:
         self._transactions = transactions
 
     def execute(self, name: str, source: IngredientNameSource) -> Ingredient:
-        text = IngredientNameText.parse(name)
+        text = CatalogName.parse(name)
         with self._transactions.atomic():
             if self._repository.find_by_normalized_name(text.normalized_name) is not None:
                 raise DuplicateIngredientNameError

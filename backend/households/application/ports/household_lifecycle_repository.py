@@ -7,7 +7,7 @@ from households.domain.models import HouseholdSummary
 
 class HouseholdLifecycleRepository(ABC):
     @abstractmethod
-    def is_member(self, user_id: int, household_id: int) -> bool:
+    def is_member_including_deleted(self, user_id: int, household_id: int) -> bool:
         raise NotImplementedError
 
     @abstractmethod

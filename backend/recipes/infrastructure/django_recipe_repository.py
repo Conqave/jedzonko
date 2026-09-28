@@ -1,8 +1,7 @@
-from django.db import models, transaction
+from django.db import models
 
-from recipes.application.commands import RecipeInput
+from recipes.application.commands import RecipeInput, ResolvedIngredient
 from recipes.application.errors import (
-    DuplicateRecipeIngredientError,
     MeasurementUnitNotFoundError,
     RecipeCategoryNotFoundError,
     RecipeNotFoundError,
@@ -19,7 +18,6 @@ from recipes.domain.models import (
 from recipes.models import Recipe, RecipeCategory, RecipeIngredient, RecipeStep, RecipeTag
 from shared.measurement import MeasurementUnit, Quantity
 from shared.measurement_units import find_measurement_unit
-from shared.text import normalize_text
 
 
 class DjangoRecipeRepository(RecipeRepository):
@@ -38,47 +36,59 @@ class DjangoRecipeRepository(RecipeRepository):
     def list_requirements_by_recipe(self) -> dict[int, list[RecipeRequirement]]:
         grouped: dict[int, list[RecipeRequirement]] = {}
         for row in RecipeIngredient.objects.all():
-            grouped.setdefault(row.recipe_id, []).append(self._to_requirement(row))
+            requirement = self._to_requirement(row)
+            grouped.setdefault(row.recipe_id, []).append(requirement)
         return grouped
 
-    def create_recipe(self, command: RecipeInput, created_by_user_id: int) -> RecipeDetail:
-        with transaction.atomic():
-            recipe = Recipe.objects.create(
-                name=command.name,
-                description=command.description,
-                servings=command.servings,
-                preparation_time_minutes=command.preparation_time_minutes,
-                cooking_time_minutes=command.cooking_time_minutes,
-                difficulty=command.difficulty.value,
-                category=self._resolve_category(command.category_id),
-                created_by_id=created_by_user_id,
-            )
-            self._replace_children(recipe, command)
+    def create_recipe(
+        self,
+        command: RecipeInput,
+        ingredients: tuple[ResolvedIngredient, ...],
+        created_by_user_id: int,
+    ) -> RecipeDetail:
+        category = self._resolve_category(command.category_id)
+        recipe = Recipe.objects.create(
+            name=command.name,
+            description=command.description,
+            servings=command.servings,
+            preparation_time_minutes=command.preparation_time_minutes,
+            cooking_time_minutes=command.cooking_time_minutes,
+            difficulty=command.difficulty.value,
+            category=category,
+            created_by_id=created_by_user_id,
+        )
+        self._replace_children(recipe, command, ingredients)
         stored = self.find_recipe(recipe.pk)
         if stored is None:
             raise RecipeNotFoundError
         return stored
 
-    def update_recipe(self, recipe_id: int, command: RecipeInput) -> RecipeDetail:
-        with transaction.atomic():
-            recipe = Recipe.objects.filter(pk=recipe_id).first()
-            if recipe is None:
-                raise RecipeNotFoundError
-            recipe.name = command.name
-            recipe.description = command.description
-            recipe.servings = command.servings
-            recipe.preparation_time_minutes = command.preparation_time_minutes
-            recipe.cooking_time_minutes = command.cooking_time_minutes
-            recipe.difficulty = command.difficulty.value
-            recipe.category = self._resolve_category(command.category_id)
-            recipe.save()
-            recipe.steps.all().delete()
-            recipe.ingredients.all().delete()
-            self._replace_children(recipe, command)
+    def update_recipe(
+        self, recipe_id: int, command: RecipeInput, ingredients: tuple[ResolvedIngredient, ...]
+    ) -> RecipeDetail:
+        recipe = Recipe.objects.filter(pk=recipe_id).first()
+        if recipe is None:
+            raise RecipeNotFoundError
+        recipe.name = command.name
+        recipe.description = command.description
+        recipe.servings = command.servings
+        recipe.preparation_time_minutes = command.preparation_time_minutes
+        recipe.cooking_time_minutes = command.cooking_time_minutes
+        recipe.difficulty = command.difficulty.value
+        recipe.category = self._resolve_category(command.category_id)
+        recipe.save()
+        recipe.steps.all().delete()
+        recipe.ingredients.all().delete()
+        self._replace_children(recipe, command, ingredients)
         stored = self.find_recipe(recipe_id)
         if stored is None:
             raise RecipeNotFoundError
         return stored
+
+    def reassign_ingredient(self, source_ingredient_id: int, target_ingredient_id: int) -> None:
+        RecipeIngredient.objects.filter(ingredient_id=source_ingredient_id).update(
+            ingredient_id=target_ingredient_id
+        )
 
     def delete_recipe(self, recipe_id: int) -> None:
         deleted, _ = Recipe.objects.filter(pk=recipe_id).delete()
@@ -100,8 +110,10 @@ class DjangoRecipeRepository(RecipeRepository):
             raise RecipeCategoryNotFoundError
         return category
 
-    @classmethod
-    def _replace_children(cls, recipe: Recipe, command: RecipeInput) -> None:
+    @staticmethod
+    def _replace_children(
+        recipe: Recipe, command: RecipeInput, ingredients: tuple[ResolvedIngredient, ...]
+    ) -> None:
         tags = [RecipeTag.objects.get_or_create(name=name)[0] for name in command.tag_names]
         recipe.tags.set(tags)
         RecipeStep.objects.bulk_create(
@@ -110,20 +122,19 @@ class DjangoRecipeRepository(RecipeRepository):
                 for step in command.steps
             ]
         )
-        used_names: set[str] = set()
-        for ingredient_input in command.ingredients:
-            cls._to_unit(ingredient_input.unit_code)
-            normalized_name = normalize_text(ingredient_input.name)
-            if normalized_name in used_names:
-                raise DuplicateRecipeIngredientError
-            used_names.add(normalized_name)
-            RecipeIngredient.objects.create(
-                recipe=recipe,
-                name=ingredient_input.name,
-                normalized_name=normalized_name,
-                unit_code=ingredient_input.unit_code,
-                quantity=ingredient_input.quantity,
-            )
+        RecipeIngredient.objects.bulk_create(
+            [
+                RecipeIngredient(
+                    recipe=recipe,
+                    ingredient_id=line.ingredient_id,
+                    name=line.name,
+                    normalized_name=line.normalized_name,
+                    unit_code=line.unit_code,
+                    quantity=line.quantity,
+                )
+                for line in ingredients
+            ]
+        )
 
     @staticmethod
     def _to_unit(unit_code: str) -> MeasurementUnit:
@@ -134,11 +145,9 @@ class DjangoRecipeRepository(RecipeRepository):
 
     @classmethod
     def _to_requirement(cls, row: RecipeIngredient) -> RecipeRequirement:
-        return RecipeRequirement(
-            name=row.name,
-            normalized_name=row.normalized_name,
-            quantity=Quantity(amount=row.quantity, unit=cls._to_unit(row.unit_code)),
-        )
+        unit = cls._to_unit(row.unit_code)
+        quantity = Quantity(amount=row.quantity, unit=unit)
+        return RecipeRequirement(name=row.name, ingredient_id=row.ingredient_id, quantity=quantity)
 
     @staticmethod
     def _to_summary(row: Recipe) -> RecipeSummary:
@@ -158,14 +167,18 @@ class DjangoRecipeRepository(RecipeRepository):
 
     @classmethod
     def _to_detail(cls, row: Recipe) -> RecipeDetail:
+        summary = cls._to_summary(row)
         return RecipeDetail(
-            summary=cls._to_summary(row),
+            summary=summary,
             steps=tuple(
                 RecipeStepDetail(position=step.position, text=step.text) for step in row.steps.all()
             ),
             ingredients=tuple(
                 RecipeIngredientDetail(
-                    name=item.name, quantity=item.quantity, unit_code=item.unit_code
+                    name=item.name,
+                    ingredient_id=item.ingredient_id,
+                    quantity=item.quantity,
+                    unit_code=item.unit_code,
                 )
                 for item in row.ingredients.all()
             ),

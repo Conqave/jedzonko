@@ -170,3 +170,15 @@ def test_renaming_a_deleted_household_is_not_found(api_client: APIClient, ala: U
 
     assert response.status_code == 403
     assert response.data["code"] == "not_a_household_member"
+
+
+def test_a_new_household_starts_with_its_primary_shopping_list(
+    api_client: APIClient, ala: User
+) -> None:
+    api_client.force_login(ala)
+
+    created = api_client.post("/api/households/", {"name": "Nowy dom"}, format="json")
+    lists = api_client.get(f"/api/shopping/lists/?household_id={created.data['id']}")
+
+    assert created.status_code == 201
+    assert [(item["name"], item["is_primary"]) for item in lists.data] == [("Lista zakupów", True)]

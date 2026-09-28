@@ -2,7 +2,8 @@ import pytest
 from django.contrib.auth.models import User
 from rest_framework.test import APIClient
 
-from households.models import Household, HouseholdMembership, Product
+from catalog.models import Product
+from households.models import Household, HouseholdMembership
 from inventory.models import InventoryCategory, InventoryItem
 
 pytestmark = pytest.mark.django_db
@@ -50,9 +51,7 @@ def flour(household: Household) -> Product:
 
 @pytest.fixture
 def item(household: Household, flour: Product) -> InventoryItem:
-    return InventoryItem.objects.create(
-        household=household, product=flour, unit_code="kg", quantity="2.000"
-    )
+    return InventoryItem.objects.create(product=flour, unit_code="kg", quantity="2.000")
 
 
 def test_member_creates_and_lists_categories(

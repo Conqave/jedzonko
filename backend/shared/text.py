@@ -1,6 +1,5 @@
 import unicodedata
 
-# NFKD leaves "ł"/"Ł" undecomposed, so they need an explicit mapping.
 _LATIN_STROKE_TRANSLATION = str.maketrans({"ł": "l", "Ł": "l"})
 
 

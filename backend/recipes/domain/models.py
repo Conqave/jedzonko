@@ -8,7 +8,7 @@ from shared.measurement import Quantity
 @dataclass(frozen=True, slots=True)
 class RecipeRequirement:
     name: str
-    normalized_name: str
+    ingredient_id: int | None
     quantity: Quantity
 
 
@@ -21,6 +21,7 @@ class RecipeStepDetail:
 @dataclass(frozen=True, slots=True)
 class RecipeIngredientDetail:
     name: str
+    ingredient_id: int | None
     quantity: Decimal
     unit_code: str
 

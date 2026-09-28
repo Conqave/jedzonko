@@ -1,16 +1,23 @@
 from dataclasses import dataclass
+from datetime import datetime
 from decimal import Decimal
 
 from shared.measurement import MeasurementUnit
+from shopping.domain.shopping_item_status import ShoppingItemStatus
+from shopping.domain.shopping_subject import ShoppingSubject
 
 
 @dataclass(frozen=True, slots=True)
 class ShoppingItemSnapshot:
     id: int
-    product_id: int | None
-    product_name: str | None
-    free_text: str | None
+    list_id: int
+    subject: ShoppingSubject
+    name: str
     quantity: Decimal
     unit: MeasurementUnit | None
-    is_purchased: bool
-    tag_names: tuple[str, ...] = ()
+    status: ShoppingItemStatus
+    purchased_at: datetime | None
+
+    @property
+    def is_purchased(self) -> bool:
+        return self.status is ShoppingItemStatus.PURCHASED

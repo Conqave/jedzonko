@@ -4,9 +4,10 @@ import pytest
 from django.contrib.auth.models import User
 from rest_framework.test import APIClient
 
-from households.composition import build_household_repository
-from households.models import Product
-from inventory.composition import build_add_inventory_item, build_get_household_inventory
+from catalog.models import Ingredient, Product
+from config.composition import container
+from households.models import Household
+from tests.factories import confirm_ingredient, make_household, make_ingredient, make_product
 
 pytestmark = [pytest.mark.django_db, pytest.mark.urls("recipes.tests.urls")]
 
@@ -28,18 +29,26 @@ def outsider() -> User:
 
 @pytest.fixture
 def household_id(member: User) -> int:
-    return build_household_repository().create_household("dom", member.pk).id
+    household = make_household(member, "dom")
+    return household.pk
 
 
 @pytest.fixture
-def egg(household_id: int) -> Product:
-    return Product.objects.create(
-        household_id=household_id,
-        name="jajko",
-        normalized_name="jajko",
-        default_unit_code="g",
-        is_food=True,
-    )
+def eggs() -> Ingredient:
+    return make_ingredient("jajko")
+
+
+@pytest.fixture
+def egg(member: User, household_id: int, eggs: Ingredient) -> Product:
+    household = Household.objects.get(pk=household_id)
+    product = make_product(household, "Jaja wiejskie", "g")
+    confirm_ingredient(member, product, eggs)
+    return product
+
+
+def _stock(member: User, household_id: int, product: Product, grams: str) -> None:
+    add_item = container().inventory.add_inventory_item
+    add_item.execute(member.pk, household_id, product.pk, Decimal(grams), "g", None, None)
 
 
 def _recipe_body() -> dict[str, object]:
@@ -81,7 +90,7 @@ def test_create_and_get_recipe(api_client: APIClient, member: User) -> None:
     assert response.data["image_url"] is None
     assert response.data["steps"] == [{"position": 1, "text": "wbij jajka"}]
     assert response.data["ingredients"] == [
-        {"name": "jajko", "quantity": "100.000", "unit_code": "g"}
+        {"name": "jajko", "ingredient_id": None, "quantity": "100.000", "unit_code": "g"}
     ]
 
 
@@ -146,9 +155,7 @@ def test_suggestions_report_stocked_recipe_as_complete(
     api_client: APIClient, member: User, egg: Product, household_id: int
 ) -> None:
     recipe_id = _create_recipe(api_client, member)
-    build_add_inventory_item().execute(
-        member.pk, household_id, egg.pk, Decimal("500"), "g", None, None
-    )
+    _stock(member, household_id, egg, "500")
 
     response = api_client.get(f"/api/recipes/suggestions/?household_id={household_id}")
 
@@ -157,12 +164,13 @@ def test_suggestions_report_stocked_recipe_as_complete(
         {
             "recipe_id": recipe_id,
             "recipe_name": "omlet",
-            "missing_items": [],
-            "required_item_count": 1,
-            "available_item_count": 1,
-            "unmeasured_ingredients": [],
-            "is_ready": True,
-            "missing_item_count": 0,
+            "shortfall": {
+                "missing_items": [],
+                "required_item_count": 1,
+                "available_item_count": 1,
+                "unmeasured_ingredients": [],
+                "is_ready": True,
+            },
         }
     ]
 
@@ -182,9 +190,7 @@ def test_missing_items_scale_with_servings(
     api_client: APIClient, member: User, egg: Product, household_id: int
 ) -> None:
     recipe_id = _create_recipe(api_client, member)
-    build_add_inventory_item().execute(
-        member.pk, household_id, egg.pk, Decimal("150"), "g", None, None
-    )
+    _stock(member, household_id, egg, "150")
 
     response = api_client.get(
         f"/api/recipes/{recipe_id}/missing-items/?household_id={household_id}&servings=4"
@@ -192,7 +198,13 @@ def test_missing_items_scale_with_servings(
 
     assert response.status_code == 200
     assert response.data["missing_items"] == [
-        {"name": "jajko", "amount": "50.000", "unit_code": "g"}
+        {
+            "name": "jajko",
+            "ingredient_id": egg.ingredient_links.get().ingredient_id,
+            "stocked_product_id": egg.pk,
+            "amount": "50.000",
+            "unit_code": "g",
+        }
     ]
     assert response.data["is_ready"] is False
 
@@ -241,9 +253,7 @@ def test_confirm_preparation_consumes_inventory(
     api_client: APIClient, member: User, egg: Product, household_id: int
 ) -> None:
     recipe_id = _create_recipe(api_client, member)
-    build_add_inventory_item().execute(
-        member.pk, household_id, egg.pk, Decimal("500"), "g", None, None
-    )
+    _stock(member, household_id, egg, "500")
 
     response = api_client.post(
         f"/api/recipes/{recipe_id}/confirm-preparation/",
@@ -252,7 +262,8 @@ def test_confirm_preparation_consumes_inventory(
     )
 
     assert response.status_code == 204
-    items = build_get_household_inventory().execute(member.pk, household_id)
+    get_inventory = container().inventory.get_household_inventory
+    items = get_inventory.execute(member.pk, household_id)
     assert items[0].quantity == Decimal("300.000")
 
 
@@ -270,3 +281,19 @@ def test_confirm_preparation_rejects_non_member(
 
     assert response.status_code == 403
     assert response.data["code"] == "not_a_household_member"
+
+
+def test_recipe_lines_name_their_ingredient_or_stay_unresolved(
+    api_client: APIClient, member: User, eggs: Ingredient
+) -> None:
+    body = _recipe_body()
+    body["ingredients"] = [
+        {"name": "Jajko", "quantity": "2", "unit_code": "szt"},
+        {"name": "szczypta miłości", "quantity": "1", "unit_code": "g"},
+    ]
+    api_client.force_authenticate(member)
+
+    response = api_client.post("/api/recipes/", body, format="json")
+
+    lines = {line["name"]: line["ingredient_id"] for line in response.data["ingredients"]}
+    assert lines == {"Jajko": eggs.pk, "szczypta miłości": None}

@@ -1,17 +1,17 @@
 import pytest
 
-from households.application.access import HouseholdAccessPolicy
-from households.application.errors import NotAHouseholdMemberError
 from recipes.application.use_cases.suggest_external_recipes_from_inventory import (
     SuggestExternalRecipesFromInventory,
 )
 from recipes.domain.external import ExternalRecipePage, ExternalRecipeSummary
-from recipes.tests.factories import GRAM, make_snapshot
+from recipes.tests.factories import EGGS, GRAM, MILK, SUGAR, make_stock
 from recipes.tests.fakes import (
-    FakeHouseholdInventoryReader,
-    FakeHouseholdRepository,
+    FakeHouseholdMembershipReader,
+    FakeIngredientResolver,
     FakeRecipeSource,
+    FakeStockReader,
 )
+from shared.household_membership import NotAHouseholdMemberError
 
 
 def _page() -> ExternalRecipePage:
@@ -35,14 +35,15 @@ def test_pantry_selection_is_bounded_and_echoed_back() -> None:
     source = FakeRecipeSource(_page())
     use_case = SuggestExternalRecipesFromInventory(
         source,
-        FakeHouseholdInventoryReader(
+        FakeStockReader(
             [
-                    make_snapshot(1, "mleko", "1", GRAM, alias_names=("mleko",)),
-                    make_snapshot(2, "jajko", "3", GRAM, alias_names=("jajko",)),
-                    make_snapshot(3, "cukier", "1", GRAM, alias_names=("cukier",)),
+                make_stock(1, "mleko", "1", GRAM, MILK),
+                make_stock(2, "jajko", "3", GRAM, EGGS),
+                make_stock(3, "cukier", "1", GRAM, SUGAR),
             ]
         ),
-        HouseholdAccessPolicy(FakeHouseholdRepository({7})),
+        FakeIngredientResolver({"jajko": EGGS}),
+        FakeHouseholdMembershipReader({7}),
         2,
     )
 
@@ -62,8 +63,9 @@ def test_empty_pantry_does_not_call_the_provider() -> None:
     source = FakeRecipeSource(_page())
     use_case = SuggestExternalRecipesFromInventory(
         source,
-        FakeHouseholdInventoryReader([]),
-        HouseholdAccessPolicy(FakeHouseholdRepository({7})),
+        FakeStockReader([]),
+        FakeIngredientResolver({"jajko": EGGS}),
+        FakeHouseholdMembershipReader({7}),
         2,
     )
 
@@ -78,8 +80,9 @@ def test_empty_pantry_does_not_call_the_provider() -> None:
 def test_non_member_is_rejected() -> None:
     use_case = SuggestExternalRecipesFromInventory(
         FakeRecipeSource(_page()),
-        FakeHouseholdInventoryReader([]),
-        HouseholdAccessPolicy(FakeHouseholdRepository({7})),
+        FakeStockReader([]),
+        FakeIngredientResolver({"jajko": EGGS}),
+        FakeHouseholdMembershipReader({7}),
         2,
     )
 
@@ -91,7 +94,8 @@ def test_ingredient_limit_must_be_positive() -> None:
     with pytest.raises(ValueError):
         SuggestExternalRecipesFromInventory(
             FakeRecipeSource(_page()),
-            FakeHouseholdInventoryReader([]),
-            HouseholdAccessPolicy(FakeHouseholdRepository({7})),
+            FakeStockReader([]),
+            FakeIngredientResolver({}),
+            FakeHouseholdMembershipReader({7}),
             0,
         )

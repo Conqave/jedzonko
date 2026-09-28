@@ -22,7 +22,7 @@ class FakeHouseholdLifecycleRepository(HouseholdLifecycleRepository):
         self.rows = rows
         self.purged: list[int] = []
 
-    def is_member(self, user_id: int, household_id: int) -> bool:
+    def is_member_including_deleted(self, user_id: int, household_id: int) -> bool:
         row = self._find(household_id)
         return row is not None and user_id in row.member_ids
 

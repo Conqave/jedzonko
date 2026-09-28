@@ -2,23 +2,19 @@ import os
 from pathlib import Path
 
 import django_stubs_ext
+from django.core.exceptions import ImproperlyConfigured
 
-# Makes Django's generic classes subscriptable at runtime so the annotations
-# required by mypy --strict + django-stubs also work when Django imports them.
 django_stubs_ext.monkeypatch()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.environ["DJANGO_SECRET_KEY"]
-DEBUG = os.environ.get("DJANGO_DEBUG", "false").lower() == "true"
-ALLOWED_HOSTS = [
-    v for v in os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",") if v
-]
-CSRF_TRUSTED_ORIGINS = [
-    v
-    for v in os.environ.get("DJANGO_CSRF_TRUSTED_ORIGINS", "http://localhost:9000").split(",")
-    if v
-]
+DEBUG_SETTING = os.environ.get("DJANGO_DEBUG", "false")
+if DEBUG_SETTING not in {"true", "false"}:
+    raise ImproperlyConfigured("DJANGO_DEBUG must be 'true' or 'false'.")
+DEBUG = DEBUG_SETTING == "true"
+ALLOWED_HOSTS = [v for v in os.environ["DJANGO_ALLOWED_HOSTS"].split(",") if v]
+CSRF_TRUSTED_ORIGINS = [v for v in os.environ["DJANGO_CSRF_TRUSTED_ORIGINS"].split(",") if v]
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -70,8 +66,8 @@ DATABASES = {
         "NAME": os.environ["MARIADB_DATABASE"],
         "USER": os.environ["MARIADB_USER"],
         "PASSWORD": os.environ["MARIADB_PASSWORD"],
-        "HOST": os.environ.get("MARIADB_HOST", "database"),
-        "PORT": int(os.environ.get("MARIADB_PORT", "3306")),
+        "HOST": os.environ["MARIADB_HOST"],
+        "PORT": int(os.environ["MARIADB_PORT"]),
         "OPTIONS": {"charset": "utf8mb4"},
         "TEST": {
             "NAME": os.environ.get("DJANGO_TEST_DATABASE", "test_jedzonko"),
@@ -89,7 +85,7 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 LANGUAGE_CODE = "pl-pl"
-TIME_ZONE = "UTC"
+TIME_ZONE = "Europe/Warsaw"
 USE_I18N = True
 USE_TZ = True
 
@@ -124,13 +120,17 @@ RECIPE_SOURCE_SUGGESTION_INGREDIENT_LIMIT = int(
     os.environ.get("RECIPE_SOURCE_SUGGESTION_INGREDIENT_LIMIT", "50")
 )
 
-ALIAS_MATCHER_BASE_URL = os.environ.get("ALIAS_MATCHER_BASE_URL", "http://192.168.37.160:11434")
-ALIAS_MATCHER_MODEL = os.environ.get("ALIAS_MATCHER_MODEL", "gpt-oss:20b")
-ALIAS_MATCHER_REASONING_EFFORT = os.environ.get("ALIAS_MATCHER_REASONING_EFFORT", "high")
-ALIAS_MATCHER_HTTP_TIMEOUT_SECONDS = float(
-    os.environ.get("ALIAS_MATCHER_HTTP_TIMEOUT_SECONDS", "120")
+INGREDIENT_CLASSIFIER_BASE_URL = os.environ.get("INGREDIENT_CLASSIFIER_BASE_URL", "")
+INGREDIENT_CLASSIFIER_MODEL = os.environ.get("INGREDIENT_CLASSIFIER_MODEL", "gpt-oss:20b")
+INGREDIENT_CLASSIFIER_REASONING_EFFORT = os.environ.get(
+    "INGREDIENT_CLASSIFIER_REASONING_EFFORT", "high"
 )
-ALIAS_ANALYSIS_QUESTION_LIMIT = int(os.environ.get("ALIAS_ANALYSIS_QUESTION_LIMIT", "20"))
+INGREDIENT_CLASSIFIER_HTTP_TIMEOUT_SECONDS = float(
+    os.environ.get("INGREDIENT_CLASSIFIER_HTTP_TIMEOUT_SECONDS", "120")
+)
+INGREDIENT_CLASSIFIER_QUESTION_LIMIT = int(
+    os.environ.get("INGREDIENT_CLASSIFIER_QUESTION_LIMIT", "20")
+)
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": ["rest_framework.authentication.SessionAuthentication"],

@@ -7,7 +7,7 @@ import pytest
 from recipes.application.ports.recipe_source import (
     RecipeNotFoundAtSourceError,
     RecipeSourceContractError,
-    RecipeSourceUnavailable,
+    RecipeSourceUnavailableError,
 )
 from recipes.infrastructure.providers.ania_gotuje.provider import AniaGotujeProvider
 
@@ -138,7 +138,7 @@ def test_missing_recipe_is_reported_as_not_found_at_source() -> None:
 def test_server_error_is_reported_as_unavailable() -> None:
     provider = build_provider([], status_code=503)
 
-    with pytest.raises(RecipeSourceUnavailable):
+    with pytest.raises(RecipeSourceUnavailableError):
         provider.get_recipe("jak-zrobic-ciasto-na-nalesniki")
 
 
@@ -148,7 +148,7 @@ def test_transport_error_is_reported_as_unavailable() -> None:
 
     provider = AniaGotujeProvider(httpx.Client(transport=httpx.MockTransport(handle_request)))
 
-    with pytest.raises(RecipeSourceUnavailable):
+    with pytest.raises(RecipeSourceUnavailableError):
         provider.get_recipe("jak-zrobic-ciasto-na-nalesniki")
 
 

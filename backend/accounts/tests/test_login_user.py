@@ -1,8 +1,13 @@
 import pytest
 
 from accounts.application.dto import AuthenticatedUser
-from accounts.application.errors import InvalidCredentialsError, NotAuthenticatedError
+from accounts.application.errors import (
+    InvalidCredentialsError,
+    NotAuthenticatedError,
+    WrongCurrentPasswordError,
+)
 from accounts.application.ports.authentication_gateway import AuthenticationGateway
+from accounts.application.use_cases.change_password import ChangePassword
 from accounts.application.use_cases.get_current_user import GetCurrentUser
 from accounts.application.use_cases.login_user import LoginUser
 from accounts.application.use_cases.logout_user import LogoutUser
@@ -28,6 +33,12 @@ class FakeAuthenticationGateway(AuthenticationGateway):
 
     def get_session_user(self) -> AuthenticatedUser | None:
         return self.session_user
+
+    def check_password(self, user_id: int, password: str) -> bool:
+        return user_id == KNOWN_USER.id and password == self._password
+
+    def set_password(self, user_id: int, password: str) -> None:
+        self._password = password
 
 
 def test_login_user_starts_session_for_valid_credentials() -> None:
@@ -62,3 +73,21 @@ def test_get_current_user_requires_session() -> None:
 
     with pytest.raises(NotAuthenticatedError):
         GetCurrentUser(gateway).execute()
+
+
+def test_change_password_needs_the_current_password() -> None:
+    gateway = FakeAuthenticationGateway("secret")
+    gateway.start_session(KNOWN_USER)
+
+    with pytest.raises(WrongCurrentPasswordError):
+        ChangePassword(gateway).execute("wrong", "new-secret-1")
+    ChangePassword(gateway).execute("secret", "new-secret-1")
+
+    assert gateway.check_password(KNOWN_USER.id, "new-secret-1")
+
+
+def test_change_password_requires_a_session() -> None:
+    gateway = FakeAuthenticationGateway("secret")
+
+    with pytest.raises(NotAuthenticatedError):
+        ChangePassword(gateway).execute("secret", "new-secret-1")

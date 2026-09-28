@@ -27,6 +27,7 @@ services:
     build:
       context: ../backend
       dockerfile: ../infra/backend.Dockerfile
+      target: runtime
     restart: unless-stopped
     environment:
       DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
@@ -51,6 +52,22 @@ services:
       - "8001:8000"
     volumes:
       - media_data:/srv/media
+
+  backend-tools:
+    profiles: ["tools"]
+    build:
+      context: ../backend
+      dockerfile: ../infra/backend.Dockerfile
+      target: tools
+    env_file: ../.env
+    environment:
+      MARIADB_HOST: database
+      MARIADB_PORT: 3306
+    depends_on:
+      database:
+        condition: service_healthy
+    volumes:
+      - ../backend:/src
 
   frontend:
     build:

@@ -1,7 +1,7 @@
 from abc import abstractmethod
 
-from households.application.ports.household_membership_reader import HouseholdMembershipReader
 from households.domain.models import HouseholdMember, HouseholdSummary
+from shared.household_membership import HouseholdMembershipReader
 
 
 class HouseholdRepository(HouseholdMembershipReader):

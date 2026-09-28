@@ -1,3 +1,4 @@
+from promotions.application.errors import InvalidShopSelectionError
 from promotions.application.ports.favourite_shop_repository import FavouriteShopRepository
 
 
@@ -6,7 +7,7 @@ def normalize_shop_slugs(shop_slugs: tuple[str, ...]) -> tuple[str, ...]:
     for shop_slug in shop_slugs:
         candidate = shop_slug.strip().casefold()
         if not candidate:
-            raise ValueError("shop slug must not be empty")
+            raise InvalidShopSelectionError("shop slug must not be empty")
         if candidate not in normalized:
             normalized.append(candidate)
     return tuple(normalized)

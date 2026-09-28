@@ -1,302 +1,274 @@
+from datetime import UTC, datetime
 from decimal import Decimal
 
 import pytest
 
-from households.application.access import HouseholdAccessPolicy
-from households.application.errors import NotAHouseholdMemberError
+from shared.household_membership import NotAHouseholdMemberError
 from shopping.application.errors import (
+    IngredientNotFoundError,
     InvalidShoppingItemError,
+    PrimaryShoppingListCannotBeDeletedError,
     ProductNotFoundError,
+    ShoppingItemAlreadyPendingError,
+    ShoppingItemMergeConflictError,
     ShoppingListItemNotFoundError,
     ShoppingListNotFoundError,
+)
+from shopping.application.use_cases.add_missing_recipe_items_to_primary_list import (
+    AddMissingRecipeItemsToPrimaryList,
 )
 from shopping.application.use_cases.add_missing_recipe_items_to_shopping_list import (
     AddMissingRecipeItemsToShoppingList,
 )
 from shopping.application.use_cases.add_shopping_list_item import AddShoppingListItem
 from shopping.application.use_cases.buy_shopping_item import BuyShoppingItem
-from shopping.application.use_cases.create_shopping_list import CreateShoppingList
-from shopping.application.use_cases.delete_shopping_list_item import DeleteShoppingListItem
+from shopping.application.use_cases.create_primary_shopping_list import CreatePrimaryShoppingList
+from shopping.application.use_cases.delete_shopping_list import DeleteShoppingList
 from shopping.application.use_cases.get_shopping_list_items import GetShoppingListItems
 from shopping.application.use_cases.list_shopping_lists import ListShoppingLists
+from shopping.application.use_cases.reassign_shopping_ingredient import ReassignShoppingIngredient
+from shopping.application.use_cases.restore_shopping_item import RestoreShoppingItem
 from shopping.application.use_cases.synchronize_minimum_stock import SynchronizeMinimumStock
+from shopping.domain.errors import InvalidShoppingSubjectError
 from shopping.domain.inventory_stock_level import InventoryStockLevel
 from shopping.domain.missing_recipe_item import MissingRecipeItem
+from shopping.domain.shopping_subject import ShoppingSubject
 from shopping.tests.fakes import (
     UNITS,
-    FakeHouseholdInventoryReader,
-    FakeHouseholdRepository,
+    FakeCatalogDirectory,
+    FakeHouseholdMembershipReader,
+    FakeInventoryReader,
     FakeInventoryWriter,
-    FakeProductResolver,
     FakeRecipeRequirementReader,
     FakeShoppingListRepository,
+    FakeTransactionManager,
 )
 
-MEMBER_ID = 1
-OUTSIDER_ID = 2
-HOUSEHOLD_ID = 10
+NOW = datetime(2026, 9, 28, 12, 0, tzinfo=UTC)
+ALA = 1
+HOME = 10
+OTHER_HOME = 20
+FLOUR = 100
+FOREIGN_PRODUCT = 200
+EGGS = 300
 
 
-def _access() -> HouseholdAccessPolicy:
-    return HouseholdAccessPolicy(FakeHouseholdRepository({(MEMBER_ID, HOUSEHOLD_ID)}))
+class Shopping:
+    def __init__(self) -> None:
+        self.repository = FakeShoppingListRepository()
+        self.memberships = FakeHouseholdMembershipReader({(ALA, HOME)})
+        self.catalog = FakeCatalogDirectory({FLOUR: HOME, FOREIGN_PRODUCT: OTHER_HOME}, {EGGS})
+        self.transactions = FakeTransactionManager()
+        self.primary = CreatePrimaryShoppingList(self.repository).execute(HOME).id
+
+    def add(self, subject: ShoppingSubject, quantity: str, unit_code: str | None) -> int:
+        use_case = AddShoppingListItem(
+            self.repository, self.catalog, self.memberships, self.transactions
+        )
+        return use_case.execute(ALA, self.primary, subject, Decimal(quantity), unit_code).id
+
+    def add_missing(self, missing: list[MissingRecipeItem]) -> None:
+        recipes = FakeRecipeRequirementReader(missing)
+        add_missing = AddMissingRecipeItemsToShoppingList(
+            self.repository, recipes, self.catalog, self.memberships, self.transactions
+        )
+        AddMissingRecipeItemsToPrimaryList(self.repository, add_missing).execute(ALA, HOME, 1, 4)
+
+    def quantities(self) -> list[tuple[ShoppingSubject, Decimal, str | None]]:
+        return [
+            (item.subject, item.quantity, None if item.unit is None else item.unit.code)
+            for item in self.repository.list_pending_items(self.primary)
+        ]
 
 
-@pytest.mark.django_db
-def test_list_shopping_lists_creates_the_primary_list_lazily() -> None:
-    repository = FakeShoppingListRepository()
-    use_case = ListShoppingLists(repository, _access())
-
-    summaries = use_case.execute(MEMBER_ID, HOUSEHOLD_ID)
-
-    assert [summary.is_primary for summary in summaries] == [True]
-    assert len(use_case.execute(MEMBER_ID, HOUSEHOLD_ID)) == 1
+@pytest.fixture
+def shopping() -> Shopping:
+    return Shopping()
 
 
-def test_list_shopping_lists_rejects_non_member() -> None:
-    use_case = ListShoppingLists(FakeShoppingListRepository(), _access())
+def test_listing_only_reads_and_shows_the_primary_list(shopping: Shopping) -> None:
+    lists = ListShoppingLists(shopping.repository, shopping.memberships).execute(ALA, HOME)
 
+    assert [(each.name, each.is_primary) for each in lists] == [("Lista zakupów", True)]
+
+
+def test_a_non_member_sees_no_lists(shopping: Shopping) -> None:
     with pytest.raises(NotAHouseholdMemberError):
-        use_case.execute(OUTSIDER_ID, HOUSEHOLD_ID)
+        ListShoppingLists(shopping.repository, shopping.memberships).execute(ALA, OTHER_HOME)
 
 
-def test_create_shopping_list_rejects_non_member() -> None:
-    use_case = CreateShoppingList(FakeShoppingListRepository(), _access())
-
-    with pytest.raises(NotAHouseholdMemberError):
-        use_case.execute(OUTSIDER_ID, HOUSEHOLD_ID, "Weekend")
+def test_the_primary_list_cannot_be_deleted(shopping: Shopping) -> None:
+    with pytest.raises(PrimaryShoppingListCannotBeDeletedError):
+        DeleteShoppingList(shopping.repository, shopping.memberships).execute(ALA, shopping.primary)
 
 
-def test_get_shopping_list_items_rejects_unknown_list() -> None:
-    use_case = GetShoppingListItems(FakeShoppingListRepository(), _access())
-
+def test_items_of_an_unknown_list_are_not_found(shopping: Shopping) -> None:
     with pytest.raises(ShoppingListNotFoundError):
-        use_case.execute(MEMBER_ID, 999)
+        GetShoppingListItems(shopping.repository, shopping.memberships).execute(ALA, 404)
 
 
-def test_get_shopping_list_items_rejects_other_household() -> None:
-    repository = FakeShoppingListRepository()
-    foreign_list_id = repository.seed_list(99, "Obca", True)
-    use_case = GetShoppingListItems(repository, _access())
-
-    with pytest.raises(NotAHouseholdMemberError):
-        use_case.execute(MEMBER_ID, foreign_list_id)
+def test_an_item_is_not_about_two_things() -> None:
+    with pytest.raises(InvalidShoppingSubjectError):
+        ShoppingSubject(product_id=FLOUR, free_text="mąka")
 
 
-def test_add_item_rejects_both_product_and_free_text() -> None:
-    repository = FakeShoppingListRepository()
-    list_id = repository.seed_list(HOUSEHOLD_ID, "Lista", True)
-    use_case = AddShoppingListItem(repository, _access(), FakeProductResolver())
-
-    with pytest.raises(InvalidShoppingItemError):
-        use_case.execute(MEMBER_ID, list_id, 5, "Ręczniki", Decimal("1"), "szt")
+def test_an_item_is_about_something() -> None:
+    with pytest.raises(InvalidShoppingSubjectError):
+        ShoppingSubject()
 
 
-def test_add_item_rejects_neither_product_nor_free_text() -> None:
-    repository = FakeShoppingListRepository()
-    list_id = repository.seed_list(HOUSEHOLD_ID, "Lista", True)
-    use_case = AddShoppingListItem(repository, _access(), FakeProductResolver())
-
-    with pytest.raises(InvalidShoppingItemError):
-        use_case.execute(MEMBER_ID, list_id, None, None, Decimal("1"), "szt")
+def test_free_text_is_not_blank() -> None:
+    with pytest.raises(InvalidShoppingSubjectError):
+        ShoppingSubject(free_text="  ")
 
 
-def test_add_item_rejects_a_product_from_another_household() -> None:
-    repository = FakeShoppingListRepository()
-    list_id = repository.seed_list(HOUSEHOLD_ID, "Lista", True)
-    products = FakeProductResolver()
-    foreign_product_id = products.resolve_product_id(99, "Mąka", "g")
-    use_case = AddShoppingListItem(repository, _access(), products)
-
+def test_a_product_from_another_household_is_rejected(shopping: Shopping) -> None:
     with pytest.raises(ProductNotFoundError):
-        use_case.execute(MEMBER_ID, list_id, foreign_product_id, None, Decimal("1"), "g")
+        shopping.add(ShoppingSubject(product_id=FOREIGN_PRODUCT), "1", "kg")
 
 
-def test_add_item_merges_into_existing_unpurchased_product_row() -> None:
-    repository = FakeShoppingListRepository()
-    list_id = repository.seed_list(HOUSEHOLD_ID, "Lista", True)
-    products = FakeProductResolver()
-    product_id = products.resolve_product_id(HOUSEHOLD_ID, "Mąka", "g")
-    use_case = AddShoppingListItem(repository, _access(), products)
-
-    first = use_case.execute(MEMBER_ID, list_id, product_id, None, Decimal("100"), "g")
-    second = use_case.execute(MEMBER_ID, list_id, product_id, None, Decimal("50"), "g")
-
-    assert first.id == second.id
-    assert second.quantity == Decimal("150")
-    assert len(repository.list_items(list_id)) == 1
+def test_an_unknown_ingredient_is_rejected(shopping: Shopping) -> None:
+    with pytest.raises(IngredientNotFoundError):
+        shopping.add(ShoppingSubject(ingredient_id=404), "1", "szt")
 
 
-def test_add_free_text_item_is_accepted() -> None:
-    repository = FakeShoppingListRepository()
-    list_id = repository.seed_list(HOUSEHOLD_ID, "Lista", True)
-    use_case = AddShoppingListItem(repository, _access(), FakeProductResolver())
-
-    item = use_case.execute(MEMBER_ID, list_id, None, "Ręczniki", Decimal("2"), None)
-
-    assert item.free_text == "Ręczniki"
-    assert item.unit is None
+def test_products_and_ingredients_need_a_unit(shopping: Shopping) -> None:
+    with pytest.raises(InvalidShoppingItemError):
+        shopping.add(ShoppingSubject(ingredient_id=EGGS), "6", None)
+    shopping.add(ShoppingSubject(free_text="ręczniki"), "1", None)
 
 
-def test_add_missing_recipe_items_is_idempotent() -> None:
-    repository = FakeShoppingListRepository()
-    list_id = repository.seed_list(HOUSEHOLD_ID, "Lista", True)
-    recipes = FakeRecipeRequirementReader(
+def test_adding_the_same_subject_again_adds_to_its_pending_item(shopping: Shopping) -> None:
+    first = shopping.add(ShoppingSubject(product_id=FLOUR), "1", "kg")
+    again = shopping.add(ShoppingSubject(product_id=FLOUR), "2", "kg")
+
+    assert first == again
+    assert shopping.quantities() == [(ShoppingSubject(product_id=FLOUR), Decimal("3"), "kg")]
+
+
+def test_a_different_unit_for_the_same_subject_is_rejected(shopping: Shopping) -> None:
+    shopping.add(ShoppingSubject(product_id=FLOUR), "1", "kg")
+
+    with pytest.raises(InvalidShoppingItemError):
+        shopping.add(ShoppingSubject(product_id=FLOUR), "500", "g")
+
+
+def test_missing_recipe_items_go_to_the_primary_list_by_what_they_are(shopping: Shopping) -> None:
+    shopping.add_missing(
         [
-            MissingRecipeItem(
-                name="Mąka", normalized_name="maka", amount=Decimal("300"), unit_code="g"
-            )
+            MissingRecipeItem("Mąka", 1, FLOUR, Decimal("200"), "g"),
+            MissingRecipeItem("Jajka", EGGS, None, Decimal("3"), "szt"),
+            MissingRecipeItem("szczypta soli", None, None, Decimal("1"), "g"),
         ]
     )
-    use_case = AddMissingRecipeItemsToShoppingList(
-        repository, _access(), recipes, FakeProductResolver()
+
+    assert shopping.quantities() == [
+        (ShoppingSubject(product_id=FLOUR), Decimal("200"), "g"),
+        (ShoppingSubject(ingredient_id=EGGS), Decimal("3"), "szt"),
+        (ShoppingSubject(free_text="szczypta soli"), Decimal("1"), "g"),
+    ]
+
+
+def test_adding_missing_recipe_items_twice_changes_nothing(shopping: Shopping) -> None:
+    missing = [MissingRecipeItem("Jajka", EGGS, None, Decimal("3"), "szt")]
+    shopping.add_missing(missing)
+
+    shopping.add_missing(missing)
+
+    assert shopping.quantities() == [(ShoppingSubject(ingredient_id=EGGS), Decimal("3"), "szt")]
+
+
+def test_missing_recipe_items_raise_a_smaller_pending_amount(shopping: Shopping) -> None:
+    shopping.add(ShoppingSubject(ingredient_id=EGGS), "1", "szt")
+
+    shopping.add_missing([MissingRecipeItem("Jajka", EGGS, None, Decimal("3"), "szt")])
+
+    assert shopping.quantities() == [(ShoppingSubject(ingredient_id=EGGS), Decimal("3"), "szt")]
+
+
+def test_minimum_stock_fills_the_primary_list_once(shopping: Shopping) -> None:
+    level = InventoryStockLevel(FLOUR, "Mąka", Decimal("100"), Decimal("500"), UNITS["g"])
+    use_case = SynchronizeMinimumStock(
+        shopping.repository,
+        FakeInventoryReader([level]),
+        shopping.memberships,
+        shopping.transactions,
     )
 
-    first = use_case.execute(MEMBER_ID, list_id, 1, 4)
-    second = use_case.execute(MEMBER_ID, list_id, 1, 4)
+    use_case.execute(ALA, HOME)
+    use_case.execute(ALA, HOME)
 
-    assert len(first) == 1
-    assert len(second) == 1
-    assert second[0].id == first[0].id
-    assert second[0].quantity == Decimal("300")
+    assert shopping.quantities() == [(ShoppingSubject(product_id=FLOUR), Decimal("400"), "g")]
 
 
-def test_add_missing_recipe_items_raises_existing_quantity() -> None:
-    repository = FakeShoppingListRepository()
-    list_id = repository.seed_list(HOUSEHOLD_ID, "Lista", True)
-    products = FakeProductResolver()
-    product_id = products.resolve_product_id(HOUSEHOLD_ID, "Mąka", "g")
-    repository.add_item(list_id, product_id, None, Decimal("100"), "g")
-    recipes = FakeRecipeRequirementReader(
-        [
-            MissingRecipeItem(
-                name="Mąka", normalized_name="maka", amount=Decimal("300"), unit_code="g"
-            )
-        ]
-    )
-    use_case = AddMissingRecipeItemsToShoppingList(repository, _access(), recipes, products)
-
-    items = use_case.execute(MEMBER_ID, list_id, 1, 4)
-
-    assert len(items) == 1
-    assert items[0].quantity == Decimal("300")
-
-
-@pytest.mark.django_db
-def test_synchronize_minimum_stock_is_idempotent() -> None:
-    repository = FakeShoppingListRepository()
-    list_id = repository.seed_list(HOUSEHOLD_ID, "Lista", True)
-    inventory = FakeHouseholdInventoryReader(
-        [
-            InventoryStockLevel(
-                product_id=5,
-                product_name="Mąka",
-                quantity=Decimal("100"),
-                minimum_quantity=Decimal("300"),
-                unit=UNITS["g"],
-            )
-        ]
-    )
-    use_case = SynchronizeMinimumStock(repository, _access(), inventory)
-
-    first = use_case.execute(MEMBER_ID, list_id)
-    second = use_case.execute(MEMBER_ID, list_id)
-
-    assert len(first) == 1
-    assert first[0].quantity == Decimal("200")
-    assert [item.id for item in second] == [item.id for item in first]
-    assert second[0].quantity == Decimal("200")
-
-
-@pytest.mark.django_db
-def test_synchronize_minimum_stock_targets_the_primary_list() -> None:
-    repository = FakeShoppingListRepository()
-    primary_id = repository.seed_list(HOUSEHOLD_ID, "Lista", True)
-    secondary_id = repository.seed_list(HOUSEHOLD_ID, "Weekend", False)
-    inventory = FakeHouseholdInventoryReader(
-        [
-            InventoryStockLevel(
-                product_id=5,
-                product_name="Mąka",
-                quantity=Decimal("0"),
-                minimum_quantity=Decimal("300"),
-                unit=UNITS["g"],
-            )
-        ]
-    )
-    use_case = SynchronizeMinimumStock(repository, _access(), inventory)
-
-    use_case.execute(MEMBER_ID, secondary_id)
-
-    assert len(repository.list_items(primary_id)) == 1
-    assert repository.list_items(secondary_id) == []
-
-
-@pytest.mark.django_db
-def test_buy_shopping_item_adds_quantity_to_inventory() -> None:
-    repository = FakeShoppingListRepository()
-    list_id = repository.seed_list(HOUSEHOLD_ID, "Lista", True)
-    item = repository.add_item(list_id, 5, None, Decimal("250"), "g")
+def test_buying_a_product_adds_it_to_the_pantry_in_one_transaction(shopping: Shopping) -> None:
+    item_id = shopping.add(ShoppingSubject(product_id=FLOUR), "2", "kg")
     writer = FakeInventoryWriter()
-    use_case = BuyShoppingItem(repository, _access(), writer)
+    buy = BuyShoppingItem(shopping.repository, writer, shopping.memberships, shopping.transactions)
+    opened_before = shopping.transactions.opened
 
-    use_case.execute(MEMBER_ID, item.id)
+    buy.execute(ALA, item_id, NOW)
 
-    assert writer.added == [(HOUSEHOLD_ID, 5, Decimal("250"), "g")]
-    assert repository.find_pending_item(item.id) is None
-    assert [snapshot.is_purchased for snapshot in repository.list_items(list_id)] == [True]
-
-
-@pytest.mark.django_db
-def test_buying_twice_fails_because_the_pending_row_is_gone() -> None:
-    repository = FakeShoppingListRepository()
-    list_id = repository.seed_list(HOUSEHOLD_ID, "Lista", True)
-    item = repository.add_item(list_id, 5, None, Decimal("250"), "g")
-    writer = FakeInventoryWriter()
-    use_case = BuyShoppingItem(repository, _access(), writer)
-    use_case.execute(MEMBER_ID, item.id)
-
+    assert writer.added == [(HOME, FLOUR, Decimal("2"), "kg")]
+    assert shopping.transactions.opened == opened_before + 1
     with pytest.raises(ShoppingListItemNotFoundError):
-        use_case.execute(MEMBER_ID, item.id)
-
-    assert len(writer.added) == 1
+        buy.execute(ALA, item_id, NOW)
 
 
-@pytest.mark.django_db
-def test_buying_free_text_item_does_not_touch_inventory() -> None:
-    repository = FakeShoppingListRepository()
-    list_id = repository.seed_list(HOUSEHOLD_ID, "Lista", True)
-    item = repository.add_item(list_id, None, "Ręczniki", Decimal("2"), None)
+def test_buying_an_ingredient_or_text_item_leaves_the_pantry_alone(shopping: Shopping) -> None:
+    eggs = shopping.add(ShoppingSubject(ingredient_id=EGGS), "6", "szt")
+    towels = shopping.add(ShoppingSubject(free_text="ręczniki"), "1", None)
     writer = FakeInventoryWriter()
-    use_case = BuyShoppingItem(repository, _access(), writer)
+    buy = BuyShoppingItem(shopping.repository, writer, shopping.memberships, shopping.transactions)
 
-    use_case.execute(MEMBER_ID, item.id)
+    buy.execute(ALA, eggs, NOW)
+    buy.execute(ALA, towels, NOW)
 
     assert writer.added == []
 
 
-def test_buy_unknown_item_fails() -> None:
-    use_case = BuyShoppingItem(FakeShoppingListRepository(), _access(), FakeInventoryWriter())
+def test_a_bought_item_can_be_put_back_unless_it_is_listed_again(shopping: Shopping) -> None:
+    first = shopping.add(ShoppingSubject(product_id=FLOUR), "1", "kg")
+    buy = BuyShoppingItem(
+        shopping.repository, FakeInventoryWriter(), shopping.memberships, shopping.transactions
+    )
+    restore = RestoreShoppingItem(shopping.repository, shopping.memberships, shopping.transactions)
+    buy.execute(ALA, first, NOW)
 
-    with pytest.raises(ShoppingListItemNotFoundError):
-        use_case.execute(MEMBER_ID, 404)
+    restored = restore.execute(ALA, first)
+    buy.execute(ALA, first, NOW)
+    shopping.add(ShoppingSubject(product_id=FLOUR), "1", "kg")
+
+    assert restored.is_purchased is False
+    with pytest.raises(ShoppingItemAlreadyPendingError):
+        restore.execute(ALA, first)
 
 
-def test_delete_item_rejects_other_household() -> None:
-    repository = FakeShoppingListRepository()
-    foreign_list_id = repository.seed_list(99, "Obca", True)
-    item = repository.add_item(foreign_list_id, 5, None, Decimal("1"), "g")
-    use_case = DeleteShoppingListItem(repository, _access())
+def test_merging_ingredients_moves_or_adds_up_items(shopping: Shopping) -> None:
+    source_item = shopping.add(ShoppingSubject(ingredient_id=EGGS), "2", "szt")
+    shopping.catalog = FakeCatalogDirectory({FLOUR: HOME}, {EGGS, 301})
+    shopping.add(ShoppingSubject(ingredient_id=301), "4", "szt")
 
-    with pytest.raises(NotAHouseholdMemberError):
-        use_case.execute(MEMBER_ID, item.id)
+    ReassignShoppingIngredient(shopping.repository).execute(EGGS, 301)
+
+    assert shopping.repository.find_item(source_item) is None
+    assert shopping.quantities() == [(ShoppingSubject(ingredient_id=301), Decimal("6"), "szt")]
 
 
-def test_delete_item_removes_the_row() -> None:
-    repository = FakeShoppingListRepository()
-    list_id = repository.seed_list(HOUSEHOLD_ID, "Lista", True)
-    item = repository.add_item(list_id, 5, None, Decimal("1"), "g")
-    use_case = DeleteShoppingListItem(repository, _access())
+def test_merging_items_in_different_units_stops(shopping: Shopping) -> None:
+    shopping.add(ShoppingSubject(ingredient_id=EGGS), "2", "szt")
+    shopping.catalog = FakeCatalogDirectory({FLOUR: HOME}, {EGGS, 301})
+    shopping.add(ShoppingSubject(ingredient_id=301), "500", "g")
 
-    use_case.execute(MEMBER_ID, item.id)
+    with pytest.raises(ShoppingItemMergeConflictError):
+        ReassignShoppingIngredient(shopping.repository).execute(EGGS, 301)
 
-    assert repository.list_items(list_id) == []
+
+def test_a_missing_ingredient_is_bought_as_the_households_only_product_of_it(
+    shopping: Shopping,
+) -> None:
+    shopping.catalog = FakeCatalogDirectory({FLOUR: HOME}, {EGGS}, only_products={EGGS: FLOUR})
+
+    shopping.add_missing([MissingRecipeItem("Jajka", EGGS, None, Decimal("3"), "szt")])
+
+    assert shopping.quantities() == [(ShoppingSubject(product_id=FLOUR), Decimal("3"), "szt")]

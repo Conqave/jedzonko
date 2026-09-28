@@ -1,13 +1,15 @@
 from decimal import Decimal
 
-from households.application.access import HouseholdAccessPolicy
 from inventory.application.errors import (
     DuplicateInventoryItemError,
     InventoryCategoryNotFoundError,
+    ProductNotFoundError,
 )
 from inventory.application.ports.inventory_category_repository import InventoryCategoryRepository
 from inventory.application.ports.inventory_repository import InventoryRepository
+from inventory.application.ports.product_directory import ProductDirectory
 from inventory.domain.models import InventoryItemSnapshot
+from shared.household_membership import HouseholdMembershipReader, require_membership
 
 
 class AddInventoryItem:
@@ -15,11 +17,13 @@ class AddInventoryItem:
         self,
         repository: InventoryRepository,
         categories: InventoryCategoryRepository,
-        access: HouseholdAccessPolicy,
+        products: ProductDirectory,
+        memberships: HouseholdMembershipReader,
     ) -> None:
         self._repository = repository
         self._categories = categories
-        self._access = access
+        self._products = products
+        self._memberships = memberships
 
     def execute(
         self,
@@ -31,14 +35,16 @@ class AddInventoryItem:
         minimum_quantity: Decimal | None,
         category_id: int | None,
     ) -> InventoryItemSnapshot:
-        self._access.require_membership(user_id, household_id)
+        require_membership(self._memberships, user_id, household_id)
+        if not self._products.is_household_product(household_id, product_id):
+            raise ProductNotFoundError
         if category_id is not None:
             category_household_id = self._categories.find_household_id_for_category(category_id)
             if category_household_id != household_id:
                 raise InventoryCategoryNotFoundError
-        existing = self._repository.find_item_by_product(household_id, product_id)
+        existing = self._repository.find_item_by_product(product_id)
         if existing is not None:
             raise DuplicateInventoryItemError
         return self._repository.create_item(
-            household_id, product_id, quantity, unit_code, minimum_quantity, category_id
+            product_id, quantity, unit_code, minimum_quantity, category_id
         )

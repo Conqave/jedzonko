@@ -1,0 +1,60 @@
+default_install_hook_types: [pre-commit, pre-push]
+default_stages: [pre-commit]
+
+repos:
+  - repo: local
+    hooks:
+      - id: no-markdown
+        name: no Markdown files in the repository
+        language: fail
+        entry: "The repository keeps no Markdown files:"
+        files: \.md$
+
+      - id: no-leftover-directories
+        name: no legacy, old, backup or deprecated directories
+        language: fail
+        entry: "Version control is the history; remove:"
+        files: (^|/)(legacy|old|backup|deprecated)/
+
+      - id: backend-format
+        name: backend format (isort, black)
+        language: system
+        entry: docker compose --env-file .env -f infra/docker-compose.yml run --rm -T backend-tools sh -c "isort --check-only . && black --check ."
+        files: ^backend/
+        pass_filenames: false
+
+      - id: backend-lint
+        name: backend lint (ruff)
+        language: system
+        entry: docker compose --env-file .env -f infra/docker-compose.yml run --rm -T backend-tools ruff check .
+        files: ^backend/
+        pass_filenames: false
+
+      - id: backend-types
+        name: backend types (mypy --strict)
+        language: system
+        entry: docker compose --env-file .env -f infra/docker-compose.yml run --rm -T backend-tools mypy .
+        files: ^backend/
+        pass_filenames: false
+
+      - id: backend-migrations
+        name: backend migrations match the models
+        language: system
+        entry: docker compose --env-file .env -f infra/docker-compose.yml run --rm -T backend-tools python manage.py makemigrations --check --dry-run
+        files: ^backend/
+        pass_filenames: false
+
+      - id: backend-architecture
+        name: backend architecture rules
+        language: system
+        entry: docker compose --env-file .env -f infra/docker-compose.yml run --rm -T backend-tools pytest -p no:cacheprovider tests/test_architecture.py
+        files: ^backend/
+        pass_filenames: false
+
+      - id: backend-tests
+        name: backend test suite
+        language: system
+        entry: docker compose --env-file .env -f infra/docker-compose.yml run --rm -T backend-tools pytest -p no:cacheprovider
+        files: ^backend/
+        pass_filenames: false
+        stages: [pre-push]

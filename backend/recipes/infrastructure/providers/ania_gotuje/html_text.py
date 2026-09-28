@@ -9,7 +9,6 @@ def read_plain_text(html: str) -> str:
 def read_paragraphs(html: str) -> list[str]:
     soup = BeautifulSoup(html, "html.parser")
     paragraphs: list[str] = []
-    # p.recipe-info repeats the times/yield/nutrition header, not a preparation step.
     for element in soup.select("p:not(.recipe-info)"):
         text = " ".join(element.get_text(separator=" ", strip=True).split())
         if text:

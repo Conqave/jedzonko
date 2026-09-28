@@ -4,3 +4,7 @@ class InvalidCredentialsError(Exception):
 
 class NotAuthenticatedError(Exception):
     pass
+
+
+class WrongCurrentPasswordError(Exception):
+    pass

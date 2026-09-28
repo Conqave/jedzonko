@@ -1,5 +1,3 @@
-from collections.abc import Callable, Iterator
-from contextlib import contextmanager
 from decimal import Decimal
 from pathlib import Path
 
@@ -8,12 +6,10 @@ import pytest
 from django.contrib.auth.models import User
 from rest_framework.test import APIClient
 
-from households.models import Household, HouseholdMembership, IngredientTag, Product, ProductTag
+from households.models import Household
 from inventory.models import InventoryItem
-from recipes.application.ports.recipe_source import RecipeSource
-from recipes.infrastructure.providers.ania_gotuje.provider import AniaGotujeProvider
 from recipes.models import Recipe, RecipeIngredient
-from recipes.presentation import external_views
+from tests.factories import confirm_ingredient, make_household, make_ingredient, make_product
 
 pytestmark = [pytest.mark.django_db, pytest.mark.urls("recipes.tests.urls")]
 
@@ -37,20 +33,11 @@ def api_client(user: User) -> APIClient:
 
 @pytest.fixture
 def household(user: User) -> Household:
-    household = Household.objects.create(name="Dom")
-    HouseholdMembership.objects.create(household=household, user=user)
-    product = Product.objects.create(
-        household=household,
-        name="Jaja ściółkowe (opakowanie)",
-        normalized_name="jaja sciolkowe (opakowanie)",
-        default_unit_code="opak",
-        is_food=True,
-    )
-    tag = IngredientTag.objects.create(name="jajko", normalized_name="jajko")
-    ProductTag.objects.create(product=product, ingredient_tag=tag, is_verified=True)
-    InventoryItem.objects.create(
-        household=household, product=product, unit_code="opak", quantity=Decimal("1.000")
-    )
+    household = make_household(user, "Dom")
+    product = make_product(household, "Jaja ściółkowe (opakowanie)", "opak")
+    eggs = make_ingredient("jajko")
+    confirm_ingredient(user, product, eggs)
+    InventoryItem.objects.create(product=product, unit_code="opak", quantity=Decimal("1.000"))
     return household
 
 
@@ -60,11 +47,17 @@ def install_source(monkeypatch: pytest.MonkeyPatch, status_code: int, text: str)
             status_code, text=text, headers={"Content-Type": "application/json"}, request=request
         )
 
-    @contextmanager
-    def open_source() -> Iterator[RecipeSource]:
-        yield AniaGotujeProvider(httpx.Client(transport=httpx.MockTransport(handle_request)))
+    real_client = httpx.Client
 
-    monkeypatch.setattr(external_views, "open_recipe_source", open_source)
+    def client_with_fixture(
+        *, timeout: httpx.Timeout, headers: dict[str, str], follow_redirects: bool
+    ) -> httpx.Client:
+        transport = httpx.MockTransport(handle_request)
+        return real_client(
+            transport=transport, timeout=timeout, headers=headers, follow_redirects=follow_redirects
+        )
+
+    monkeypatch.setattr("recipes.composition.httpx.Client", client_with_fixture)
 
 
 def test_external_recipe_is_returned_with_attribution_and_not_stored(
@@ -150,7 +143,6 @@ def test_external_search_returns_a_mapped_page_without_storing_anything(
     assert response.data["recipes"][0]["source_name"] == "Ania Gotuje"
     assert response.data["recipes"][0]["source_url"].startswith("https://aniagotuje.pl/przepis/")
     assert response.data["recipes"][0]["matched_product_names"] == ["Jaja ściółkowe (opakowanie)"]
-    assert response.data["recipes"][0]["matched_product_count"] == 1
     assert Recipe.objects.count() == recipe_count
 
 

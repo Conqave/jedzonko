@@ -2,21 +2,21 @@ from decimal import Decimal
 
 import pytest
 
-from households.application.access import HouseholdAccessPolicy
-from households.application.errors import NotAHouseholdMemberError
-from inventory.domain.models import InventoryItemSnapshot
 from recipes.application.errors import InvalidServingsError, RecipeNotFoundError
 from recipes.application.use_cases.confirm_recipe_preparation import ConfirmRecipePreparation
 from recipes.domain.difficulty import RecipeDifficulty
 from recipes.domain.models import RecipeDetail, RecipeSummary
-from recipes.tests.factories import GRAM, make_requirement, make_snapshot
+from recipes.domain.stock import StockedProduct
+from recipes.tests.factories import EGGS, FLOUR, GRAM, make_requirement, make_stock
 from recipes.tests.fakes import (
-    FakeHouseholdInventoryConsumer,
-    FakeHouseholdInventoryReader,
-    FakeHouseholdRepository,
+    FakeHouseholdMembershipReader,
+    FakeInventoryConsumer,
     FakeRecipeRepository,
+    FakeStockReader,
     FakeTransactionManager,
 )
+from shared.household_membership import NotAHouseholdMemberError
+from shared.measurement import Quantity
 
 
 def _recipe(servings: int) -> RecipeDetail:
@@ -38,29 +38,34 @@ def _recipe(servings: int) -> RecipeDetail:
 
 def _build(
     repository: FakeRecipeRepository,
-    inventory: list[InventoryItemSnapshot],
-    consumer: FakeHouseholdInventoryConsumer,
+    inventory: list[StockedProduct],
+    consumer: FakeInventoryConsumer,
     transaction_manager: FakeTransactionManager,
 ) -> ConfirmRecipePreparation:
     return ConfirmRecipePreparation(
         repository,
-        FakeHouseholdInventoryReader(inventory),
+        FakeStockReader(inventory),
         consumer,
         transaction_manager,
-        HouseholdAccessPolicy(FakeHouseholdRepository({7})),
+        FakeHouseholdMembershipReader({7}),
     )
 
 
 def test_each_stocked_ingredient_is_consumed_exactly_once() -> None:
     repository = FakeRecipeRepository(
         [_recipe(2)],
-        {1: [make_requirement("jajko", "2", GRAM), make_requirement("maka", "50", GRAM)]},
+        {
+            1: [
+                make_requirement("jajko", "2", GRAM, EGGS),
+                make_requirement("maka", "50", GRAM, FLOUR),
+            ]
+        },
     )
-    consumer = FakeHouseholdInventoryConsumer()
+    consumer = FakeInventoryConsumer()
     transaction_manager = FakeTransactionManager()
     use_case = _build(
         repository,
-        [make_snapshot(1, "jajko", "10", GRAM), make_snapshot(2, "maka", "500", GRAM)],
+        [make_stock(1, "jajko", "10", GRAM, EGGS), make_stock(2, "maka", "500", GRAM, FLOUR)],
         consumer,
         transaction_manager,
     )
@@ -68,8 +73,8 @@ def test_each_stocked_ingredient_is_consumed_exactly_once() -> None:
     use_case.execute(5, 7, 1, 4)
 
     assert consumer.consumed == [
-        (7, 1, Decimal("4"), "g"),
-        (7, 2, Decimal("100"), "g"),
+        (7, 1, Quantity(amount=Decimal("4"), unit=GRAM)),
+        (7, 2, Quantity(amount=Decimal("100"), unit=GRAM)),
     ]
     assert transaction_manager.entered_count == 1
 
@@ -77,11 +82,16 @@ def test_each_stocked_ingredient_is_consumed_exactly_once() -> None:
 def test_ingredients_absent_from_inventory_are_skipped() -> None:
     repository = FakeRecipeRepository(
         [_recipe(2)],
-        {1: [make_requirement("jajko", "2", GRAM), make_requirement("maka", "50", GRAM)]},
+        {
+            1: [
+                make_requirement("jajko", "2", GRAM, EGGS),
+                make_requirement("maka", "50", GRAM, FLOUR),
+            ]
+        },
     )
-    consumer = FakeHouseholdInventoryConsumer()
+    consumer = FakeInventoryConsumer()
     use_case = _build(
-        repository, [make_snapshot(1, "jajko", "10", GRAM)], consumer, FakeTransactionManager()
+        repository, [make_stock(1, "jajko", "10", GRAM, EGGS)], consumer, FakeTransactionManager()
     )
 
     use_case.execute(5, 7, 1, 2)
@@ -90,11 +100,13 @@ def test_ingredients_absent_from_inventory_are_skipped() -> None:
 
 
 def test_repeated_confirmation_consumes_again() -> None:
-    repository = FakeRecipeRepository([_recipe(2)], {1: [make_requirement("jajko", "2", GRAM)]})
-    consumer = FakeHouseholdInventoryConsumer()
+    repository = FakeRecipeRepository(
+        [_recipe(2)], {1: [make_requirement("jajko", "2", GRAM, EGGS)]}
+    )
+    consumer = FakeInventoryConsumer()
     transaction_manager = FakeTransactionManager()
     use_case = _build(
-        repository, [make_snapshot(1, "jajko", "10", GRAM)], consumer, transaction_manager
+        repository, [make_stock(1, "jajko", "10", GRAM, EGGS)], consumer, transaction_manager
     )
 
     use_case.execute(5, 7, 1, 2)
@@ -105,11 +117,13 @@ def test_repeated_confirmation_consumes_again() -> None:
 
 
 def test_non_member_consumes_nothing() -> None:
-    repository = FakeRecipeRepository([_recipe(2)], {1: [make_requirement("jajko", "2", GRAM)]})
-    consumer = FakeHouseholdInventoryConsumer()
+    repository = FakeRecipeRepository(
+        [_recipe(2)], {1: [make_requirement("jajko", "2", GRAM, EGGS)]}
+    )
+    consumer = FakeInventoryConsumer()
     transaction_manager = FakeTransactionManager()
     use_case = _build(
-        repository, [make_snapshot(1, "jajko", "10", GRAM)], consumer, transaction_manager
+        repository, [make_stock(1, "jajko", "10", GRAM, EGGS)], consumer, transaction_manager
     )
 
     with pytest.raises(NotAHouseholdMemberError):
@@ -120,7 +134,7 @@ def test_non_member_consumes_nothing() -> None:
 
 
 def test_zero_servings_is_rejected() -> None:
-    consumer = FakeHouseholdInventoryConsumer()
+    consumer = FakeInventoryConsumer()
     use_case = _build(
         FakeRecipeRepository([_recipe(2)], {}), [], consumer, FakeTransactionManager()
     )
@@ -132,7 +146,7 @@ def test_zero_servings_is_rejected() -> None:
 
 
 def test_unknown_recipe_is_rejected() -> None:
-    consumer = FakeHouseholdInventoryConsumer()
+    consumer = FakeInventoryConsumer()
     use_case = _build(FakeRecipeRepository([], {}), [], consumer, FakeTransactionManager())
 
     with pytest.raises(RecipeNotFoundError):

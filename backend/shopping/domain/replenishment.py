@@ -17,9 +17,9 @@ def calculate_replenishment_targets(
     stock_levels: list[InventoryStockLevel], unpurchased_items: list[ShoppingItemSnapshot]
 ) -> list[ReplenishmentTarget]:
     items_by_product: dict[int, ShoppingItemSnapshot] = {
-        item.product_id: item
+        item.subject.product_id: item
         for item in unpurchased_items
-        if item.product_id is not None and not item.is_purchased
+        if item.subject.product_id is not None and not item.is_purchased
     }
     targets: list[ReplenishmentTarget] = []
     for level in stock_levels:
