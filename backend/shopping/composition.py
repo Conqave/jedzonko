@@ -10,9 +10,6 @@ from shopping.application.ports.recipe_requirement_reader import RecipeRequireme
 from shopping.application.use_cases.add_missing_external_recipe_items_to_shopping_list import (
     AddMissingExternalRecipeItemsToShoppingList,
 )
-from shopping.application.use_cases.add_missing_recipe_items_to_primary_list import (
-    AddMissingRecipeItemsToPrimaryList,
-)
 from shopping.application.use_cases.add_missing_recipe_items_to_shopping_list import (
     AddMissingRecipeItemsToShoppingList,
 )
@@ -43,7 +40,6 @@ class ShoppingModule:
     get_shopping_list_items: GetShoppingListItems
     add_shopping_list_item: AddShoppingListItem
     add_missing_recipe_items_to_shopping_list: AddMissingRecipeItemsToShoppingList
-    add_missing_recipe_items_to_primary_list: AddMissingRecipeItemsToPrimaryList
     add_missing_external_recipe_items_to_shopping_list: AddMissingExternalRecipeItemsToShoppingList
     synchronize_minimum_stock: SynchronizeMinimumStock
     buy_shopping_item: BuyShoppingItem
@@ -81,9 +77,6 @@ def build_shopping(
         get_shopping_list_items=GetShoppingListItems(lists, memberships),
         add_shopping_list_item=AddShoppingListItem(lists, catalog, memberships, transactions),
         add_missing_recipe_items_to_shopping_list=add_missing,
-        add_missing_recipe_items_to_primary_list=AddMissingRecipeItemsToPrimaryList(
-            lists, add_missing
-        ),
         add_missing_external_recipe_items_to_shopping_list=(
             AddMissingExternalRecipeItemsToShoppingList(
                 lists, recipes, catalog, memberships, transactions

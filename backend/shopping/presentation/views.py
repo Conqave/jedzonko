@@ -99,22 +99,6 @@ class ShoppingListRecipeItemsView(APIView):
         return Response(serializer.data)
 
 
-class PrimaryListRecipeItemsView(APIView):
-    def post(self, request: Request, household_id: int) -> Response:
-        user_id = current_user_id(request)
-        payload = AddRecipeItemsSerializer(data=request.data)
-        payload.is_valid(raise_exception=True)
-        use_case = container().shopping.add_missing_recipe_items_to_primary_list
-        items = use_case.execute(
-            user_id,
-            household_id,
-            payload.validated_data["recipe_id"],
-            payload.validated_data["servings"],
-        )
-        serializer = ShoppingItemSerializer(items, many=True)
-        return Response(serializer.data)
-
-
 class MinimumStockSynchronizationView(APIView):
     def post(self, request: Request, household_id: int) -> Response:
         user_id = current_user_id(request)
