@@ -1,6 +1,6 @@
 <template>
   <q-page padding>
-      <div class="text-h5 q-mb-md">Zakupy</div>
+    <div class="text-h5 q-mb-md">Zakupy</div>
     <q-banner v-if="households.selectedId === null" class="bg-grey-3">
       Wybierz gospodarstwo domowe, aby zobaczyć listy zakupów.
     </q-banner>
@@ -20,7 +20,13 @@
             :loading="loadingLists"
             @update:model-value="loadItems"
           />
-          <q-btn v-if="selectedListId !== null" flat round icon="more_vert" aria-label="Opcje listy">
+          <q-btn
+            v-if="selectedListId !== null"
+            flat
+            round
+            icon="more_vert"
+            aria-label="Opcje listy"
+          >
             <q-menu>
               <q-list style="min-width: 220px">
                 <q-item clickable v-close-popup @click="openRenameList">
@@ -52,10 +58,24 @@
 
       <q-form v-if="!advancedAdd" class="row q-col-gutter-sm q-mb-md" @submit.prevent="submitItem">
         <div class="col">
-          <q-input v-model="form.freeText" dense outlined label="Dodaj produkt…" placeholder="np. 2 litry mleka" />
+          <q-input
+            v-model="form.freeText"
+            dense
+            outlined
+            label="Dodaj produkt…"
+            placeholder="np. 2 litry mleka"
+          />
         </div>
         <div class="col-auto">
-          <q-btn type="submit" color="primary" icon="add" no-caps aria-label="Dodaj pozycję" :loading="savingItem" :disable="selectedListId === null" />
+          <q-btn
+            type="submit"
+            color="primary"
+            icon="add"
+            no-caps
+            aria-label="Dodaj pozycję"
+            :loading="savingItem"
+            :disable="selectedListId === null"
+          />
         </div>
         <div class="col-auto flex items-center">
           <q-btn flat dense no-caps label="Opcje zaawansowane" @click="advancedAdd = true" />
@@ -64,7 +84,14 @@
 
       <q-form v-else class="row q-col-gutter-sm q-mb-md" @submit.prevent="submitItem">
         <div class="col-12">
-          <q-btn flat dense no-caps icon="arrow_back" label="Proste dodawanie" @click="advancedAdd = false" />
+          <q-btn
+            flat
+            dense
+            no-caps
+            icon="arrow_back"
+            label="Proste dodawanie"
+            @click="advancedAdd = false"
+          />
         </div>
         <div class="col-12 col-sm-3">
           <q-select
@@ -140,11 +167,21 @@
         />
         <q-btn flat no-caps label="Wyczyść zaznaczenie" @click="selectedReanalysisIds = []" />
       </div>
-      <div v-else-if="reanalysisSelectionMode && pendingItems.length > 0" class="row justify-end q-mb-sm">
+      <div
+        v-else-if="reanalysisSelectionMode && pendingItems.length > 0"
+        class="row justify-end q-mb-sm"
+      >
         <q-btn flat dense no-caps label="Anuluj wybór" @click="reanalysisSelectionMode = false" />
       </div>
       <div v-else-if="pendingItems.length > 0" class="row justify-end q-mb-sm">
-        <q-btn flat dense no-caps icon="checklist" label="Wybierz do analizy" @click="reanalysisSelectionMode = true" />
+        <q-btn
+          flat
+          dense
+          no-caps
+          icon="checklist"
+          label="Wybierz do analizy"
+          @click="reanalysisSelectionMode = true"
+        />
       </div>
       <q-list v-if="!loadingItems && items.length > 0" bordered separator>
         <q-item class="shopping-row shopping-row-header bg-grey-2 text-caption text-grey-8">
@@ -153,7 +190,11 @@
           <q-item-section side class="shopping-tags-column">Tagi</q-item-section>
           <q-item-section side class="shopping-item-actions" />
         </q-item>
-        <q-item v-for="item in pendingItems" :key="item.id ?? `pending-${item.free_text}`" class="shopping-row">
+        <q-item
+          v-for="item in pendingItems"
+          :key="item.id ?? `pending-${item.free_text}`"
+          class="shopping-row"
+        >
           <q-item-section side top>
             <q-checkbox
               :model-value="item.is_purchased"
@@ -178,7 +219,15 @@
           </q-item-section>
           <q-item-section side class="shopping-tags-column">
             <div v-if="item.tag_names.length > 0" class="row justify-end q-gutter-xs">
-              <q-chip v-for="tag in item.tag_names" :key="tag" dense square color="blue-1" text-color="primary">{{ tag }}</q-chip>
+              <q-chip
+                v-for="tag in item.tag_names"
+                :key="tag"
+                dense
+                square
+                color="blue-1"
+                text-color="primary"
+                >{{ tag }}</q-chip
+              >
             </div>
             <span v-else class="text-grey-6">—</span>
           </q-item-section>
@@ -186,12 +235,21 @@
             <q-btn flat dense round icon="more_vert" aria-label="Więcej">
               <q-menu>
                 <q-list style="min-width: 150px">
-                  <q-item clickable v-close-popup class="text-negative" @click="confirmDelete(item)">
-                    <q-item-section avatar><q-icon name="delete" color="negative" /></q-item-section>
+                  <q-item
+                    clickable
+                    v-close-popup
+                    class="text-negative"
+                    @click="confirmDelete(item)"
+                  >
+                    <q-item-section avatar
+                      ><q-icon name="delete" color="negative"
+                    /></q-item-section>
                     <q-item-section>Usuń pozycję</q-item-section>
                   </q-item>
                   <q-item clickable v-close-popup @click="reanalyzeTag(item)">
-                    <q-item-section avatar><q-icon name="refresh" color="primary" /></q-item-section>
+                    <q-item-section avatar
+                      ><q-icon name="refresh" color="primary"
+                    /></q-item-section>
                     <q-item-section>Ponów analizę tagu</q-item-section>
                   </q-item>
                 </q-list>
@@ -199,19 +257,38 @@
             </q-btn>
           </q-item-section>
         </q-item>
-        <q-expansion-item v-if="purchasedItems.length > 0" icon="check_circle" :label="`Kupione (${purchasedItems.length})`" header-class="text-grey-8">
+        <q-expansion-item
+          v-if="purchasedItems.length > 0"
+          icon="check_circle"
+          :label="`Kupione (${purchasedItems.length})`"
+          header-class="text-grey-8"
+        >
           <div class="q-px-md q-pt-sm text-caption text-grey-7">
             Kupione produkty zostały dodane do zapasów automatycznie.
           </div>
           <q-item v-for="item in purchasedItems" :key="item.id ?? `bought-${item.free_text}`">
             <q-item-section side top>
-              <q-checkbox :model-value="item.is_purchased" @update:model-value="togglePurchased(item)" />
+              <q-checkbox
+                :model-value="item.is_purchased"
+                @update:model-value="togglePurchased(item)"
+              />
             </q-item-section>
             <q-item-section>
-              <q-item-label class="text-strike text-grey">{{ item.product_name ?? item.free_text }}</q-item-label>
-              <q-item-label caption>{{ formatQuantity(item.quantity) }} {{ item.unit_code ?? '' }}</q-item-label>
+              <q-item-label class="text-strike text-grey">{{
+                item.product_name ?? item.free_text
+              }}</q-item-label>
+              <q-item-label caption
+                >{{ formatQuantity(item.quantity) }} {{ item.unit_code ?? '' }}</q-item-label
+              >
               <div v-if="item.tag_names.length > 0" class="row q-gutter-xs q-mt-xs">
-                <q-chip v-for="tag in item.tag_names" :key="tag" dense square color="grey-3" text-color="grey-8">
+                <q-chip
+                  v-for="tag in item.tag_names"
+                  :key="tag"
+                  dense
+                  square
+                  color="grey-3"
+                  text-color="grey-8"
+                >
                   {{ tag }}
                 </q-chip>
               </div>
@@ -225,11 +302,24 @@
       <q-card style="min-width: 320px; max-width: 90vw">
         <q-card-section class="text-h6">Zmień nazwę listy</q-card-section>
         <q-card-section>
-          <q-input v-model="renameListName" autofocus outlined label="Nazwa listy" @keyup.enter="submitRenameList" />
+          <q-input
+            v-model="renameListName"
+            autofocus
+            outlined
+            label="Nazwa listy"
+            @keyup.enter="submitRenameList"
+          />
         </q-card-section>
         <q-card-actions align="right">
           <q-btn v-close-popup flat label="Anuluj" no-caps />
-          <q-btn color="primary" label="Zapisz" no-caps :loading="renamingList" :disable="renameListName.trim().length === 0" @click="submitRenameList" />
+          <q-btn
+            color="primary"
+            label="Zapisz"
+            no-caps
+            :loading="renamingList"
+            :disable="renameListName.trim().length === 0"
+            @click="submitRenameList"
+          />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -256,14 +346,13 @@
       </q-card>
     </q-dialog>
 
-
     <q-dialog v-model="promotionSplitDialogOpen">
       <q-card style="width: min(680px, 95vw); max-width: 680px">
         <q-card-section class="text-h6">Podziel zakupy według promocji</q-card-section>
         <q-card-section class="q-pt-none">
           <div class="text-body2 q-mb-md">
-            Na liście jest {{ pendingItems.length }} niekupionych pozycji. Oryginalna lista
-            zostanie zachowana.
+            Na liście jest {{ pendingItems.length }} niekupionych pozycji. Oryginalna lista zostanie
+            zachowana.
           </div>
           <q-banner v-if="pendingItems.length === 0" class="bg-grey-3 q-mb-md">
             Ta lista nie ma jeszcze niekupionych pozycji do podziału.
@@ -292,8 +381,8 @@
           <q-banner v-if="promotionCoverage.length > 0" class="bg-orange-1 q-mt-md">
             <template #avatar><q-icon name="local_offer" color="deep-orange" /></template>
             <div v-for="coverage in promotionCoverage" :key="coverage.shop_slug" class="q-mb-sm">
-              <strong>{{ coverage.shop_name }}</strong> — {{ coverage.matched_query_count }}
-              z {{ pendingItems.length }} pozycji ma promocję.
+              <strong>{{ coverage.shop_name }}</strong> — {{ coverage.matched_query_count }} z
+              {{ pendingItems.length }} pozycji ma promocję.
               <div class="text-caption">
                 Oferty: {{ coverageStats(coverage).offers }} · suma cen promocyjnych:
                 <strong>{{ coverageStats(coverage).total }} zł</strong> · średnio:
@@ -333,8 +422,8 @@
               </tbody>
             </q-markup-table>
             <div class="text-caption text-grey-8 q-mt-xs">
-              Zielona cena jest najniższą znalezioną ceną oferty. To porównanie cen ofertowych,
-              nie pełna cena za kilogram, jeśli gazetka nie podaje jednostki.
+              Zielona cena jest najniższą znalezioną ceną oferty. To porównanie cen ofertowych, nie
+              pełna cena za kilogram, jeśli gazetka nie podaje jednostki.
             </div>
           </div>
           <q-banner v-if="favouriteShopOptions.length === 0" class="bg-grey-3 q-mt-md">
@@ -485,7 +574,12 @@ const form = ref<{
   unitCode: string | null;
 }>({ product: null, freeText: '', quantity: '', unitCode: null });
 const advancedAdd = ref(false);
-const shoppingTaggingStatus = ref<{ active: boolean; processed: number; total: number; status: string } | null>(null);
+const shoppingTaggingStatus = ref<{
+  active: boolean;
+  processed: number;
+  total: number;
+  status: string;
+} | null>(null);
 let taggingNotification: (() => void) | null = null;
 let lastTaggingNotificationState = '';
 
@@ -496,8 +590,10 @@ function refreshShoppingTaggingStatus(): void {
   if (status === null) return;
   const state = `${status.status}:${status.processed}:${status.total}`;
   if (state === lastTaggingNotificationState) return;
-  if ((status.status === 'completed' || status.status === 'failed')
-    && localStorage.getItem('jedzonko.shopping-tagging-dismissed') === state) {
+  if (
+    (status.status === 'completed' || status.status === 'failed') &&
+    localStorage.getItem('jedzonko.shopping-tagging-dismissed') === state
+  ) {
     lastTaggingNotificationState = state;
     return;
   }
@@ -506,16 +602,23 @@ function refreshShoppingTaggingStatus(): void {
   const finished = status.status === 'completed' || status.status === 'failed';
   taggingNotification = quasar.notify({
     type: status.status === 'failed' ? 'negative' : finished ? 'positive' : 'info',
-    message: status.status === 'failed'
-      ? `Przetwarzanie składników nie powiodło się (${status.processed}/${status.total}).`
-      : finished
-        ? `Przetwarzanie składników zakończone (${status.processed}/${status.total}).`
-        : `Przetwarzanie składników: ${status.processed}/${status.total}`,
+    message:
+      status.status === 'failed'
+        ? `Przetwarzanie składników nie powiodło się (${status.processed}/${status.total}).`
+        : finished
+          ? `Przetwarzanie składników zakończone (${status.processed}/${status.total}).`
+          : `Przetwarzanie składników: ${status.processed}/${status.total}`,
     timeout: 0,
-    actions: [{ label: 'Zamknij', color: 'white', handler: () => {
-      localStorage.setItem('jedzonko.shopping-tagging-dismissed', state);
-      taggingNotification = null;
-    } }],
+    actions: [
+      {
+        label: 'Zamknij',
+        color: 'white',
+        handler: () => {
+          localStorage.setItem('jedzonko.shopping-tagging-dismissed', state);
+          taggingNotification = null;
+        },
+      },
+    ],
     group: 'shopping-tagging-progress',
   });
 }
@@ -534,7 +637,9 @@ const favouriteShopOptions = computed(() =>
 );
 const chosenShopSlugs = computed(() =>
   typeof selectedPromotionShops.value === 'string'
-    ? (selectedPromotionShops.value ? [selectedPromotionShops.value] : [])
+    ? selectedPromotionShops.value
+      ? [selectedPromotionShops.value]
+      : []
     : selectedPromotionShops.value,
 );
 const canSplitByPromotions = computed(
@@ -547,7 +652,9 @@ function coverageStats(coverage: StorePromotionCoverage): {
   average: string;
 } {
   const prices = coverage.offers
-    .map((offer) => Number.parseFloat((offer.price ?? '').replace(',', '.').replace(/[^0-9.]/g, '')))
+    .map((offer) =>
+      Number.parseFloat((offer.price ?? '').replace(',', '.').replace(/[^0-9.]/g, '')),
+    )
     .filter((price) => Number.isFinite(price));
   const total = prices.reduce((sum, price) => sum + price, 0);
   return {
@@ -558,24 +665,42 @@ function coverageStats(coverage: StorePromotionCoverage): {
 }
 
 const priceComparisonRows = computed(() => {
-  const normalize = (value: string) => value.toLocaleLowerCase('pl-PL').replace(/[^a-z0-9ąćęłńóśźż ]/g, ' ');
+  const normalize = (value: string) =>
+    value.toLocaleLowerCase('pl-PL').replace(/[^a-z0-9ąćęłńóśźż ]/g, ' ');
   return pendingItems.value.map((item) => {
     const label = item.tag_names[0] ?? item.product_name ?? item.free_text ?? 'Pozycja';
-    const words = normalize(label).split(/\s+/).filter((word) => word.length > 2);
+    const words = normalize(label)
+      .split(/\s+/)
+      .filter((word) => word.length > 2);
     const cells = promotionCoverage.value.map((shop) => {
       const matches = shop.offers.filter((offer) => {
         const offerName = normalize(offer.name);
         return words.length > 0 && words.every((word) => offerName.includes(word));
       });
       const prices = matches
-        .map((offer) => Number.parseFloat((offer.price ?? '').replace(',', '.').replace(/[^0-9.]/g, '')))
+        .map((offer) =>
+          Number.parseFloat((offer.price ?? '').replace(',', '.').replace(/[^0-9.]/g, '')),
+        )
         .filter((price) => Number.isFinite(price));
-      const bestOffer = matches.find((offer) => prices.includes(Number.parseFloat((offer.price ?? '').replace(',', '.').replace(/[^0-9.]/g, ''))));
-      return { shopSlug: shop.shop_slug, price: prices.length ? Math.min(...prices) : null, url: bestOffer?.leaflet_url ?? null, isBest: false };
+      const bestOffer = matches.find((offer) =>
+        prices.includes(
+          Number.parseFloat((offer.price ?? '').replace(',', '.').replace(/[^0-9.]/g, '')),
+        ),
+      );
+      return {
+        shopSlug: shop.shop_slug,
+        price: prices.length ? Math.min(...prices) : null,
+        url: bestOffer?.leaflet_url ?? null,
+        isBest: false,
+      };
     });
-    const available = cells.map((cell) => cell.price).filter((price): price is number => price !== null);
+    const available = cells
+      .map((cell) => cell.price)
+      .filter((price): price is number => price !== null);
     const best = available.length ? Math.min(...available) : null;
-    cells.forEach((cell) => { cell.isBest = best !== null && cell.price === best; });
+    cells.forEach((cell) => {
+      cell.isBest = best !== null && cell.price === best;
+    });
     return { label, cells };
   });
 });
@@ -627,12 +752,16 @@ async function loadLists(): Promise<void> {
 function confirmDeleteList(): void {
   const list = selectedList.value;
   if (list === undefined) return;
-  quasar.dialog({
-    title: 'Usunąć listę zakupów?',
-    message: `Lista „${list.name}” i jej pozycje zostaną usunięte.`,
-    cancel: true,
-    persistent: true,
-  }).onOk(() => { void doDeleteList(list.id); });
+  quasar
+    .dialog({
+      title: 'Usunąć listę zakupów?',
+      message: `Lista „${list.name}” i jej pozycje zostaną usunięte.`,
+      cancel: true,
+      persistent: true,
+    })
+    .onOk(() => {
+      void doDeleteList(list.id);
+    });
 }
 
 function openRenameList(): void {
@@ -785,15 +914,38 @@ async function reanalyzeTag(item: ShoppingItem): Promise<void> {
   }
   reanalyzingItemId.value = item.id;
   try {
-    const jobId = await startTagAnalysis(households.selectedId, item.product_id ?? undefined, item.product_id === null ? { id: item.id, text: text.trim() } : undefined);
-    localStorage.setItem('jedzonko.shopping-tagging', JSON.stringify({ active: true, processed: 0, total: 1, status: 'running' }));
+    const jobId = await startTagAnalysis(
+      households.selectedId,
+      item.product_id ?? undefined,
+      item.product_id === null ? { id: item.id, text: text.trim() } : undefined,
+    );
+    localStorage.setItem(
+      'jedzonko.shopping-tagging',
+      JSON.stringify({ active: true, processed: 0, total: 1, status: 'running' }),
+    );
     let status = await fetchTagAnalysisStatus(jobId);
     while (status.status === 'running') {
       await new Promise((resolve) => window.setTimeout(resolve, 400));
       status = await fetchTagAnalysisStatus(jobId);
-      localStorage.setItem('jedzonko.shopping-tagging', JSON.stringify({ active: true, processed: status.processed, total: status.total || 1, status: 'running' }));
+      localStorage.setItem(
+        'jedzonko.shopping-tagging',
+        JSON.stringify({
+          active: true,
+          processed: status.processed,
+          total: status.total || 1,
+          status: 'running',
+        }),
+      );
     }
-    localStorage.setItem('jedzonko.shopping-tagging', JSON.stringify({ active: false, processed: status.processed, total: status.total || 1, status: status.status }));
+    localStorage.setItem(
+      'jedzonko.shopping-tagging',
+      JSON.stringify({
+        active: false,
+        processed: status.processed,
+        total: status.total || 1,
+        status: status.status,
+      }),
+    );
     await loadItems();
   } catch (error) {
     notifyError(error);
@@ -810,7 +962,9 @@ function toggleReanalysisSelection(item: ShoppingItem): void {
 }
 
 async function reanalyzeSelected(): Promise<void> {
-  const selected = pendingItems.value.filter((item) => item.id !== null && selectedReanalysisIds.value.includes(item.id));
+  const selected = pendingItems.value.filter(
+    (item) => item.id !== null && selectedReanalysisIds.value.includes(item.id),
+  );
   if (selected.length === 0) return;
   reanalyzingSelected.value = true;
   try {
@@ -818,7 +972,10 @@ async function reanalyzeSelected(): Promise<void> {
       await reanalyzeTag(item);
     }
     selectedReanalysisIds.value = [];
-    quasar.notify({ type: 'positive', message: `Ponownie przeanalizowano ${selected.length} pozycji.` });
+    quasar.notify({
+      type: 'positive',
+      message: `Ponownie przeanalizowano ${selected.length} pozycji.`,
+    });
   } finally {
     reanalyzingSelected.value = false;
   }
@@ -879,7 +1036,9 @@ async function splitByPromotions(): Promise<void> {
   if (households.selectedId === null || !canSplitByPromotions.value) return;
   splittingByPromotions.value = true;
   try {
-    const coverageByShop = new Map(promotionCoverage.value.map((entry) => [entry.shop_slug, entry]));
+    const coverageByShop = new Map(
+      promotionCoverage.value.map((entry) => [entry.shop_slug, entry]),
+    );
     const assignments = new Map<string, ShoppingItem[]>();
     const selected = chosenShopSlugs.value;
     for (const item of pendingItems.value) {
@@ -888,7 +1047,11 @@ async function splitByPromotions(): Promise<void> {
       const matchingShop = selected
         .map((slug) => coverageByShop.get(slug))
         .filter((entry): entry is StorePromotionCoverage => entry !== undefined)
-        .sort((a, b) => Number(b.matched_queries.some((query) => normalize(query) === normalize(label))) - Number(a.matched_queries.some((query) => normalize(query) === normalize(label))))[0];
+        .sort(
+          (a, b) =>
+            Number(b.matched_queries.some((query) => normalize(query) === normalize(label))) -
+            Number(a.matched_queries.some((query) => normalize(query) === normalize(label))),
+        )[0];
       const slug = matchingShop?.shop_slug ?? 'other';
       const name = matchingShop?.shop_name ?? 'Pozostałe';
       const key = `${slug}|${name}`;
@@ -903,7 +1066,9 @@ async function splitByPromotions(): Promise<void> {
       created.push(list);
       for (const item of group) {
         await addShoppingItem(list.id, {
-          ...(item.product_id !== null ? { product_id: item.product_id } : { free_text: item.free_text ?? item.product_name ?? '' }),
+          ...(item.product_id !== null
+            ? { product_id: item.product_id }
+            : { free_text: item.free_text ?? item.product_name ?? '' }),
           quantity: item.quantity,
           ...(item.unit_code ? { unit_code: item.unit_code } : {}),
         });
@@ -927,7 +1092,9 @@ watch(promotionSplitMode, (mode) => {
   if (mode === 'single' && Array.isArray(selectedPromotionShops.value)) {
     selectedPromotionShops.value = selectedPromotionShops.value[0] ?? '';
   } else if (mode === 'multiple' && typeof selectedPromotionShops.value === 'string') {
-    selectedPromotionShops.value = selectedPromotionShops.value ? [selectedPromotionShops.value] : [];
+    selectedPromotionShops.value = selectedPromotionShops.value
+      ? [selectedPromotionShops.value]
+      : [];
   }
 });
 

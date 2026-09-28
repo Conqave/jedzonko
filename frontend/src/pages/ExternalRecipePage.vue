@@ -130,11 +130,7 @@ import { useRoute } from 'vue-router';
 import { fetchExternalRecipe } from '@/features/recipes/api';
 import { fetchInventory } from '@/features/inventory/api';
 import type { InventoryItem } from '@/features/inventory/models';
-import {
-  addShoppingItem,
-  createShoppingList,
-  fetchShoppingLists,
-} from '@/features/shopping/api';
+import { addShoppingItem, createShoppingList, fetchShoppingLists } from '@/features/shopping/api';
 import type { ShoppingList } from '@/features/shopping/models';
 import { useHouseholdStore } from '@/features/households/store';
 import { describeRecipeError } from '@/features/recipes/errors';
@@ -176,11 +172,17 @@ const shoppingIngredients = computed(() =>
 );
 
 const shoppingListOptions = computed(() =>
-  shoppingLists.value.map((list) => ({ label: `${list.name} (${list.item_count})`, value: list.id })),
+  shoppingLists.value.map((list) => ({
+    label: `${list.name} (${list.item_count})`,
+    value: list.id,
+  })),
 );
 
 function normalize(value: string): string {
-  return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
 }
 
 async function openShoppingDialog(): Promise<void> {
@@ -200,10 +202,26 @@ async function addMissingToShoppingList(): Promise<void> {
     type: 'info',
     message: `Dodawanie składników: 0/${shoppingIngredients.value.length}`,
     timeout: 0,
-    actions: [{ label: 'Zamknij', color: 'white', handler: () => { progressNotification = null; } }],
+    actions: [
+      {
+        label: 'Zamknij',
+        color: 'white',
+        handler: () => {
+          progressNotification = null;
+        },
+      },
+    ],
     group: 'shopping-tagging-progress',
   });
-  localStorage.setItem('jedzonko.shopping-tagging', JSON.stringify({ active: true, processed: 0, total: shoppingIngredients.value.length, status: 'running' }));
+  localStorage.setItem(
+    'jedzonko.shopping-tagging',
+    JSON.stringify({
+      active: true,
+      processed: 0,
+      total: shoppingIngredients.value.length,
+      status: 'running',
+    }),
+  );
   try {
     let listId = selectedListId.value;
     if (newListName.value.trim() !== '') {
@@ -213,9 +231,9 @@ async function addMissingToShoppingList(): Promise<void> {
     if (listId === null) return;
     for (const ingredient of shoppingIngredients.value) {
       await addShoppingItem(listId, {
-          free_text: ingredient.name,
-          quantity: ingredient.quantity ?? '1',
-          ...(ingredient.unit_code === null ? {} : { unit_code: ingredient.unit_code }),
+        free_text: ingredient.name,
+        quantity: ingredient.quantity ?? '1',
+        ...(ingredient.unit_code === null ? {} : { unit_code: ingredient.unit_code }),
       });
       shoppingProgress.value += 1;
       progressNotification?.();
@@ -223,18 +241,50 @@ async function addMissingToShoppingList(): Promise<void> {
         type: 'info',
         message: `Dodawanie składników: ${shoppingProgress.value}/${shoppingIngredients.value.length}`,
         timeout: 0,
-        actions: [{ label: 'Zamknij', color: 'white', handler: () => { progressNotification = null; } }],
+        actions: [
+          {
+            label: 'Zamknij',
+            color: 'white',
+            handler: () => {
+              progressNotification = null;
+            },
+          },
+        ],
         group: 'shopping-tagging-progress',
       });
-      localStorage.setItem('jedzonko.shopping-tagging', JSON.stringify({ active: true, processed: shoppingProgress.value, total: shoppingIngredients.value.length, status: 'running' }));
+      localStorage.setItem(
+        'jedzonko.shopping-tagging',
+        JSON.stringify({
+          active: true,
+          processed: shoppingProgress.value,
+          total: shoppingIngredients.value.length,
+          status: 'running',
+        }),
+      );
     }
-    localStorage.setItem('jedzonko.shopping-tagging', JSON.stringify({ active: false, processed: shoppingProgress.value, total: shoppingIngredients.value.length, status: 'completed' }));
+    localStorage.setItem(
+      'jedzonko.shopping-tagging',
+      JSON.stringify({
+        active: false,
+        processed: shoppingProgress.value,
+        total: shoppingIngredients.value.length,
+        status: 'completed',
+      }),
+    );
     shoppingDialogOpen.value = false;
     progressNotification?.();
     progressNotification = null;
     quasar.notify({ type: 'positive', message: 'Brakujące składniki dodano do listy zakupów.' });
   } catch (error) {
-    localStorage.setItem('jedzonko.shopping-tagging', JSON.stringify({ active: false, processed: shoppingProgress.value, total: shoppingIngredients.value.length, status: 'failed' }));
+    localStorage.setItem(
+      'jedzonko.shopping-tagging',
+      JSON.stringify({
+        active: false,
+        processed: shoppingProgress.value,
+        total: shoppingIngredients.value.length,
+        status: 'failed',
+      }),
+    );
     progressNotification?.();
     progressNotification = null;
     quasar.notify({ type: 'negative', message: describeRecipeError(error) });

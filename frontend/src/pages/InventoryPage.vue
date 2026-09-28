@@ -14,9 +14,12 @@
 
     <q-banner v-if="belowMinimumItems.length > 0" class="bg-orange-1 q-mb-md">
       <div class="text-weight-medium">
-        Kończą się {{ belowMinimumItems.length }} {{ belowMinimumItems.length === 1 ? 'produkt' : 'produkty' }}
+        Kończą się {{ belowMinimumItems.length }}
+        {{ belowMinimumItems.length === 1 ? 'produkt' : 'produkty' }}
       </div>
-      <div class="text-caption q-mt-xs">{{ belowMinimumItems.map((item) => item.product_name).join(', ') }}</div>
+      <div class="text-caption q-mt-xs">
+        {{ belowMinimumItems.map((item) => item.product_name).join(', ') }}
+      </div>
       <template #action>
         <q-btn flat no-caps color="primary" label="Dodaj do zakupów" :to="{ name: 'shopping' }" />
       </template>
@@ -179,13 +182,7 @@
             aria-label="Edytuj"
             @click="openEditDialog(props.row)"
           />
-          <q-btn
-            flat
-            dense
-            round
-            icon="more_vert"
-            aria-label="Więcej"
-          >
+          <q-btn flat dense round icon="more_vert" aria-label="Więcej">
             <q-menu>
               <q-list style="min-width: 160px">
                 <q-item clickable v-close-popup @click="openPhotoDialog(props.row)">
@@ -196,7 +193,12 @@
                   <q-item-section avatar><q-icon name="refresh" color="primary" /></q-item-section>
                   <q-item-section>Ponów analizę tagu</q-item-section>
                 </q-item>
-                <q-item clickable v-close-popup class="text-negative" @click="confirmDelete(props.row)">
+                <q-item
+                  clickable
+                  v-close-popup
+                  class="text-negative"
+                  @click="confirmDelete(props.row)"
+                >
                   <q-item-section avatar><q-icon name="delete" color="negative" /></q-item-section>
                   <q-item-section>Usuń produkt</q-item-section>
                 </q-item>
@@ -443,9 +445,7 @@ const columns: QTableColumn<InventoryItem>[] = [
 
 const PRIMARY_COLUMNS = ['photo', 'product_name', 'tags', 'quantity', 'actions'];
 
-const visibleColumns = computed(() =>
-  PRIMARY_COLUMNS,
-);
+const visibleColumns = computed(() => PRIMARY_COLUMNS);
 
 const items = ref<InventoryItem[]>([]);
 const belowMinimumItems = computed(() => items.value.filter((item) => item.below_minimum));
@@ -673,9 +673,15 @@ async function analyzeProductTag(item: InventoryItem): Promise<void> {
     progress();
     if (status.status === 'completed') {
       await loadItems();
-      quasar.notify({ type: 'positive', message: `Zakończono analizę tagu: ${item.product_name}.` });
+      quasar.notify({
+        type: 'positive',
+        message: `Zakończono analizę tagu: ${item.product_name}.`,
+      });
     } else {
-      quasar.notify({ type: 'negative', message: `Analiza tagu nie powiodła się: ${item.product_name}.` });
+      quasar.notify({
+        type: 'negative',
+        message: `Analiza tagu nie powiodła się: ${item.product_name}.`,
+      });
     }
   } catch (error) {
     notifyError(error);
@@ -720,10 +726,7 @@ function openEditDialog(item: InventoryItem): void {
   editDialogOpen.value = true;
 }
 
-function filterTagOptions(
-  value: string,
-  update: (callback: () => void) => void,
-): void {
+function filterTagOptions(value: string, update: (callback: () => void) => void): void {
   if (households.selectedId === null) return;
   void searchProductTags(households.selectedId, value).then((tags) => {
     update(() => {
