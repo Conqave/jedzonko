@@ -1,0 +1,106 @@
+from dataclasses import dataclass, replace
+from datetime import datetime
+
+from catalog.domain.errors import (
+    InvalidProductClassificationError,
+    InvalidProductIngredientTransitionError,
+    ProductAlreadyClassifiedError,
+    ProductIngredientAlreadyRecordedError,
+    ProductIngredientNotFoundError,
+)
+from catalog.domain.product_ingredient import (
+    ProductIngredient,
+    ProductIngredientSource,
+    ProductIngredientStatus,
+)
+
+
+@dataclass(frozen=True, slots=True)
+class ProductClassification:
+    """Every recorded ingredient decision for one product; at most one is confirmed."""
+
+    product_id: int
+    household_id: int
+    links: tuple[ProductIngredient, ...]
+
+    def __post_init__(self) -> None:
+        if any(link.product_id != self.product_id for link in self.links):
+            raise InvalidProductClassificationError("A link belongs to another product.")
+        ingredient_ids = [link.ingredient_id for link in self.links]
+        if len(ingredient_ids) != len(set(ingredient_ids)):
+            raise InvalidProductClassificationError("An ingredient is recorded twice.")
+        confirmed = [
+            link for link in self.links if link.status is ProductIngredientStatus.CONFIRMED
+        ]
+        if len(confirmed) > 1:
+            raise InvalidProductClassificationError("More than one ingredient is confirmed.")
+
+    def confirmed(self) -> ProductIngredient | None:
+        for link in self.links:
+            if link.status is ProductIngredientStatus.CONFIRMED:
+                return link
+        return None
+
+    def find(self, ingredient_id: int) -> ProductIngredient | None:
+        for link in self.links:
+            if link.ingredient_id == ingredient_id:
+                return link
+        return None
+
+    def propose(self, ingredient_id: int, model_name: str, now: datetime) -> ProductIngredient:
+        if self.confirmed() is not None:
+            raise ProductAlreadyClassifiedError
+        if self.find(ingredient_id) is not None:
+            raise ProductIngredientAlreadyRecordedError
+        return ProductIngredient(
+            product_id=self.product_id,
+            ingredient_id=ingredient_id,
+            status=ProductIngredientStatus.PROPOSED,
+            source=ProductIngredientSource.MODEL,
+            model_name=model_name,
+            proposed_at=now,
+            decided_at=None,
+        )
+
+    def confirm(self, ingredient_id: int, now: datetime) -> tuple[ProductIngredient, ...]:
+        """Return the changes in the order they must be stored; empty when nothing changes."""
+        current = self.confirmed()
+        if current is not None and current.ingredient_id == ingredient_id:
+            return ()
+        changes: list[ProductIngredient] = []
+        if current is not None:
+            changes.append(
+                replace(current, status=ProductIngredientStatus.REJECTED, decided_at=now)
+            )
+        existing = self.find(ingredient_id)
+        if existing is None:
+            changes.append(
+                ProductIngredient(
+                    product_id=self.product_id,
+                    ingredient_id=ingredient_id,
+                    status=ProductIngredientStatus.CONFIRMED,
+                    source=ProductIngredientSource.MANUAL,
+                    model_name=None,
+                    proposed_at=None,
+                    decided_at=now,
+                )
+            )
+        else:
+            changes.append(
+                replace(existing, status=ProductIngredientStatus.CONFIRMED, decided_at=now)
+            )
+        return tuple(changes)
+
+    def reject(self, ingredient_id: int, now: datetime) -> ProductIngredient:
+        existing = self.find(ingredient_id)
+        if existing is None:
+            raise ProductIngredientNotFoundError
+        if existing.status is ProductIngredientStatus.REJECTED:
+            raise InvalidProductIngredientTransitionError("The ingredient is already rejected.")
+        return replace(existing, status=ProductIngredientStatus.REJECTED, decided_at=now)
+
+    def apply(self, changes: tuple[ProductIngredient, ...]) -> "ProductClassification":
+        links = {link.ingredient_id: link for link in self.links}
+        for change in changes:
+            links[change.ingredient_id] = change
+        return replace(self, links=tuple(links.values()))

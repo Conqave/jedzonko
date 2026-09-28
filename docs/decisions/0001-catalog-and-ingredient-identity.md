@@ -1,6 +1,6 @@
 # 0001 — Catalog module and ingredient identity
 
-- Status: proposed
+- Status: accepted
 - Date: 2026-09-28
 - Supersedes: the product alias and Ania Gotuje tag models on `wip/ingredient-tags`
   (households migrations 0002–0007)
@@ -74,14 +74,24 @@ IngredientNameCandidate    name, normalized_name UNIQUE, source, reason, status
 5. A pending shopping item and a purchased shopping item reference exactly one of
    `product_id`, `ingredient_id` or `free_text`.
 6. Nothing writes to the catalog during a read request.
+7. `confirmed_product_id` and `canonical_ingredient_id` are persistence mechanisms
+   only. They are not part of the domain model or of the public `catalog` API.
+8. `IngredientNameCandidate` never takes part in name resolution.
+   `FindIngredientByName` searches accepted `IngredientName` rows only, so the
+   quarantine cannot affect runtime behaviour.
+9. Deleting or merging an `Ingredient` never leaves a `ProductIngredient` or a
+   `RecipeIngredient` pointing at a semantically different ingredient. A merge is a
+   dedicated transactional use case, not generic CRUD in Django admin; the admin
+   does not offer ingredient deletion.
 
 ### Transitions of `ProductIngredient`
 
 | operation | from | to | notes |
 |---|---|---|---|
 | `ProposeProductIngredient` | (none) | proposed | only when the product has no confirmed ingredient and the pair has no row |
-| `ConfirmProductIngredient` | none, proposed, rejected | confirmed | explicit user decision; a previously confirmed row for the product becomes rejected in the same transaction |
-| `RejectProductIngredient` | proposed, confirmed | rejected | |
+| `ConfirmProductIngredient` | none, proposed, rejected | confirmed | explicit user decision; a previously confirmed row for the product becomes rejected in the same transaction, stored before the new confirmation; the row keeps its original `source` and `proposed_at` |
+| `ConfirmProductIngredient` | confirmed (same ingredient) | unchanged | no-op, nothing is written |
+| `RejectProductIngredient` | proposed, confirmed | rejected | rejecting a rejected row is an invalid transition |
 
 ### Application contract
 
