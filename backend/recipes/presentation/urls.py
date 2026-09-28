@@ -3,6 +3,7 @@ from django.urls import URLPattern, path
 from recipes.presentation.external_views import (
     ExternalRecipeDetailView,
     ExternalRecipeListView,
+    ExternalRecipeMissingItemListView,
     ExternalRecipeSuggestionListView,
 )
 from recipes.presentation.views import (
@@ -19,6 +20,7 @@ urlpatterns: list[URLPattern] = [
     path("external/", ExternalRecipeListView.as_view()),
     path("external/suggestions/", ExternalRecipeSuggestionListView.as_view()),
     path("external/<slug:reference>/", ExternalRecipeDetailView.as_view()),
+    path("external/<slug:reference>/missing-items/", ExternalRecipeMissingItemListView.as_view()),
     path("<int:recipe_id>/", RecipeDetailView.as_view()),
     path("<int:recipe_id>/missing-items/", RecipeMissingItemListView.as_view()),
     path("<int:recipe_id>/confirm-preparation/", RecipePreparationView.as_view()),

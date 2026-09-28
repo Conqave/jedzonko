@@ -7,12 +7,16 @@ import httpx
 from recipes.application.ports.household_stock_reader import HouseholdStockReader
 from recipes.application.ports.ingredient_resolver import IngredientResolver
 from recipes.application.ports.inventory_consumer import HouseholdInventoryConsumer
+from recipes.application.use_cases.calculate_external_recipe_shortfall import (
+    CalculateExternalRecipeShortfall,
+)
 from recipes.application.use_cases.calculate_missing_recipe_items import (
     CalculateMissingRecipeItems,
 )
 from recipes.application.use_cases.confirm_recipe_preparation import ConfirmRecipePreparation
 from recipes.application.use_cases.create_recipe import CreateRecipe
 from recipes.application.use_cases.delete_recipe import DeleteRecipe
+from recipes.application.use_cases.external_recipes import ExternalRecipes
 from recipes.application.use_cases.get_external_recipe import GetExternalRecipe
 from recipes.application.use_cases.get_recipe import GetRecipe
 from recipes.application.use_cases.list_recipes import ListRecipes
@@ -36,13 +40,6 @@ class RecipeSourceSettings:
     timeout_seconds: float
     user_agent: str
     suggestion_ingredient_limit: int
-
-
-@dataclass(frozen=True, slots=True)
-class ExternalRecipes:
-    search: SearchExternalRecipes
-    suggest_from_inventory: SuggestExternalRecipesFromInventory
-    get: GetExternalRecipe
 
 
 @dataclass(frozen=True, slots=True)
@@ -80,6 +77,9 @@ class RecipesModule:
                     settings.suggestion_ingredient_limit,
                 ),
                 get=GetExternalRecipe(source),
+                calculate_shortfall=CalculateExternalRecipeShortfall(
+                    source, self.stock, self.resolver, self.memberships
+                ),
             )
 
 

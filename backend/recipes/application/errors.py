@@ -16,3 +16,19 @@ class RecipeCategoryNotFoundError(Exception):
 
 class InvalidServingsError(Exception):
     pass
+
+
+class RecipeSourceError(Exception):
+    pass
+
+
+class RecipeSourceUnavailableError(RecipeSourceError):
+    pass
+
+
+class RecipeSourceContractError(RecipeSourceError):
+    pass
+
+
+class RecipeNotFoundAtSourceError(RecipeSourceError):
+    pass

@@ -54,3 +54,13 @@ class ShoppingItemSerializer(serializers.Serializer[object]):
     unit_code = serializers.CharField(source="unit.code", read_only=True, allow_null=True)
     status = serializers.CharField(read_only=True)
     purchased_at = serializers.DateTimeField(read_only=True, allow_null=True)
+
+
+class SplitByPromotionsSerializer(serializers.Serializer[dict[str, list[str]]]):
+    shops = serializers.ListField(
+        child=serializers.SlugField(max_length=120), min_length=1, max_length=20
+    )
+
+
+class AddExternalRecipeItemsSerializer(serializers.Serializer[dict[str, str]]):
+    reference = serializers.SlugField(max_length=200)

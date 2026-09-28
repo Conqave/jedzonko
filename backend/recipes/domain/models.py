@@ -9,7 +9,7 @@ from shared.measurement import Quantity
 class RecipeRequirement:
     name: str
     ingredient_id: int | None
-    quantity: Quantity
+    quantity: Quantity | None
 
 
 @dataclass(frozen=True, slots=True)

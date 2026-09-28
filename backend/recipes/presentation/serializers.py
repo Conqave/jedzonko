@@ -99,8 +99,10 @@ class MissingRecipeItemSerializer(serializers.Serializer[object]):
     name = serializers.CharField(read_only=True)
     ingredient_id = serializers.IntegerField(read_only=True, allow_null=True)
     stocked_product_id = serializers.IntegerField(read_only=True, allow_null=True)
-    amount = serializers.DecimalField(max_digits=12, decimal_places=3, read_only=True)
-    unit_code = serializers.CharField(read_only=True)
+    amount = serializers.DecimalField(
+        max_digits=12, decimal_places=3, read_only=True, allow_null=True
+    )
+    unit_code = serializers.CharField(read_only=True, allow_null=True)
 
 
 class RecipeShortfallSerializer(serializers.Serializer[object]):

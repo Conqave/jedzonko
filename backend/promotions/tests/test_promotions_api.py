@@ -2,12 +2,12 @@ import pytest
 from django.contrib.auth.models import Permission, User
 from rest_framework.test import APIClient
 
-from promotions.application.permissions import VIEW_PROMOTIONS_PERMISSION
-from promotions.application.ports.promotion_source import (
-    PromotionSource,
+from promotions.application.errors import (
     PromotionSourceContractError,
     PromotionSourceUnavailableError,
 )
+from promotions.application.permissions import VIEW_PROMOTIONS_PERMISSION
+from promotions.application.ports.promotion_source import PromotionSource
 from promotions.tests.fakes import FailingPromotionSource, FakePromotionSource, build_offer
 
 pytestmark = pytest.mark.django_db

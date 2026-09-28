@@ -9,8 +9,8 @@ class MissingRecipeItem:
     name: str
     ingredient_id: int | None
     stocked_product_id: int | None
-    amount: Decimal
-    unit_code: str
+    amount: Decimal | None
+    unit_code: str | None
 
     def subject(self, only_product_of_ingredient: int | None) -> ShoppingSubject:
         if self.stocked_product_id is not None:

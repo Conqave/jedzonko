@@ -228,3 +228,8 @@ class FakeRecipeRequirementReader(RecipeRequirementReader):
         self, user_id: int, household_id: int, recipe_id: int, servings: int
     ) -> list[MissingRecipeItem]:
         return self._missing
+
+    def get_missing_external_items(
+        self, user_id: int, household_id: int, reference: str
+    ) -> list[MissingRecipeItem]:
+        return self._missing

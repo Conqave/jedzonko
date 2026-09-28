@@ -2,7 +2,7 @@ from decimal import Decimal
 
 import pytest
 
-from recipes.application.ports.recipe_source import RecipeSourceContractError
+from recipes.application.errors import RecipeSourceContractError
 from recipes.infrastructure.providers.ania_gotuje.duration import parse_iso_duration_minutes
 from recipes.infrastructure.providers.ania_gotuje.ingredient_line import parse_ingredient_line
 

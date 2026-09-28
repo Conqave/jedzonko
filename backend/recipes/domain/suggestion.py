@@ -7,8 +7,8 @@ class MissingRecipeItem:
     name: str
     ingredient_id: int | None
     stocked_product_id: int | None
-    amount: Decimal
-    unit_code: str
+    amount: Decimal | None
+    unit_code: str | None
 
 
 @dataclass(frozen=True, slots=True)

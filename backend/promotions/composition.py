@@ -11,6 +11,7 @@ from promotions.application.use_cases.compare_store_promotion_coverage import (
 )
 from promotions.application.use_cases.list_favourite_shops import ListFavouriteShops
 from promotions.application.use_cases.list_promotion_shops import ListPromotionShops
+from promotions.application.use_cases.promotion_operations import PromotionOperations
 from promotions.application.use_cases.search_promotions import SearchPromotions
 from promotions.application.use_cases.set_favourite_shops import SetFavouriteShops
 from promotions.infrastructure.django_favourite_shop_repository import (
@@ -28,14 +29,6 @@ class PromotionSourceSettings:
     user_agent: str
     search_leaflet_limit: int
     search_result_limit: int
-
-
-@dataclass(frozen=True, slots=True)
-class PromotionOperations:
-    list_shops: ListPromotionShops
-    set_favourite_shops: SetFavouriteShops
-    search: SearchPromotions
-    compare_store_coverage: CompareStorePromotionCoverage
 
 
 @dataclass(frozen=True, slots=True)

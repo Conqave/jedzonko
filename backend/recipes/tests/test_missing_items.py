@@ -91,11 +91,15 @@ def test_incomparable_quantity_is_reported_and_blocks_readiness() -> None:
 
 def test_scaling_multiplies_amounts_by_serving_ratio() -> None:
     scaled = scale_requirements([make_requirement("flour", "500", GRAM, FLOUR)], 2, 5)
+    quantity = scaled[0].quantity
 
-    assert scaled[0].quantity.amount == Decimal("1250")
+    assert quantity is not None
+    assert quantity.amount == Decimal("1250")
 
 
 def test_scaling_down_reduces_amounts() -> None:
     scaled = scale_requirements([make_requirement("flour", "500", GRAM, FLOUR)], 4, 2)
+    quantity = scaled[0].quantity
 
-    assert scaled[0].quantity.amount == Decimal("250")
+    assert quantity is not None
+    assert quantity.amount == Decimal("250")

@@ -36,6 +36,12 @@ def find_stock(
     return best
 
 
+def has_stock(ingredient_id: int | None, stock: list[StockedProduct]) -> bool:
+    if ingredient_id is None:
+        return False
+    return any(product.ingredient_id == ingredient_id for product in stock)
+
+
 def available_quantity(product: StockedProduct, target: MeasurementUnit) -> Quantity | None:
     stock = product.quantity
     if _is_directly_comparable(stock.unit, target):

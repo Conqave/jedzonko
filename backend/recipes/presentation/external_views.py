@@ -8,10 +8,12 @@ from recipes.application.use_cases.search_external_recipes import ExternalRecipe
 from recipes.presentation.external_serializers import (
     ExternalRecipeDetailSerializer,
     ExternalRecipeSearchSerializer,
+    ExternalRecipeShortfallQuerySerializer,
     ExternalRecipeSuggestionSerializer,
     ExternalRecipeSuggestionsSerializer,
     MatchedExternalRecipePageSerializer,
 )
+from recipes.presentation.serializers import RecipeShortfallSerializer
 
 
 def _split_names(value: str) -> tuple[str, ...]:
@@ -59,4 +61,16 @@ class ExternalRecipeDetailView(APIView):
         with container().recipes.open_external() as external:
             recipe = external.get.execute(reference)
         serializer = ExternalRecipeDetailSerializer(recipe)
+        return Response(serializer.data)
+
+
+class ExternalRecipeMissingItemListView(APIView):
+    def get(self, request: Request, reference: str) -> Response:
+        user_id = current_user_id(request)
+        query = ExternalRecipeShortfallQuerySerializer(data=request.query_params)
+        query.is_valid(raise_exception=True)
+        household_id = query.validated_data["household_id"]
+        with container().recipes.open_external() as external:
+            shortfall = external.calculate_shortfall.execute(user_id, household_id, reference)
+        serializer = RecipeShortfallSerializer(shortfall)
         return Response(serializer.data)

@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from promotions.application.ports.promotion_source import PromotionSourceContractError
+from promotions.application.errors import PromotionSourceContractError
 from promotions.infrastructure.providers.blix.parser import BlixSearchParser
 
 FIXTURES = Path(__file__).parent / "fixtures"

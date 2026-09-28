@@ -4,7 +4,7 @@ from pathlib import Path
 import httpx
 import pytest
 
-from promotions.application.ports.promotion_source import (
+from promotions.application.errors import (
     PromotionSourceContractError,
     PromotionSourceUnavailableError,
 )

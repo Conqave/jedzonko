@@ -20,6 +20,10 @@ class ExternalRecipeSearchSerializer(serializers.Serializer[dict[str, object]]):
     )
 
 
+class ExternalRecipeShortfallQuerySerializer(serializers.Serializer[dict[str, int]]):
+    household_id = serializers.IntegerField(min_value=1)
+
+
 class ExternalRecipeSuggestionSerializer(serializers.Serializer[dict[str, object]]):
     household_id = serializers.IntegerField(min_value=1)
     page = serializers.IntegerField(min_value=0, required=False, default=0)
