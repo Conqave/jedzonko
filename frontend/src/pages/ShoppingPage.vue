@@ -512,7 +512,7 @@
 </style>
 
 <script setup lang="ts">
-import { formatQuantity } from '@/features/shared/formatQuantity';
+import { formatQuantity } from '@/shared/formatQuantity';
 import { computed, onMounted, ref, watch } from 'vue';
 import { useQuasar } from 'quasar';
 import { fetchUnits } from '@/features/products/api';

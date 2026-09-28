@@ -1,4 +1,4 @@
-import { describeApiError } from '@/features/shared/apiError';
+import { describeApiError } from '@/shared/apiError';
 
 const MESSAGES: Record<string, string> = {
   product_not_found: 'Nie znaleziono wybranego produktu.',
@@ -9,5 +9,5 @@ const MESSAGES: Record<string, string> = {
 };
 
 export function describeProductError(error: unknown): string {
-  return describeApiError(error, MESSAGES, 'Nie udało się wykonać operacji na produktach.');
+  return describeApiError(error, MESSAGES);
 }

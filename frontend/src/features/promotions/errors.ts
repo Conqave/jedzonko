@@ -1,4 +1,4 @@
-import { describeApiError } from '@/features/shared/apiError';
+import { describeApiError } from '@/shared/apiError';
 
 const MESSAGES: Record<string, string> = {
   promotion_source_unavailable: 'Źródło promocji jest chwilowo niedostępne.',
@@ -8,9 +8,6 @@ const MESSAGES: Record<string, string> = {
   invalid: 'Nieprawidłowe dane zapytania.',
 };
 
-export function describePromotionError(
-  error: unknown,
-  fallback = 'Nie udało się pobrać promocji.',
-): string {
-  return describeApiError(error, MESSAGES, fallback);
+export function describePromotionError(error: unknown): string {
+  return describeApiError(error, MESSAGES);
 }

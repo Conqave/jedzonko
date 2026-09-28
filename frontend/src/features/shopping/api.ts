@@ -1,4 +1,4 @@
-import { api } from '@/boot/api';
+import { http as api } from '@/shared/http';
 import type { NewShoppingItem, ShoppingItem, ShoppingList } from './models';
 
 export async function fetchShoppingLists(householdId: number): Promise<ShoppingList[]> {

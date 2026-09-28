@@ -2,7 +2,7 @@ import { defineConfig } from '#q-app';
 
 export default defineConfig(() => {
   return {
-    boot: ['api', 'session'],
+    boot: ['errors', 'session'],
     extras: ['roboto-font', 'material-icons'],
     build: {
       typescript: {

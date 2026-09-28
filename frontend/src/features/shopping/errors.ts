@@ -1,4 +1,4 @@
-import { describeApiError } from '@/features/shared/apiError';
+import { describeApiError } from '@/shared/apiError';
 
 const MESSAGES: Record<string, string> = {
   shopping_list_not_found: 'Nie znaleziono listy zakupów.',
@@ -11,5 +11,5 @@ const MESSAGES: Record<string, string> = {
 };
 
 export function describeShoppingError(error: unknown): string {
-  return describeApiError(error, MESSAGES, 'Nie udało się wykonać operacji na liście zakupów.');
+  return describeApiError(error, MESSAGES);
 }

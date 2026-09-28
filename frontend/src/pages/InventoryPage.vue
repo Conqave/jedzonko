@@ -410,8 +410,8 @@ import {
 import { describeInventoryError } from '@/features/inventory/errors';
 import type { InventoryCategory, InventoryItem } from '@/features/inventory/models';
 import { useHouseholdStore } from '@/features/households/store';
-import { formatQuantity } from '@/features/shared/formatQuantity';
-import { productEmoji } from '@/features/shared/productEmoji';
+import { formatQuantity } from '@/shared/formatQuantity';
+import { productEmoji } from '@/shared/productEmoji';
 
 const quasar = useQuasar();
 const households = useHouseholdStore();
