@@ -1,61 +1,98 @@
-import { http as api } from '@/shared/http';
+import { z } from 'zod';
+import { http } from '@/shared/http';
 import type {
   InventoryCategory,
   InventoryItem,
-  InventoryItemUpdate,
+  InventoryItemChanges,
   NewInventoryItem,
-} from './models';
+} from './model';
+
+const itemSchema = z
+  .object({
+    id: z.number().int(),
+    product_id: z.number().int(),
+    product_name: z.string(),
+    quantity: z.string(),
+    unit_code: z.string(),
+    minimum_quantity: z.string().nullable(),
+    category_id: z.number().int().nullable(),
+    category_name: z.string().nullable(),
+    photo_url: z.string().nullable(),
+    below_minimum: z.boolean(),
+  })
+  .transform((item): InventoryItem => ({
+    id: item.id,
+    productId: item.product_id,
+    productName: item.product_name,
+    quantity: item.quantity,
+    unitCode: item.unit_code,
+    minimumQuantity: item.minimum_quantity,
+    categoryId: item.category_id,
+    categoryName: item.category_name,
+    photoUrl: item.photo_url,
+    isBelowMinimum: item.below_minimum,
+  }));
+
+const categorySchema = z.object({ id: z.number().int(), name: z.string() });
 
 export async function fetchInventory(householdId: number): Promise<InventoryItem[]> {
-  const response = await api.get<InventoryItem[]>('/inventory/', {
-    params: { household_id: householdId },
-  });
-  return response.data;
+  const params = { household_id: householdId };
+  const response = await http.get('/inventory/', { params });
+  return itemSchema.array().parse(response.data);
 }
 
 export async function addInventoryItem(item: NewInventoryItem): Promise<InventoryItem> {
-  const response = await api.post<InventoryItem>('/inventory/', item);
-  return response.data;
+  const payload = {
+    household_id: item.householdId,
+    product_id: item.productId,
+    quantity: item.quantity,
+    unit_code: item.unitCode,
+    minimum_quantity: item.minimumQuantity,
+    category_id: item.categoryId,
+  };
+  const response = await http.post('/inventory/', payload);
+  return itemSchema.parse(response.data);
 }
 
 export async function updateInventoryItem(
   itemId: number,
-  changes: InventoryItemUpdate,
+  changes: Partial<InventoryItemChanges>,
 ): Promise<InventoryItem> {
-  const response = await api.patch<InventoryItem>(`/inventory/${itemId}/`, changes);
-  return response.data;
+  const payload = {
+    product_name: changes.productName,
+    quantity: changes.quantity,
+    unit_code: changes.unitCode,
+  };
+  const response = await http.patch(`/inventory/${itemId}/`, payload);
+  return itemSchema.parse(response.data);
 }
 
 export async function deleteInventoryItem(itemId: number): Promise<void> {
-  await api.delete(`/inventory/${itemId}/`);
+  await http.delete(`/inventory/${itemId}/`);
 }
 
 export async function fetchInventoryCategories(householdId: number): Promise<InventoryCategory[]> {
-  const response = await api.get<InventoryCategory[]>('/inventory/categories/', {
-    params: { household_id: householdId },
-  });
-  return response.data;
+  const params = { household_id: householdId };
+  const response = await http.get('/inventory/categories/', { params });
+  return categorySchema.array().parse(response.data);
 }
 
 export async function createInventoryCategory(
   householdId: number,
   name: string,
 ): Promise<InventoryCategory> {
-  const response = await api.post<InventoryCategory>('/inventory/categories/', {
-    household_id: householdId,
-    name,
-  });
-  return response.data;
+  const payload = { household_id: householdId, name };
+  const response = await http.post('/inventory/categories/', payload);
+  return categorySchema.parse(response.data);
 }
 
 export async function setInventoryItemCategory(
   itemId: number,
   categoryId: number | null,
 ): Promise<InventoryItem> {
-  const response = await api.put<InventoryItem>(`/inventory/${itemId}/category/`, {
-    category_id: categoryId,
-  });
-  return response.data;
+  const payload = { category_id: categoryId };
+  const response = await http.put(`/inventory/${itemId}/category/`, payload);
+  return itemSchema.parse(response.data);
 }
 
 export async function uploadInventoryItemPhoto(
@@ -64,11 +101,11 @@ export async function uploadInventoryItemPhoto(
 ): Promise<InventoryItem> {
   const payload = new FormData();
   payload.append('photo', photo);
-  const response = await api.put<InventoryItem>(`/inventory/${itemId}/photo/`, payload);
-  return response.data;
+  const response = await http.put(`/inventory/${itemId}/photo/`, payload);
+  return itemSchema.parse(response.data);
 }
 
 export async function deleteInventoryItemPhoto(itemId: number): Promise<InventoryItem> {
-  const response = await api.delete<InventoryItem>(`/inventory/${itemId}/photo/`);
-  return response.data;
+  const response = await http.delete(`/inventory/${itemId}/photo/`);
+  return itemSchema.parse(response.data);
 }
