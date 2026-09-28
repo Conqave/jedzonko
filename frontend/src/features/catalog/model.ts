@@ -1,4 +1,6 @@
-export type MeasurementDimension = 'mass' | 'volume' | 'count';
+export const MEASUREMENT_DIMENSIONS = ['mass', 'volume', 'count'] as const;
+
+export type MeasurementDimension = (typeof MEASUREMENT_DIMENSIONS)[number];
 
 export interface MeasurementUnit {
   code: string;
@@ -31,9 +33,13 @@ export interface ProductListing {
   openProposalCount: number;
 }
 
-export type ProductIngredientStatus = 'proposed' | 'confirmed' | 'rejected';
+export const PRODUCT_INGREDIENT_STATUSES = ['proposed', 'confirmed', 'rejected'] as const;
 
-export type ProductIngredientProvenance = 'manual' | 'model';
+export type ProductIngredientStatus = (typeof PRODUCT_INGREDIENT_STATUSES)[number];
+
+export const PRODUCT_INGREDIENT_PROVENANCES = ['manual', 'model'] as const;
+
+export type ProductIngredientProvenance = (typeof PRODUCT_INGREDIENT_PROVENANCES)[number];
 
 export interface ProductIngredientDecision {
   ingredient: Ingredient;

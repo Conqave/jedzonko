@@ -1,11 +1,12 @@
 import { z } from 'zod';
 import { http } from '@/shared/http';
-import type {
-  NewShoppingItem,
-  RecipeShoppingSource,
-  ShoppingItem,
-  ShoppingList,
-  ShoppingSubject,
+import {
+  SHOPPING_ITEM_STATUSES,
+  type NewShoppingItem,
+  type RecipeShoppingSource,
+  type ShoppingItem,
+  type ShoppingList,
+  type ShoppingSubject,
 } from './model';
 
 const listSchema = z
@@ -47,7 +48,7 @@ const itemSchema = z
     name: z.string(),
     quantity: z.string(),
     unit_code: z.string().nullable(),
-    status: z.enum(['pending', 'purchased']),
+    status: z.enum(SHOPPING_ITEM_STATUSES),
     purchased_at: z.iso.datetime({ offset: true }).nullable(),
   })
   .and(subjectFields)
