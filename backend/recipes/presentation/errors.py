@@ -1,7 +1,6 @@
-from rest_framework import status
-from rest_framework.exceptions import APIException, NotFound, ValidationError
+from rest_framework.exceptions import NotFound, ValidationError
 
-from config.api_errors import ApiErrors
+from config.api_errors import ApiErrors, BadGateway, ServiceUnavailable
 from recipes.application.errors import (
     DuplicateRecipeIngredientError,
     InvalidServingsError,
@@ -12,15 +11,6 @@ from recipes.application.errors import (
     RecipeSourceContractError,
     RecipeSourceUnavailableError,
 )
-
-
-class ServiceUnavailable(APIException):
-    status_code = status.HTTP_503_SERVICE_UNAVAILABLE
-
-
-class BadGateway(APIException):
-    status_code = status.HTTP_502_BAD_GATEWAY
-
 
 API_ERRORS: ApiErrors = {
     RecipeNotFoundError: (NotFound, "Recipe not found.", "recipe_not_found"),

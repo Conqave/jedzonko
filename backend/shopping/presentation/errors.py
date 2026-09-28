@@ -1,7 +1,6 @@
-from rest_framework import status
-from rest_framework.exceptions import APIException, NotFound, PermissionDenied, ValidationError
+from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 
-from config.api_errors import ApiErrors
+from config.api_errors import ApiErrors, ServiceUnavailable
 from shopping.application.errors import (
     ExternalRecipeNotFoundError,
     IngredientNotFoundError,
@@ -20,11 +19,6 @@ from shopping.application.errors import (
     ShoppingListNotFoundError,
 )
 from shopping.domain.errors import InvalidShoppingSubjectError
-
-
-class ServiceUnavailable(APIException):
-    status_code = status.HTTP_503_SERVICE_UNAVAILABLE
-
 
 API_ERRORS: ApiErrors = {
     ExternalRecipeNotFoundError: (
