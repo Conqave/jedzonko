@@ -1,4 +1,4 @@
-import { api } from '@/boot/api';
+import { http as api } from '@/shared/http';
 import type { TagProposal, MeasurementUnit, NewProduct, Product } from './models';
 
 export async function searchProducts(householdId: number, search: string): Promise<Product[]> {

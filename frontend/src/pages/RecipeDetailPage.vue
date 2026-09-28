@@ -108,7 +108,7 @@
 </template>
 
 <script setup lang="ts">
-import { formatQuantity } from '@/features/shared/formatQuantity';
+import { formatQuantity } from '@/shared/formatQuantity';
 import { onMounted, ref } from 'vue';
 import { useQuasar } from 'quasar';
 import { useRoute, useRouter } from 'vue-router';

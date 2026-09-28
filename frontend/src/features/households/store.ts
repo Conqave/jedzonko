@@ -1,24 +1,37 @@
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
-import * as householdsApi from './api';
-import type { Household } from './models';
+import {
+  createHousehold,
+  deleteHousehold,
+  fetchHouseholds,
+  renameHousehold,
+  restoreHousehold,
+} from './api';
+import type { Household } from './model';
 
 const SELECTED_HOUSEHOLD_KEY = 'jedzonko.selectedHouseholdId';
 
-function readStoredHouseholdId(): number | null {
+function loadSelectedHouseholdId(): number | null {
   const stored = localStorage.getItem(SELECTED_HOUSEHOLD_KEY);
   if (stored === null) {
     return null;
   }
-  const parsed = Number.parseInt(stored, 10);
-  return Number.isNaN(parsed) ? null : parsed;
+  const parsed = Number(stored);
+  return Number.isInteger(parsed) ? parsed : null;
+}
+
+function saveSelectedHouseholdId(householdId: number | null): void {
+  if (householdId === null) {
+    localStorage.removeItem(SELECTED_HOUSEHOLD_KEY);
+    return;
+  }
+  localStorage.setItem(SELECTED_HOUSEHOLD_KEY, String(householdId));
 }
 
 export const useHouseholdStore = defineStore('households', () => {
   const households = ref<Household[]>([]);
-  const selectedId = ref<number | null>(readStoredHouseholdId());
-  const loading = ref(false);
-  const loaded = ref(false);
+  const selectedId = ref<number | null>(loadSelectedHouseholdId());
+  const isLoaded = ref(false);
 
   const selected = computed(
     () => households.value.find((household) => household.id === selectedId.value) ?? null,
@@ -27,40 +40,53 @@ export const useHouseholdStore = defineStore('households', () => {
 
   function select(householdId: number | null): void {
     selectedId.value = householdId;
-    if (householdId === null) {
-      localStorage.removeItem(SELECTED_HOUSEHOLD_KEY);
-    } else {
-      localStorage.setItem(SELECTED_HOUSEHOLD_KEY, String(householdId));
+    saveSelectedHouseholdId(householdId);
+  }
+
+  function selectAvailable(): void {
+    const isSelectedAvailable = households.value.some(
+      (household) => household.id === selectedId.value,
+    );
+    if (!isSelectedAvailable) {
+      select(households.value[0]?.id ?? null);
     }
   }
 
   async function load(): Promise<void> {
-    loading.value = true;
-    try {
-      households.value = await householdsApi.fetchHouseholds();
-      const current = households.value.find((household) => household.id === selectedId.value);
-      if (current === undefined) {
-        select(households.value[0]?.id ?? null);
-      }
-      loaded.value = true;
-    } finally {
-      loading.value = false;
-    }
+    households.value = await fetchHouseholds();
+    selectAvailable();
+    isLoaded.value = true;
   }
 
-  async function create(name: string): Promise<Household> {
-    const household = await householdsApi.createHousehold(name);
+  async function create(name: string): Promise<void> {
+    const household = await createHousehold(name);
     households.value = [...households.value, household];
     select(household.id);
-    return household;
   }
 
-  async function rename(householdId: number, name: string): Promise<Household> {
-    const renamed = await householdsApi.renameHousehold(householdId, name);
+  async function rename(householdId: number, name: string): Promise<void> {
+    const renamed = await renameHousehold(householdId, name);
     households.value = households.value.map((household) =>
       household.id === renamed.id ? renamed : household,
     );
-    return renamed;
+  }
+
+  async function remove(householdId: number): Promise<void> {
+    await deleteHousehold(householdId);
+    households.value = households.value.filter((household) => household.id !== householdId);
+    selectAvailable();
+  }
+
+  async function restore(householdId: number): Promise<void> {
+    const restored = await restoreHousehold(householdId);
+    households.value = [...households.value, restored];
+    selectAvailable();
+  }
+
+  function refreshMemberCount(householdId: number, memberCount: number): void {
+    households.value = households.value.map((household) =>
+      household.id === householdId ? { ...household, memberCount } : household,
+    );
   }
 
   return {
@@ -68,11 +94,13 @@ export const useHouseholdStore = defineStore('households', () => {
     selectedId,
     selected,
     hasHousehold,
-    loading,
-    loaded,
+    isLoaded,
     select,
     load,
     create,
     rename,
+    remove,
+    restore,
+    refreshMemberCount,
   };
 });

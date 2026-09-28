@@ -4,20 +4,20 @@
       <q-card-section>
         <div class="text-h6">Zaloguj się</div>
       </q-card-section>
-      <q-form @submit.prevent="submit">
+      <q-form @submit="submit">
         <q-card-section class="q-gutter-md">
           <q-input
             v-model="username"
             label="Login"
             autocomplete="username"
-            :rules="[(value) => !!value || 'Podaj login']"
+            :rules="[(value: string) => value !== '' || 'Podaj login']"
           />
           <q-input
             v-model="password"
             type="password"
             label="Hasło"
             autocomplete="current-password"
-            :rules="[(value) => !!value || 'Podaj hasło']"
+            :rules="[(value: string) => value !== '' || 'Podaj hasło']"
           />
         </q-card-section>
         <q-card-actions>
@@ -30,29 +30,26 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
-import { useQuasar } from 'quasar';
 import { useRoute, useRouter } from 'vue-router';
+import { ACCOUNT_ERROR_MESSAGES } from '@/features/accounts/errors';
 import { useAccountStore } from '@/features/accounts/store';
+import { useApiAction } from '@/shared/useApiAction';
 
 const username = ref('');
 const password = ref('');
-const busy = ref(false);
 
 const accounts = useAccountStore();
 const router = useRouter();
 const route = useRoute();
-const quasar = useQuasar();
+const { busy, run } = useApiAction(ACCOUNT_ERROR_MESSAGES);
 
 async function submit(): Promise<void> {
-  busy.value = true;
-  try {
-    await accounts.signIn(username.value, password.value);
-    const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : null;
-    await (redirect ? router.push(redirect) : router.push({ name: 'home' }));
-  } catch {
-    quasar.notify({ type: 'negative', message: 'Nieprawidłowy login lub hasło.' });
-  } finally {
-    busy.value = false;
+  const isSignedIn = await run(() => accounts.signIn(username.value, password.value));
+  if (!isSignedIn) {
+    return;
   }
+  const redirect = route.query.redirect;
+  const target = typeof redirect === 'string' ? redirect : { name: 'home' };
+  await router.push(target);
 }
 </script>

@@ -1,4 +1,4 @@
-import { api } from '@/boot/api';
+import { http as api } from '@/shared/http';
 import type { FavouriteShop, PromotionOffer, Shop, StorePromotionCoverage } from './models';
 
 export async function fetchShops(): Promise<Shop[]> {

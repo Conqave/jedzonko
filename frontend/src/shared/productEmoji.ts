@@ -1,7 +1,5 @@
 const FALLBACK_EMOJI = '📦';
 
-// Matched against whole words of the product name, longest keyword first, so
-// "ser twarogowy" picks the cheese icon rather than the generic package.
 const EMOJI_BY_KEYWORD: ReadonlyArray<readonly [string, string]> = [
   ['awokado', '🥑'],
   ['jajko', '🥚'],

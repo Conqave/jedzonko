@@ -36,6 +36,10 @@
                   <q-item-section avatar><q-icon name="local_offer" /></q-item-section>
                   <q-item-section>Promocje i sklepy</q-item-section>
                 </q-item>
+                <q-item v-close-popup clickable @click="openChangePassword">
+                  <q-item-section avatar><q-icon name="password" /></q-item-section>
+                  <q-item-section>Zmień hasło</q-item-section>
+                </q-item>
                 <q-separator />
                 <q-item clickable v-close-popup @click="signOut">
                   <q-item-section avatar><q-icon name="logout" /></q-item-section>
@@ -93,6 +97,10 @@
             <q-item-section avatar><q-icon name="home" /></q-item-section>
             <q-item-section>Dom i członkowie</q-item-section>
           </q-item>
+          <q-item clickable @click="openChangePassword">
+            <q-item-section avatar><q-icon name="password" /></q-item-section>
+            <q-item-section>Zmień hasło</q-item-section>
+          </q-item>
           <q-item clickable @click="signOut">
             <q-item-section avatar><q-icon name="logout" /></q-item-section>
             <q-item-section>Wyloguj</q-item-section>
@@ -126,22 +134,31 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
 import { useQuasar } from 'quasar';
+import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
+import ChangePasswordDialog from '@/features/accounts/components/ChangePasswordDialog.vue';
 import { useAccountStore } from '@/features/accounts/store';
-import { describeHouseholdError } from '@/features/households/errors';
+import { HOUSEHOLD_ERROR_MESSAGES } from '@/features/households/errors';
 import { useHouseholdStore } from '@/features/households/store';
+import { useApiAction } from '@/shared/useApiAction';
 
 const drawerOpen = ref(false);
 const accounts = useAccountStore();
 const households = useHouseholdStore();
 const router = useRouter();
 const quasar = useQuasar();
+const { run } = useApiAction(HOUSEHOLD_ERROR_MESSAGES);
 
 const householdOptions = computed(() =>
   households.households.map((household) => ({ id: household.id, label: household.name })),
 );
+
+function openChangePassword(): void {
+  quasar.dialog({ component: ChangePasswordDialog }).onOk(() => {
+    quasar.notify({ type: 'positive', message: 'Hasło zostało zmienione.' });
+  });
+}
 
 async function signOut(): Promise<void> {
   await accounts.signOut();
@@ -149,8 +166,6 @@ async function signOut(): Promise<void> {
 }
 
 onMounted(() => {
-  void households.load().catch((error: unknown) => {
-    quasar.notify({ type: 'negative', message: describeHouseholdError(error) });
-  });
+  void run(() => households.load());
 });
 </script>

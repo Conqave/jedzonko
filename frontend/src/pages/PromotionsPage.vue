@@ -392,7 +392,7 @@ onMounted(async () => {
   } catch (error) {
     quasar.notify({
       type: 'negative',
-      message: describePromotionError(error, 'Nie udało się pobrać listy sklepów.'),
+      message: describePromotionError(error),
     });
   }
 });
@@ -404,7 +404,7 @@ async function saveFavourites(selection: string[]): Promise<void> {
   } catch (error) {
     quasar.notify({
       type: 'negative',
-      message: describePromotionError(error, 'Nie udało się zapisać ulubionych sklepów.'),
+      message: describePromotionError(error),
     });
   }
 }
@@ -435,7 +435,7 @@ async function runCoverage(): Promise<void> {
   } catch (error) {
     quasar.notify({
       type: 'negative',
-      message: describePromotionError(error, 'Nie udało się porównać sklepów.'),
+      message: describePromotionError(error),
     });
   } finally {
     comparing.value = false;

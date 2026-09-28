@@ -1,4 +1,4 @@
-import { describeApiError } from '@/features/shared/apiError';
+import { describeApiError } from '@/shared/apiError';
 
 const MESSAGES: Record<string, string> = {
   duplicate_inventory_item: 'Ten produkt jest już w zapasach tego gospodarstwa domowego.',
@@ -17,5 +17,5 @@ const MESSAGES: Record<string, string> = {
 };
 
 export function describeInventoryError(error: unknown): string {
-  return describeApiError(error, MESSAGES, 'Nie udało się wykonać operacji na zapasach.');
+  return describeApiError(error, MESSAGES);
 }

@@ -1,29 +1,27 @@
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
-import * as accountsApi from './api';
-import type { CurrentUser } from './models';
+import { findCurrentUser, logIn, logOut, requestCsrfToken } from './api';
+import type { CurrentUser } from './model';
 
 export const useAccountStore = defineStore('accounts', () => {
   const user = ref<CurrentUser | null>(null);
-  const isResolved = ref(false);
 
   const isAuthenticated = computed(() => user.value !== null);
-  const canViewPromotions = computed(() => user.value?.can_view_promotions === true);
+  const canViewPromotions = computed(() => user.value?.canViewPromotions === true);
 
   async function resolveSession(): Promise<void> {
-    await accountsApi.fetchCsrfToken();
-    user.value = await accountsApi.fetchCurrentUserIfSignedIn();
-    isResolved.value = true;
+    await requestCsrfToken();
+    user.value = await findCurrentUser();
   }
 
   async function signIn(username: string, password: string): Promise<void> {
-    user.value = await accountsApi.login(username, password);
+    user.value = await logIn(username, password);
   }
 
   async function signOut(): Promise<void> {
-    await accountsApi.logout();
+    await logOut();
     user.value = null;
   }
 
-  return { user, isResolved, isAuthenticated, canViewPromotions, resolveSession, signIn, signOut };
+  return { user, isAuthenticated, canViewPromotions, resolveSession, signIn, signOut };
 });
