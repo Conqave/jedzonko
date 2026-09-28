@@ -82,6 +82,10 @@
           <q-item-section avatar><q-icon name="restaurant_menu" /></q-item-section>
           <q-item-section>Przepisy</q-item-section>
         </q-item>
+        <q-item clickable :to="{ name: 'products' }">
+          <q-item-section avatar><q-icon name="category" /></q-item-section>
+          <q-item-section>Produkty</q-item-section>
+        </q-item>
         <q-item clickable :to="{ name: 'shopping' }">
           <q-item-section avatar><q-icon name="shopping_cart" /></q-item-section>
           <q-item-section>Zakupy</q-item-section>
