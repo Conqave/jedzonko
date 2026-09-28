@@ -1,6 +1,6 @@
-import { describeApiError } from '@/shared/apiError';
+import type { ErrorMessages } from '@/shared/apiError';
 
-const MESSAGES: Record<string, string> = {
+export const RECIPE_ERROR_MESSAGES: ErrorMessages = {
   recipe_not_found: 'Nie znaleziono przepisu.',
   invalid_servings: 'Nieprawidłowa liczba porcji.',
   duplicate_recipe_ingredient: 'Ten składnik występuje w przepisie więcej niż raz.',
@@ -9,9 +9,4 @@ const MESSAGES: Record<string, string> = {
   external_recipe_not_found: 'Nie znaleziono przepisu w zewnętrznym źródle.',
   recipe_source_unavailable: 'Zewnętrzne źródło przepisów jest niedostępne.',
   recipe_source_contract_invalid: 'Zewnętrzne źródło przepisów zwróciło nieoczekiwane dane.',
-  invalid: 'Popraw dane w formularzu — backend odrzucił zapis.',
 };
-
-export function describeRecipeError(error: unknown): string {
-  return describeApiError(error, MESSAGES);
-}
