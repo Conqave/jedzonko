@@ -53,6 +53,7 @@ def _represent(item: InventoryItemSnapshot) -> dict[str, object]:
         "id": item.id,
         "product_id": item.product_id,
         "product_name": item.product_name,
+        "tags": list(item.tag_names),
         "quantity": str(item.quantity),
         "unit_code": item.unit.code,
         "minimum_quantity": None if item.minimum_quantity is None else str(item.minimum_quantity),

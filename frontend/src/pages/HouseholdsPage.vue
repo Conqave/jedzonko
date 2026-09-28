@@ -1,8 +1,8 @@
 <template>
   <q-page padding>
     <div class="row items-center q-mb-md">
-      <div class="text-h5 col">Gospodarstwa domowe</div>
-      <q-btn color="primary" icon="add" label="Nowe gospodarstwo" no-caps @click="openCreate" />
+      <div class="text-h5 col">Dom</div>
+      <q-btn color="primary" icon="add" label="Nowy dom" no-caps @click="openCreate" />
     </div>
 
     <q-banner v-if="households.loaded && !households.hasHousehold" class="bg-grey-3 q-mb-md">
@@ -30,21 +30,23 @@
               name="check_circle"
               color="primary"
             />
-            <q-btn
-              flat
-              dense
-              round
-              icon="edit"
-              aria-label="Zmień nazwę"
-              @click.stop="openRename(household)"
-            />
+            <q-btn flat dense round icon="more_vert" aria-label="Opcje domu" @click.stop>
+              <q-menu>
+                <q-list style="min-width: 180px">
+                  <q-item clickable v-close-popup @click="openRename(household)">
+                    <q-item-section avatar><q-icon name="edit" /></q-item-section>
+                    <q-item-section>Zmień nazwę</q-item-section>
+                  </q-item>
+                </q-list>
+              </q-menu>
+            </q-btn>
           </div>
         </q-item-section>
       </q-item>
     </q-list>
 
     <template v-if="households.selected !== null">
-      <div class="text-h6 q-mt-lg q-mb-sm">Członkowie — {{ households.selected.name }}</div>
+      <div class="text-h6 q-mt-lg q-mb-sm">Osoby w domu — {{ households.selected.name }}</div>
 
       <q-form class="row q-col-gutter-sm q-mb-md" @submit.prevent="submitMember">
         <div class="col-12 col-sm-6">
@@ -60,7 +62,7 @@
           <q-btn
             type="submit"
             color="primary"
-            label="Dodaj członka"
+            label="Dodaj osobę"
             no-caps
             :loading="addingMember"
           />
@@ -70,24 +72,25 @@
       <q-list bordered separator>
         <q-item v-for="member in members" :key="member.user_id">
           <q-item-section>{{ member.username }}</q-item-section>
-          <q-item-section side>
-            <q-btn
-              flat
-              dense
-              round
-              color="negative"
-              icon="delete"
-              :aria-label="`Usuń ${member.username}`"
-              @click="confirmRemoveMember(member)"
-            />
-          </q-item-section>
+            <q-item-section side>
+              <q-btn flat dense round icon="more_vert" :aria-label="`Opcje ${member.username}`">
+                <q-menu>
+                  <q-list>
+                    <q-item clickable v-close-popup class="text-negative" @click="confirmRemoveMember(member)">
+                      <q-item-section avatar><q-icon name="delete" color="negative" /></q-item-section>
+                      <q-item-section>Usuń z domu</q-item-section>
+                    </q-item>
+                  </q-list>
+                </q-menu>
+              </q-btn>
+            </q-item-section>
         </q-item>
       </q-list>
     </template>
 
     <q-dialog v-model="createDialogOpen">
       <q-card style="min-width: 320px">
-        <q-card-section class="text-h6">Nowe gospodarstwo domowe</q-card-section>
+        <q-card-section class="text-h6">Nowy dom</q-card-section>
         <q-form @submit.prevent="submitCreate">
           <q-card-section>
             <q-input

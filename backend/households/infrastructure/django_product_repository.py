@@ -3,6 +3,7 @@ from django.db import IntegrityError
 from households.application.errors import DuplicateProductError, ProductNotFoundError
 from households.application.ports.product_repository import ProductRepository
 from households.domain.product import ProductSummary
+from households.domain.product_names import ProductNames
 from households.models import Product
 from shared.text import normalize_text
 
@@ -13,6 +14,18 @@ class DjangoProductRepository(ProductRepository):
         if name_query is not None:
             rows = rows.filter(normalized_name__contains=normalize_text(name_query))
         return [self._to_summary(row) for row in rows]
+
+    def list_product_names(self, household_id: int) -> list[ProductNames]:
+        rows = Product.objects.filter(household_id=household_id).prefetch_related("product_tags__ingredient_tag")
+        return [
+            ProductNames(
+                id=row.pk,
+                name=row.name,
+                normalized_name=row.normalized_name,
+                tag_names=tuple(tag.ingredient_tag.normalized_name for tag in row.product_tags.all()),
+            )
+            for row in rows
+        ]
 
     def find_product(self, household_id: int, product_id: int) -> ProductSummary | None:
         row = Product.objects.filter(household_id=household_id, pk=product_id).first()

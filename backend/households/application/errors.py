@@ -28,3 +28,11 @@ class DuplicateProductError(Exception):
 
 class MeasurementUnitNotFoundError(Exception):
     pass
+
+
+class AliasProposalNotFoundError(Exception):
+    pass
+
+
+class AliasProposalNotPendingError(Exception):
+    pass

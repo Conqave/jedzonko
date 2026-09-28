@@ -22,7 +22,7 @@ class DjangoInventoryRepository(InventoryRepository):
         rows = (
             InventoryItem.objects.filter(household_id=household_id)
             .select_related("product", "category")
-            .prefetch_related("product__aliases")
+            .prefetch_related("product__product_tags__ingredient_tag")
         )
         return [self._to_snapshot(row) for row in rows]
 
@@ -148,7 +148,9 @@ class DjangoInventoryRepository(InventoryRepository):
             product_id=row.product_id,
             product_name=row.product.name,
             normalized_name=row.product.normalized_name,
-            alias_names=tuple(alias.normalized_name for alias in row.product.aliases.all()),
+            tag_names=tuple(
+                tag.ingredient_tag.normalized_name for tag in row.product.product_tags.all()
+            ),
             quantity=row.quantity,
             unit=cls._to_unit(row.unit_code),
             package_quantity=row.product.package_quantity,

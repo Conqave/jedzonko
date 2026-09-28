@@ -13,7 +13,7 @@ from accounts.application.use_cases.get_current_user import GetCurrentUser
 from accounts.application.use_cases.login_user import LoginUser
 from accounts.application.use_cases.logout_user import LogoutUser
 from accounts.infrastructure.django_authentication_gateway import DjangoAuthenticationGateway
-from accounts.presentation.serializers import LoginSerializer
+from accounts.presentation.serializers import LoginSerializer, ChangePasswordSerializer
 
 
 def _build_gateway(request: Request) -> DjangoAuthenticationGateway:
@@ -65,3 +65,13 @@ class CurrentUserView(APIView):
     def get(self, request: Request) -> Response:
         user = GetCurrentUser(_build_gateway(request)).execute()
         return Response(_represent(user))
+
+class ChangePasswordView(APIView):
+    def post(self, request: Request) -> Response:
+        serializer = ChangePasswordSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        if not request.user.check_password(serializer.validated_data["current_password"]):
+            return Response({"detail": "Nieprawidłowe obecne hasło."}, status=400)
+        request.user.set_password(serializer.validated_data["new_password"])
+        request.user.save(update_fields=["password"])
+        return Response(status=204)

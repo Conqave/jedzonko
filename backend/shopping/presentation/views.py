@@ -18,11 +18,14 @@ from shopping.composition import (
 )
 from shopping.domain.shopping_item_snapshot import ShoppingItemSnapshot
 from shopping.domain.shopping_list_summary import ShoppingListSummary
+from shopping.models import PurchasedShoppingItem, ShoppingListItem, ShoppingList, PrimaryShoppingList
+from households.models import HouseholdMembership
 from shopping.presentation.error_mapping import HANDLED_ERRORS, to_api_exception
 from shopping.presentation.serializers import (
     AddRecipeItemsSerializer,
     AddShoppingListItemSerializer,
     CreateShoppingListSerializer,
+    RenameShoppingListSerializer,
     HouseholdQuerySerializer,
 )
 
@@ -47,13 +50,14 @@ def _represent_item(item: ShoppingItemSnapshot) -> dict[str, object]:
     # Pending and purchased rows live in separate tables with independent id
     # spaces, so only the addressable pending rows expose an id over HTTP.
     return {
-        "id": None if item.is_purchased else item.id,
+        "id": item.id,
         "product_id": item.product_id,
         "product_name": item.product_name,
         "free_text": item.free_text,
         "quantity": str(item.quantity),
         "unit_code": None if item.unit is None else item.unit.code,
         "is_purchased": item.is_purchased,
+        "tag_names": list(item.tag_names),
     }
 
 
@@ -80,6 +84,31 @@ class ShoppingListListView(APIView):
         except HANDLED_ERRORS as error:
             raise to_api_exception(error) from error
         return Response(_represent_list(shopping_list), status=status.HTTP_201_CREATED)
+
+class ShoppingListDeleteView(APIView):
+    def patch(self, request: Request, list_id: int) -> Response:
+        serializer = RenameShoppingListSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        row = ShoppingList.objects.filter(pk=list_id).first()
+        if row is None or not HouseholdMembership.objects.filter(
+            household_id=row.household_id, user_id=_user_id(request)
+        ).exists():
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        row.name = str(serializer.validated_data["name"])
+        row.save(update_fields=["name"])
+        return Response(_represent_list(ShoppingListSummary(
+            id=row.pk,
+            name=row.name,
+            is_primary=PrimaryShoppingList.objects.filter(shopping_list_id=row.pk).exists(),
+            item_count=row.items.count() + row.purchased_items.count(),
+        )))
+
+    def delete(self, request: Request, list_id: int) -> Response:
+        row = ShoppingList.objects.filter(pk=list_id).first()
+        if row is None or not HouseholdMembership.objects.filter(household_id=row.household_id, user_id=_user_id(request)).exists():
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        row.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class ShoppingListItemListView(APIView):
@@ -139,6 +168,25 @@ class ShoppingItemPurchaseView(APIView):
             build_buy_shopping_item().execute(_user_id(request), item_id)
         except HANDLED_ERRORS as error:
             raise to_api_exception(error) from error
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class PurchasedShoppingItemRestoreView(APIView):
+    def post(self, request: Request, item_id: int) -> Response:
+        row = PurchasedShoppingItem.objects.filter(pk=item_id).select_related("shopping_list").first()
+        if row is None or not HouseholdMembership.objects.filter(
+            household_id=row.shopping_list.household_id, user_id=_user_id(request)
+        ).exists():
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        ShoppingListItem.objects.create(
+            shopping_list_id=row.shopping_list_id,
+            product_id=row.product_id,
+            free_text=row.free_text,
+            unit_code=row.unit_code,
+            quantity=row.quantity,
+            created_at=row.created_at,
+        )
+        row.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 

@@ -33,9 +33,7 @@
               <q-item-section>
                 <q-item-label>{{ suggestion.recipe_name }}</q-item-label>
                 <q-item-label caption>
-                  dostępne: {{ suggestion.available_item_count }} z
-                  {{ suggestion.required_item_count }} · brakuje:
-                  {{ suggestion.missing_item_count }}
+                  {{ suggestion.is_ready ? 'Masz wszystkie składniki' : `Brakuje ${suggestion.missing_item_count} składników` }}
                 </q-item-label>
               </q-item-section>
               <q-item-section side>
@@ -137,10 +135,26 @@
           </div>
         </q-form>
 
-        <q-banner v-if="externalIngredients.length > 0" class="bg-grey-3 q-mb-md">
-          Szukam przepisów zawierających jednocześnie:
+        <q-banner v-if="externalIngredients.length > 0" class="bg-grey-3 q-mb-md pantry-search-banner">
+          <div class="row items-center q-col-gutter-sm">
+            <div class="col-auto text-weight-medium">Szukam po zapasach</div>
+            <div class="col text-caption text-grey-8">
+              {{ externalIngredients.length }} tagów · {{ externalInventoryCount }} produktów w domu
+            </div>
+            <div class="col-auto">
+              <q-btn
+                flat
+                dense
+                no-caps
+                color="primary"
+                :label="showExternalIngredients ? 'Ukryj tagi' : 'Pokaż tagi'"
+                @click="showExternalIngredients = !showExternalIngredients"
+              />
+            </div>
+          </div>
+          <div class="row q-gutter-xs q-mt-xs">
           <q-chip
-            v-for="ingredient in externalIngredients"
+            v-for="ingredient in displayedExternalIngredients"
             :key="ingredient"
             dense
             square
@@ -149,10 +163,15 @@
           >
             {{ ingredient }}
           </q-chip>
-          <template v-if="externalInventoryCount > externalIngredients.length">
-            — to {{ externalIngredients.length }} z {{ externalInventoryCount }} produktów w
-            zapasach; źródło wyszukuje po wszystkich naraz, więc pytamy o część.
-          </template>
+          <q-chip
+            v-if="!showExternalIngredients && externalIngredients.length > ingredientPreviewLimit"
+            dense
+            outline
+            color="primary"
+          >
+            +{{ externalIngredients.length - ingredientPreviewLimit }} więcej
+          </q-chip>
+          </div>
         </q-banner>
 
         <q-banner v-if="externalLoaded && externalRecipes.length === 0" class="bg-grey-3">
@@ -254,6 +273,14 @@ const externalTotalPages = ref(0);
 const externalFromInventory = ref(false);
 const loadingExternal = ref(false);
 const externalLoaded = ref(false);
+const showExternalIngredients = ref(false);
+const ingredientPreviewLimit = 5;
+
+const displayedExternalIngredients = computed(() =>
+  showExternalIngredients.value
+    ? externalIngredients.value
+    : externalIngredients.value.slice(0, ingredientPreviewLimit),
+);
 
 async function loadExternalPage(page: number): Promise<void> {
   loadingExternal.value = true;
@@ -296,6 +323,7 @@ async function searchExternal(): Promise<void> {
 async function loadExternalSuggestions(): Promise<void> {
   externalFromInventory.value = true;
   externalPageNumber.value = 1;
+  showExternalIngredients.value = false;
   await loadExternalPage(1);
 }
 
@@ -303,9 +331,18 @@ async function reloadExternalPage(page: number): Promise<void> {
   await loadExternalPage(page);
 }
 
-const visibleSuggestions = computed<RecipeSuggestion[]>(() =>
-  onlyReady.value ? suggestions.value.filter((item) => item.is_ready) : suggestions.value,
-);
+const visibleSuggestions = computed<RecipeSuggestion[]>(() => {
+  const filtered = onlyReady.value
+    ? suggestions.value.filter((item) => item.is_ready)
+    : suggestions.value;
+  return [...filtered].sort((left, right) => {
+    if (left.is_ready !== right.is_ready) return left.is_ready ? -1 : 1;
+    if (left.missing_item_count !== right.missing_item_count) {
+      return left.missing_item_count - right.missing_item_count;
+    }
+    return left.recipe_name.localeCompare(right.recipe_name, 'pl');
+  });
+});
 
 async function loadSuggestions(): Promise<void> {
   if (households.selectedId === null) {

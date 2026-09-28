@@ -12,6 +12,10 @@ class CreateShoppingListSerializer(serializers.Serializer[dict[str, object]]):
     name = serializers.CharField(max_length=120, trim_whitespace=True)
 
 
+class RenameShoppingListSerializer(serializers.Serializer[dict[str, object]]):
+    name = serializers.CharField(max_length=120, trim_whitespace=True)
+
+
 class AddShoppingListItemSerializer(serializers.Serializer[dict[str, object]]):
     product_id = serializers.IntegerField(min_value=1, required=False, allow_null=True)
     free_text = serializers.CharField(

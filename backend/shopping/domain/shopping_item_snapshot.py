@@ -13,3 +13,4 @@ class ShoppingItemSnapshot:
     quantity: Decimal
     unit: MeasurementUnit | None
     is_purchased: bool
+    tag_names: tuple[str, ...] = ()

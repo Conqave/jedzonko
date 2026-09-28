@@ -23,6 +23,15 @@
           <q-btn flat dense no-caps :label="accounts.user?.username ?? ''" icon="account_circle">
             <q-menu>
               <q-list style="min-width: 160px">
+                <q-item clickable v-close-popup :to="{ name: 'households' }">
+                  <q-item-section avatar><q-icon name="home" /></q-item-section>
+                  <q-item-section>Dom i członkowie</q-item-section>
+                </q-item>
+                <q-item v-if="accounts.canViewPromotions" clickable v-close-popup :to="{ name: 'promotions' }">
+                  <q-item-section avatar><q-icon name="local_offer" /></q-item-section>
+                  <q-item-section>Promocje i sklepy</q-item-section>
+                </q-item>
+                <q-separator />
                 <q-item clickable v-close-popup @click="signOut">
                   <q-item-section avatar><q-icon name="logout" /></q-item-section>
                   <q-item-section>Wyloguj</q-item-section>
@@ -34,7 +43,7 @@
       </q-toolbar>
     </q-header>
 
-    <q-drawer v-model="drawerOpen" show-if-above bordered>
+    <q-drawer v-model="drawerOpen" show-if-above bordered :width="280">
       <q-list>
         <template v-if="!quasar.screen.gt.sm">
           <q-item v-if="households.hasHousehold">
@@ -56,13 +65,9 @@
         </template>
 
         <q-item-label header>Nawigacja</q-item-label>
-        <q-item clickable :to="{ name: 'home' }" exact>
-          <q-item-section avatar><q-icon name="home" /></q-item-section>
-          <q-item-section>Start</q-item-section>
-        </q-item>
         <q-item clickable :to="{ name: 'inventory' }">
           <q-item-section avatar><q-icon name="kitchen" /></q-item-section>
-          <q-item-section>Mam w domu</q-item-section>
+          <q-item-section>Zapasy</q-item-section>
         </q-item>
         <q-item clickable :to="{ name: 'recipes' }">
           <q-item-section avatar><q-icon name="restaurant_menu" /></q-item-section>
@@ -70,20 +75,19 @@
         </q-item>
         <q-item clickable :to="{ name: 'shopping' }">
           <q-item-section avatar><q-icon name="shopping_cart" /></q-item-section>
-          <q-item-section>Listy zakupów</q-item-section>
-        </q-item>
-        <q-item clickable :to="{ name: 'households' }">
-          <q-item-section avatar><q-icon name="groups" /></q-item-section>
-          <q-item-section>Gospodarstwa domowe</q-item-section>
+          <q-item-section>Zakupy</q-item-section>
         </q-item>
         <q-item v-if="accounts.canViewPromotions" clickable :to="{ name: 'promotions' }">
           <q-item-section avatar><q-icon name="local_offer" /></q-item-section>
-          <q-item-section>Promocje</q-item-section>
+          <q-item-section>Promocje i sklepy</q-item-section>
         </q-item>
-
         <template v-if="!quasar.screen.gt.sm">
           <q-separator class="q-my-sm" />
           <q-item-label header>{{ accounts.user?.username ?? '' }}</q-item-label>
+          <q-item clickable :to="{ name: 'households' }">
+            <q-item-section avatar><q-icon name="home" /></q-item-section>
+            <q-item-section>Dom i członkowie</q-item-section>
+          </q-item>
           <q-item clickable @click="signOut">
             <q-item-section avatar><q-icon name="logout" /></q-item-section>
             <q-item-section>Wyloguj</q-item-section>
@@ -95,6 +99,14 @@
     <q-page-container>
       <router-view />
     </q-page-container>
+
+    <q-footer v-if="!quasar.screen.gt.sm" bordered class="bg-white text-primary">
+      <q-tabs no-caps active-color="primary" indicator-color="primary" align="justify">
+        <q-route-tab name="inventory" icon="kitchen" label="Zapasy" :to="{ name: 'inventory' }" />
+        <q-route-tab name="recipes" icon="restaurant_menu" label="Przepisy" :to="{ name: 'recipes' }" />
+        <q-route-tab name="shopping" icon="shopping_cart" label="Zakupy" :to="{ name: 'shopping' }" />
+      </q-tabs>
+    </q-footer>
   </q-layout>
 </template>
 

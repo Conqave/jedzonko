@@ -37,9 +37,9 @@ def test_pantry_selection_is_bounded_and_echoed_back() -> None:
         source,
         FakeHouseholdInventoryReader(
             [
-                make_snapshot(1, "mleko", "1", GRAM),
-                make_snapshot(2, "jajko", "3", GRAM),
-                make_snapshot(3, "cukier", "1", GRAM),
+                    make_snapshot(1, "mleko", "1", GRAM, alias_names=("mleko",)),
+                    make_snapshot(2, "jajko", "3", GRAM, alias_names=("jajko",)),
+                    make_snapshot(3, "cukier", "1", GRAM, alias_names=("cukier",)),
             ]
         ),
         HouseholdAccessPolicy(FakeHouseholdRepository({7})),
@@ -50,7 +50,10 @@ def test_pantry_selection_is_bounded_and_echoed_back() -> None:
 
     assert suggestions.ingredient_names == ("cukier", "jajko")
     assert suggestions.inventory_item_count == 3
-    assert source.search_calls == [("", ("cukier", "jajko"), (), 0, 12)]
+    assert source.search_calls == [
+        ("", ("cukier",), (), 0, 12),
+        ("", ("jajko",), (), 0, 12),
+    ]
     assert suggestions.page.total_count == 1
     assert suggestions.page.matches[0].matched_product_names == ("jajko",)
 

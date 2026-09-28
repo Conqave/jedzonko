@@ -13,7 +13,7 @@
       <q-item clickable :to="{ name: 'inventory' }">
         <q-item-section avatar><q-icon name="kitchen" /></q-item-section>
         <q-item-section>
-          <q-item-label>Mam w domu</q-item-label>
+          <q-item-label>Zapasy</q-item-label>
           <q-item-label caption>Zapasy gospodarstwa domowego</q-item-label>
         </q-item-section>
       </q-item>
@@ -27,22 +27,8 @@
       <q-item clickable :to="{ name: 'shopping' }">
         <q-item-section avatar><q-icon name="shopping_cart" /></q-item-section>
         <q-item-section>
-          <q-item-label>Listy zakupów</q-item-label>
+          <q-item-label>Zakupy</q-item-label>
           <q-item-label caption>Brakujące produkty i zakupy</q-item-label>
-        </q-item-section>
-      </q-item>
-      <q-item clickable :to="{ name: 'households' }">
-        <q-item-section avatar><q-icon name="groups" /></q-item-section>
-        <q-item-section>
-          <q-item-label>Gospodarstwa domowe</q-item-label>
-          <q-item-label caption>Członkowie i wybór gospodarstwa</q-item-label>
-        </q-item-section>
-      </q-item>
-      <q-item v-if="accounts.canViewPromotions" clickable :to="{ name: 'promotions' }">
-        <q-item-section avatar><q-icon name="local_offer" /></q-item-section>
-        <q-item-section>
-          <q-item-label>Promocje</q-item-label>
-          <q-item-label caption>Wyszukiwanie promocji i porównanie sklepów</q-item-label>
         </q-item-section>
       </q-item>
     </q-list>

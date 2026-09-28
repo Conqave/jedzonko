@@ -13,6 +13,7 @@ export interface ShoppingItem {
   quantity: string;
   unit_code: string | null;
   is_purchased: boolean;
+  tag_names: string[];
 }
 
 export interface NewShoppingItem {

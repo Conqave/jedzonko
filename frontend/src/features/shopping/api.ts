@@ -52,6 +52,19 @@ export async function buyShoppingItem(itemId: number): Promise<void> {
   await api.post(`/shopping/items/${itemId}/buy/`);
 }
 
+export async function restorePurchasedShoppingItem(itemId: number): Promise<void> {
+  await api.post(`/shopping/purchased-items/${itemId}/restore/`);
+}
+
 export async function deleteShoppingItem(itemId: number): Promise<void> {
   await api.delete(`/shopping/items/${itemId}/`);
+}
+
+export async function deleteShoppingList(listId: number): Promise<void> {
+  await api.delete(`/shopping/lists/${listId}/`);
+}
+
+export async function renameShoppingList(listId: number, name: string): Promise<ShoppingList> {
+  const response = await api.patch<ShoppingList>(`/shopping/lists/${listId}/`, { name });
+  return response.data;
 }
