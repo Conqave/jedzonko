@@ -203,7 +203,7 @@ def test_a_bought_item_is_restored_with_the_same_id(
     assert (restored.data["id"], restored.data["status"]) == (item["id"], "pending")
 
 
-def test_recipe_shortfall_goes_to_the_primary_list_in_one_request(
+def test_recipe_shortfall_goes_to_a_list_in_one_request(
     member_client: APIClient, ala: User, home: Household, flour: Product
 ) -> None:
     flour_ingredient = make_ingredient("Mąka pszenna")
@@ -221,7 +221,8 @@ def test_recipe_shortfall_goes_to_the_primary_list_in_one_request(
     add_recipe_line(recipe, flour_ingredient, "Mąka pszenna", "300")
     add_recipe_line(recipe, eggs, "Jajka", "120")
     body = {"recipe_id": recipe.pk, "servings": 2}
-    url = f"/api/shopping/households/{home.pk}/primary-list/recipe-items/"
+    shopping_list = ShoppingList.objects.get(household=home, is_primary=True)
+    url = f"/api/shopping/lists/{shopping_list.pk}/recipe-items/"
 
     first = member_client.post(url, body, format="json")
     second = member_client.post(url, body, format="json")

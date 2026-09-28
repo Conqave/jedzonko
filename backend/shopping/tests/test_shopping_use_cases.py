@@ -17,9 +17,6 @@ from shopping.application.errors import (
 from shopping.application.use_cases.add_missing_external_recipe_items_to_shopping_list import (
     AddMissingExternalRecipeItemsToShoppingList,
 )
-from shopping.application.use_cases.add_missing_recipe_items_to_primary_list import (
-    AddMissingRecipeItemsToPrimaryList,
-)
 from shopping.application.use_cases.add_missing_recipe_items_to_shopping_list import (
     AddMissingRecipeItemsToShoppingList,
 )
@@ -75,7 +72,7 @@ class Shopping:
         add_missing = AddMissingRecipeItemsToShoppingList(
             self.repository, recipes, self.catalog, self.memberships, self.transactions
         )
-        AddMissingRecipeItemsToPrimaryList(self.repository, add_missing).execute(ALA, HOME, 1, 4)
+        add_missing.execute(ALA, self.primary, 1, 4)
 
     def quantities(self) -> list[tuple[ShoppingSubject, Decimal, str | None]]:
         return [
@@ -156,7 +153,7 @@ def test_a_different_unit_for_the_same_subject_is_rejected(shopping: Shopping) -
         shopping.add(ShoppingSubject(product_id=FLOUR), "500", "g")
 
 
-def test_missing_recipe_items_go_to_the_primary_list_by_what_they_are(shopping: Shopping) -> None:
+def test_missing_recipe_items_go_to_the_list_by_what_they_are(shopping: Shopping) -> None:
     shopping.add_missing(
         [
             MissingRecipeItem("Mąka", 1, FLOUR, Decimal("200"), "g"),

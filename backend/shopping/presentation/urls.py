@@ -2,7 +2,6 @@ from django.urls import URLPattern, path
 
 from shopping.presentation.views import (
     MinimumStockSynchronizationView,
-    PrimaryListRecipeItemsView,
     ShoppingItemDetailView,
     ShoppingItemPurchaseView,
     ShoppingItemRestoreView,
@@ -23,10 +22,6 @@ urlpatterns: list[URLPattern] = [
     path(
         "lists/<int:list_id>/external-recipe-items/",
         ShoppingListExternalRecipeItemsView.as_view(),
-    ),
-    path(
-        "households/<int:household_id>/primary-list/recipe-items/",
-        PrimaryListRecipeItemsView.as_view(),
     ),
     path("households/<int:household_id>/minimum-stock/", MinimumStockSynchronizationView.as_view()),
     path("items/<int:item_id>/", ShoppingItemDetailView.as_view()),
