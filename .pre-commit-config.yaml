@@ -1,4 +1,4 @@
-default_install_hook_types: [pre-commit, pre-push]
+default_install_hook_types: [pre-commit, commit-msg, pre-push]
 default_stages: [pre-commit]
 
 repos:
@@ -15,6 +15,12 @@ repos:
         language: fail
         entry: "Version control is the history; remove:"
         files: (^|/)(legacy|old|backup|deprecated)/
+
+      - id: commit-message
+        name: commit message follows the classic git convention
+        language: python
+        entry: python infra/hooks/check_commit_message.py
+        stages: [commit-msg]
 
       - id: backend-format
         name: backend format (isort, black)
