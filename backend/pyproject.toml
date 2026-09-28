@@ -10,6 +10,7 @@ dependencies = [
   "beautifulsoup4>=4.13,<5",
   "Pillow>=11,<13",
   "django-stubs-ext>=6.1",
+  "whitenoise>=6.9,<7",
 ]
 
 [project.optional-dependencies]
@@ -72,4 +73,7 @@ DJANGO_SETTINGS_MODULE = "config.settings"
 python_files = ["test_*.py"]
 testpaths = ["."]
 addopts = "-q"
-filterwarnings = ["error"]
+filterwarnings = [
+  "error",
+  "ignore:No directory at:UserWarning",
+]
