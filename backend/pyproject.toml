@@ -3,13 +3,13 @@ name = "jedzonko-backend"
 version = "0.1.0"
 requires-python = ">=3.14"
 dependencies = [
-  "Django>=5.2,<6",
-  "djangorestframework>=3.16,<4",
+  "Django>=6.1,<6.2",
+  "djangorestframework>=3.18,<4",
   "mysqlclient>=2.2,<3",
   "httpx>=0.28,<1",
   "beautifulsoup4>=4.13,<5",
   "Pillow>=11,<13",
-  "django-stubs-ext>=5.2",
+  "django-stubs-ext>=6.1",
 ]
 
 [project.optional-dependencies]
@@ -19,7 +19,7 @@ dev = [
   "black>=25.1",
   "isort>=6,<7",
   "mypy>=1.18,<2",
-  "django-stubs[compatible-mypy]>=5.2",
+  "django-stubs[compatible-mypy]>=6.1",
   "djangorestframework-stubs>=3.16",
   "types-beautifulsoup4>=4.12",
 ]
