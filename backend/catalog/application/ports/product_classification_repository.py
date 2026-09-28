@@ -11,10 +11,16 @@ class ProductClassificationRepository(ABC):
 
     @abstractmethod
     def save(self, changes: tuple[ProductIngredient, ...]) -> None:
-        """Store the changes in the given order, inserting or updating by (product, ingredient)."""
         raise NotImplementedError
 
     @abstractmethod
     def list_confirmed(self, household_id: int) -> dict[int, int]:
-        """Map product id to its confirmed ingredient id."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def list_links_to(self, ingredient_id: int) -> list[ProductIngredient]:
+        raise NotImplementedError
+
+    @abstractmethod
+    def delete(self, product_id: int, ingredient_id: int) -> None:
         raise NotImplementedError

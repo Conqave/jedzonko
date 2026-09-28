@@ -5,7 +5,8 @@ from decimal import Decimal
 @dataclass(frozen=True, slots=True)
 class MissingRecipeItem:
     name: str
-    normalized_name: str
+    ingredient_id: int | None
+    stocked_product_id: int | None
     amount: Decimal
     unit_code: str
 

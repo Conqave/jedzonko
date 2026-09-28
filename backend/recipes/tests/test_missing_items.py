@@ -1,11 +1,19 @@
 from decimal import Decimal
 
 from recipes.domain.missing_items import calculate_shortfall, scale_requirements
-from recipes.tests.factories import GRAM, KILOGRAM, MILLILITRE, make_requirement, make_snapshot
+from recipes.tests.factories import (
+    FLOUR,
+    GRAM,
+    KILOGRAM,
+    MILK,
+    MILLILITRE,
+    make_requirement,
+    make_stock,
+)
 
 
 def test_absent_ingredient_is_fully_missing() -> None:
-    shortfall = calculate_shortfall([make_requirement("flour", "500", GRAM)], [])
+    shortfall = calculate_shortfall([make_requirement("flour", "500", GRAM, FLOUR)], [])
 
     assert len(shortfall.missing_items) == 1
     assert shortfall.missing_items[0].name == "flour"
@@ -15,8 +23,8 @@ def test_absent_ingredient_is_fully_missing() -> None:
 
 
 def test_sufficient_stock_leaves_nothing_missing() -> None:
-    requirements = [make_requirement("flour", "500", GRAM)]
-    inventory = [make_snapshot(1, "flour", "1", KILOGRAM)]
+    requirements = [make_requirement("flour", "500", GRAM, FLOUR)]
+    inventory = [make_stock(1, "flour", "1", KILOGRAM, FLOUR)]
 
     shortfall = calculate_shortfall(requirements, inventory)
 
@@ -28,12 +36,12 @@ def test_sufficient_stock_leaves_nothing_missing() -> None:
 
 def test_every_ingredient_in_stock_makes_the_recipe_ready() -> None:
     requirements = [
-        make_requirement("flour", "500", GRAM),
-        make_requirement("milk", "250", MILLILITRE),
+        make_requirement("flour", "500", GRAM, FLOUR),
+        make_requirement("milk", "250", MILLILITRE, MILK),
     ]
     inventory = [
-        make_snapshot(1, "flour", "1", KILOGRAM),
-        make_snapshot(2, "milk", "900", MILLILITRE),
+        make_stock(1, "flour", "1", KILOGRAM, FLOUR),
+        make_stock(2, "milk", "900", MILLILITRE, MILK),
     ]
 
     assert calculate_shortfall(requirements, inventory).is_ready is True
@@ -41,12 +49,12 @@ def test_every_ingredient_in_stock_makes_the_recipe_ready() -> None:
 
 def test_one_short_ingredient_makes_the_recipe_not_ready() -> None:
     requirements = [
-        make_requirement("flour", "500", GRAM),
-        make_requirement("milk", "250", MILLILITRE),
+        make_requirement("flour", "500", GRAM, FLOUR),
+        make_requirement("milk", "250", MILLILITRE, MILK),
     ]
     inventory = [
-        make_snapshot(1, "flour", "1", KILOGRAM),
-        make_snapshot(2, "milk", "100", MILLILITRE),
+        make_stock(1, "flour", "1", KILOGRAM, FLOUR),
+        make_stock(2, "milk", "100", MILLILITRE, MILK),
     ]
 
     shortfall = calculate_shortfall(requirements, inventory)
@@ -60,8 +68,8 @@ def test_recipe_without_ingredients_is_not_ready() -> None:
 
 
 def test_partial_stock_reports_remainder_in_requirement_unit() -> None:
-    requirements = [make_requirement("flour", "500", GRAM)]
-    inventory = [make_snapshot(1, "flour", "0.2", KILOGRAM)]
+    requirements = [make_requirement("flour", "500", GRAM, FLOUR)]
+    inventory = [make_stock(1, "flour", "0.2", KILOGRAM, FLOUR)]
 
     shortfall = calculate_shortfall(requirements, inventory)
 
@@ -70,8 +78,8 @@ def test_partial_stock_reports_remainder_in_requirement_unit() -> None:
 
 
 def test_incomparable_quantity_is_reported_and_blocks_readiness() -> None:
-    requirements = [make_requirement("milk", "250", MILLILITRE)]
-    inventory = [make_snapshot(1, "milk", "900", GRAM)]
+    requirements = [make_requirement("milk", "250", MILLILITRE, MILK)]
+    inventory = [make_stock(1, "milk", "900", GRAM, MILK)]
 
     shortfall = calculate_shortfall(requirements, inventory)
 
@@ -82,12 +90,12 @@ def test_incomparable_quantity_is_reported_and_blocks_readiness() -> None:
 
 
 def test_scaling_multiplies_amounts_by_serving_ratio() -> None:
-    scaled = scale_requirements([make_requirement("flour", "500", GRAM)], 2, 5)
+    scaled = scale_requirements([make_requirement("flour", "500", GRAM, FLOUR)], 2, 5)
 
     assert scaled[0].quantity.amount == Decimal("1250")
 
 
 def test_scaling_down_reduces_amounts() -> None:
-    scaled = scale_requirements([make_requirement("flour", "500", GRAM)], 4, 2)
+    scaled = scale_requirements([make_requirement("flour", "500", GRAM, FLOUR)], 4, 2)
 
     assert scaled[0].quantity.amount == Decimal("250")

@@ -12,3 +12,23 @@ class InvalidShoppingItemError(Exception):
 
 class ProductNotFoundError(Exception):
     pass
+
+
+class IngredientNotFoundError(Exception):
+    pass
+
+
+class PrimaryShoppingListNotFoundError(Exception):
+    pass
+
+
+class PrimaryShoppingListCannotBeDeletedError(Exception):
+    pass
+
+
+class ShoppingItemAlreadyPendingError(Exception):
+    pass
+
+
+class ShoppingItemMergeConflictError(Exception):
+    pass

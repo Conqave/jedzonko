@@ -6,7 +6,7 @@ from catalog.domain.ingredient import (
     IngredientNameKind,
     IngredientNameSource,
 )
-from catalog.domain.names import IngredientNameText
+from catalog.domain.names import CatalogName
 
 
 class IngredientRepository(ABC):
@@ -15,21 +15,43 @@ class IngredientRepository(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def find_by_normalized_name(self, normalized_name: str) -> Ingredient | None:
-        """Exact lookup among accepted ingredient names only."""
+    def find_many(self, ingredient_ids: set[int]) -> dict[int, Ingredient]:
         raise NotImplementedError
 
     @abstractmethod
-    def create(self, name: IngredientNameText, source: IngredientNameSource) -> Ingredient:
-        """Create the ingredient together with its canonical name."""
+    def find_by_normalized_name(self, normalized_name: str) -> Ingredient | None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def find_by_normalized_names(self, normalized_names: set[str]) -> dict[str, Ingredient]:
+        raise NotImplementedError
+
+    @abstractmethod
+    def search(self, normalized_query: str, limit: int) -> list[Ingredient]:
+        raise NotImplementedError
+
+    @abstractmethod
+    def list_names(self) -> list[IngredientName]:
+        raise NotImplementedError
+
+    @abstractmethod
+    def create(self, name: CatalogName, source: IngredientNameSource) -> Ingredient:
         raise NotImplementedError
 
     @abstractmethod
     def add_name(
         self,
         ingredient_id: int,
-        name: IngredientNameText,
+        name: CatalogName,
         kind: IngredientNameKind,
         source: IngredientNameSource,
     ) -> IngredientName:
+        raise NotImplementedError
+
+    @abstractmethod
+    def move_names_as_aliases(self, source_id: int, target_id: int) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def delete(self, ingredient_id: int) -> None:
         raise NotImplementedError

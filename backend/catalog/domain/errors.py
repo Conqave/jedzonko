@@ -1,4 +1,4 @@
-class InvalidIngredientNameError(Exception):
+class InvalidNameError(Exception):
     pass
 
 
@@ -23,4 +23,16 @@ class ProductIngredientNotFoundError(Exception):
 
 
 class InvalidProductIngredientTransitionError(Exception):
+    pass
+
+
+class InvalidProductPackageError(Exception):
+    pass
+
+
+class UnknownMeasurementUnitError(Exception):
+    pass
+
+
+class IngredientMergeError(Exception):
     pass

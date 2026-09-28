@@ -10,7 +10,6 @@ class IngredientNameKind(StrEnum):
 class IngredientNameSource(StrEnum):
     MANUAL = "manual"
     ANIA_GOTUJE = "ania_gotuje"
-    LEGACY = "legacy"
 
 
 @dataclass(frozen=True, slots=True)

@@ -1,8 +1,11 @@
-from households.application.access import HouseholdAccessPolicy
+from shared.household_membership import HouseholdMembershipReader, require_membership
+from shared.transactions import TransactionManager
 from shopping.application.errors import ShoppingListNotFoundError
-from shopping.application.ports.product_resolver import ProductResolver
+from shopping.application.items import ensure_on_list
+from shopping.application.ports.catalog_directory import CatalogDirectory
 from shopping.application.ports.recipe_requirement_reader import RecipeRequirementReader
 from shopping.application.ports.shopping_list_repository import ShoppingListRepository
+from shopping.domain.missing_recipe_item import MissingRecipeItem
 from shopping.domain.shopping_item_snapshot import ShoppingItemSnapshot
 
 
@@ -10,35 +13,35 @@ class AddMissingRecipeItemsToShoppingList:
     def __init__(
         self,
         repository: ShoppingListRepository,
-        access: HouseholdAccessPolicy,
         recipes: RecipeRequirementReader,
-        products: ProductResolver,
+        catalog: CatalogDirectory,
+        memberships: HouseholdMembershipReader,
+        transactions: TransactionManager,
     ) -> None:
         self._repository = repository
-        self._access = access
         self._recipes = recipes
-        self._products = products
+        self._catalog = catalog
+        self._memberships = memberships
+        self._transactions = transactions
 
     def execute(
         self, user_id: int, list_id: int, recipe_id: int, servings: int
     ) -> list[ShoppingItemSnapshot]:
-        household_id = self._repository.find_household_id_for_list(list_id)
-        if household_id is None:
+        shopping_list = self._repository.find_list(list_id)
+        if shopping_list is None:
             raise ShoppingListNotFoundError
-        self._access.require_membership(user_id, household_id)
-        missing_items = self._recipes.read_missing_items(user_id, household_id, recipe_id, servings)
-        for missing in missing_items:
-            product_id = self._products.resolve_product_id(
-                household_id, missing.name, missing.unit_code
-            )
-            existing = self._repository.find_pending_item_by_product(list_id, product_id)
-            if existing is None:
-                self._repository.add_item(
-                    list_id, product_id, None, missing.amount, missing.unit_code
-                )
-                continue
-            same_unit = existing.unit is not None and existing.unit.code == missing.unit_code
-            if same_unit and existing.quantity >= missing.amount:
-                continue
-            self._repository.set_item_quantity(existing.id, missing.amount, missing.unit_code)
+        require_membership(self._memberships, user_id, shopping_list.household_id)
+        missing = self._recipes.get_missing_items(
+            user_id, shopping_list.household_id, recipe_id, servings
+        )
+        with self._transactions.atomic():
+            for item in missing:
+                known_product = self._find_known_product(shopping_list.household_id, item)
+                subject = item.subject(known_product)
+                ensure_on_list(self._repository, list_id, subject, item.amount, item.unit_code)
         return self._repository.list_items(list_id)
+
+    def _find_known_product(self, household_id: int, item: MissingRecipeItem) -> int | None:
+        if item.stocked_product_id is not None or item.ingredient_id is None:
+            return None
+        return self._catalog.find_only_product_of_ingredient(household_id, item.ingredient_id)

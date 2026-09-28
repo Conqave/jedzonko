@@ -1,8 +1,8 @@
 from decimal import Decimal
 
-from inventory.domain.models import InventoryItemSnapshot
-from recipes.domain.matching import find_available_quantity, find_matching_item
+from recipes.domain.matching import find_stock
 from recipes.domain.models import RecipeRequirement
+from recipes.domain.stock import StockedProduct
 from recipes.domain.suggestion import MissingRecipeItem, RecipeShortfall
 from shared.measurement import Quantity
 
@@ -14,7 +14,7 @@ def scale_requirements(
     return [
         RecipeRequirement(
             name=requirement.name,
-            normalized_name=requirement.normalized_name,
+            ingredient_id=requirement.ingredient_id,
             quantity=Quantity(
                 amount=requirement.quantity.amount * factor, unit=requirement.quantity.unit
             ),
@@ -24,24 +24,26 @@ def scale_requirements(
 
 
 def calculate_shortfall(
-    requirements: list[RecipeRequirement], inventory: list[InventoryItemSnapshot]
+    requirements: list[RecipeRequirement], stock: list[StockedProduct]
 ) -> RecipeShortfall:
     missing: list[MissingRecipeItem] = []
     unmeasured: list[str] = []
     for requirement in requirements:
         required = requirement.quantity
-        item = find_matching_item(requirement.normalized_name, inventory)
-        if item is None:
-            missing.append(_to_missing_item(requirement, required.amount))
+        match = find_stock(requirement.ingredient_id, required.unit, stock)
+        if match is None:
+            absent = _to_missing_item(requirement, None, required.amount)
+            missing.append(absent)
             continue
-        available = find_available_quantity(item, required.unit)
-        if available is None:
+        if match.available is None:
             unmeasured.append(requirement.name)
-            missing.append(_to_missing_item(requirement, required.amount))
+            incomparable = _to_missing_item(requirement, match.product.product_id, required.amount)
+            missing.append(incomparable)
             continue
-        remainder = required.subtract(available)
+        remainder = required.subtract(match.available)
         if remainder.amount > 0:
-            missing.append(_to_missing_item(requirement, remainder.amount))
+            short = _to_missing_item(requirement, match.product.product_id, remainder.amount)
+            missing.append(short)
     return RecipeShortfall(
         missing_items=tuple(missing),
         unmeasured_ingredient_names=tuple(unmeasured),
@@ -50,10 +52,13 @@ def calculate_shortfall(
     )
 
 
-def _to_missing_item(requirement: RecipeRequirement, amount: Decimal) -> MissingRecipeItem:
+def _to_missing_item(
+    requirement: RecipeRequirement, stocked_product_id: int | None, amount: Decimal
+) -> MissingRecipeItem:
     return MissingRecipeItem(
         name=requirement.name,
-        normalized_name=requirement.normalized_name,
+        ingredient_id=requirement.ingredient_id,
+        stocked_product_id=stocked_product_id,
         amount=amount,
         unit_code=requirement.quantity.unit.code,
     )

@@ -1,3 +1,4 @@
+from promotions.application.errors import InvalidPromotionQueryError
 from promotions.application.ports.promotion_source import PromotionSource
 from promotions.application.shop_selection import ShopSelection
 from promotions.domain.coverage import calculate_store_coverage
@@ -16,11 +17,11 @@ class CompareStorePromotionCoverage:
         for query in queries:
             normalized_query = query.strip()
             if not normalized_query:
-                raise ValueError("query must not be empty")
+                raise InvalidPromotionQueryError("query must not be empty")
             if normalized_query not in normalized_queries:
                 normalized_queries.append(normalized_query)
         if not normalized_queries:
-            raise ValueError("queries must not be empty")
+            raise InvalidPromotionQueryError("queries must not be empty")
 
         shop_slugs = self._shop_selection.resolve(user_id, requested_shop_slugs)
         offers_by_query: dict[str, list[PromotionOffer]] = {

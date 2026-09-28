@@ -1,10 +1,9 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
 from households.application.errors import (
     HouseholdNotFoundError,
-    NotAHouseholdMemberError,
     RecoveryWindowExpiredError,
 )
 from households.application.use_cases.delete_household import DeleteHousehold
@@ -13,11 +12,12 @@ from households.application.use_cases.purge_expired_households import PurgeExpir
 from households.application.use_cases.restore_household import RestoreHousehold
 from households.domain.retention import HOUSEHOLD_RETENTION_PERIOD
 from households.tests.fakes import FakeHouseholdLifecycleRepository, FakeHouseholdRow
+from shared.household_membership import NotAHouseholdMemberError
 
 MEMBER_ID = 1
 OUTSIDER_ID = 2
 HOUSEHOLD_ID = 10
-NOW = datetime(2026, 9, 19, 12, 0, tzinfo=timezone.utc)
+NOW = datetime(2026, 9, 19, 12, 0, tzinfo=UTC)
 
 
 def _repository(deleted_at: datetime | None = None) -> FakeHouseholdLifecycleRepository:

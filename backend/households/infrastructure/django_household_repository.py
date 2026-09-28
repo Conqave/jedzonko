@@ -1,7 +1,11 @@
 from django.contrib.auth.models import User
 from django.db.models import Count
 
-from households.application.errors import HouseholdNotFoundError, MemberNotFoundError
+from households.application.errors import (
+    HouseholdNotFoundError,
+    MemberNotFoundError,
+    UserNotFoundError,
+)
 from households.application.ports.household_repository import HouseholdRepository
 from households.domain.models import HouseholdMember, HouseholdSummary
 from households.models import Household, HouseholdMembership
@@ -75,7 +79,7 @@ class DjangoHouseholdRepository(HouseholdRepository):
             raise HouseholdNotFoundError
         user = User.objects.filter(username=username).first()
         if user is None:
-            raise MemberNotFoundError
+            raise UserNotFoundError
         HouseholdMembership.objects.get_or_create(household_id=household_id, user=user)
         return HouseholdMember(user_id=user.pk, username=user.get_username())
 

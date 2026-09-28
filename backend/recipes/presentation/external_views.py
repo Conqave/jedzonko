@@ -1,123 +1,62 @@
-from rest_framework.exceptions import NotAuthenticated, NotFound, PermissionDenied
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from households.application.errors import NotAHouseholdMemberError
-from households.models import IngredientTag
-from shared.text import normalize_text
-from recipes.application.ports.recipe_source import (
-    RecipeNotFoundAtSourceError,
-    RecipeSourceContractError,
-    RecipeSourceUnavailable,
-)
+from config.api import current_user_id
+from config.composition import container
 from recipes.application.use_cases.search_external_recipes import ExternalRecipeQuery
-from recipes.composition import (
-    build_get_external_recipe,
-    build_search_external_recipes,
-    build_suggest_external_recipes_from_inventory,
-    open_recipe_source,
-)
-from recipes.presentation.errors import (
-    RecipeSourceContractInvalidError,
-    RecipeSourceUnavailableError,
-)
 from recipes.presentation.external_serializers import (
+    ExternalRecipeDetailSerializer,
     ExternalRecipeSearchSerializer,
     ExternalRecipeSuggestionSerializer,
+    ExternalRecipeSuggestionsSerializer,
+    MatchedExternalRecipePageSerializer,
 )
-from recipes.presentation.representation import (
-    represent_external_page,
-    represent_external_recipe,
-    represent_external_suggestions,
-)
-
-
-def _read_user_id(request: Request) -> int:
-    user_id = request.user.pk
-    if user_id is None:
-        raise NotAuthenticated
-    return user_id
 
 
 def _split_names(value: str) -> tuple[str, ...]:
     return tuple(part.strip() for part in value.split(",") if part.strip())
 
 
-def _remember_ania_tags(page: object) -> None:
-    summaries = tuple(match.summary for match in page.matches)
-    for summary in summaries:
-        for name in summary.tag_names:
-            IngredientTag.objects.get_or_create(
-                normalized_name=normalize_text(name),
-                defaults={"name": name, "source": "ania_gotuje"},
-            )
-
-
 class ExternalRecipeListView(APIView):
     def get(self, request: Request) -> Response:
-        serializer = ExternalRecipeSearchSerializer(data=request.query_params)
-        serializer.is_valid(raise_exception=True)
-        payload = serializer.validated_data
+        user_id = current_user_id(request)
+        payload = ExternalRecipeSearchSerializer(data=request.query_params)
+        payload.is_valid(raise_exception=True)
+        data = payload.validated_data
+        ingredient_names = _split_names(data["ingredients"])
+        excluded_ingredient_names = _split_names(data["excluded_ingredients"])
         query = ExternalRecipeQuery(
-            household_id=int(payload["household_id"]),
-            text=str(payload["query"]),
-            ingredient_names=_split_names(str(payload["ingredients"])),
-            excluded_ingredient_names=_split_names(str(payload["excluded_ingredients"])),
-            page=int(payload["page"]),
-            page_size=int(payload["page_size"]),
+            household_id=data["household_id"],
+            text=data["query"],
+            ingredient_names=ingredient_names,
+            excluded_ingredient_names=excluded_ingredient_names,
+            page=data["page"],
+            page_size=data["page_size"],
         )
-        with open_recipe_source() as source:
-            try:
-                page = build_search_external_recipes(source).execute(_read_user_id(request), query)
-                _remember_ania_tags(page)
-            except NotAHouseholdMemberError:
-                raise PermissionDenied(
-                    detail="Not a household member.", code="not_a_household_member"
-                )
-            except RecipeSourceUnavailable:
-                raise RecipeSourceUnavailableError
-            except RecipeSourceContractError:
-                raise RecipeSourceContractInvalidError
-        return Response(represent_external_page(page))
+        with container().recipes.open_external() as external:
+            page = external.search.execute(user_id, query)
+        serializer = MatchedExternalRecipePageSerializer(page)
+        return Response(serializer.data)
 
 
 class ExternalRecipeSuggestionListView(APIView):
     def get(self, request: Request) -> Response:
-        serializer = ExternalRecipeSuggestionSerializer(data=request.query_params)
-        serializer.is_valid(raise_exception=True)
-        payload = serializer.validated_data
-        with open_recipe_source() as source:
-            try:
-                suggestions = build_suggest_external_recipes_from_inventory(source).execute(
-                    _read_user_id(request),
-                    int(payload["household_id"]),
-                    int(payload["page"]),
-                    int(payload["page_size"]),
-                )
-                _remember_ania_tags(suggestions.page)
-            except NotAHouseholdMemberError:
-                raise PermissionDenied(
-                    detail="Not a household member.", code="not_a_household_member"
-                )
-            except RecipeSourceUnavailable:
-                raise RecipeSourceUnavailableError
-            except RecipeSourceContractError:
-                raise RecipeSourceContractInvalidError
-        return Response(represent_external_suggestions(suggestions))
+        user_id = current_user_id(request)
+        payload = ExternalRecipeSuggestionSerializer(data=request.query_params)
+        payload.is_valid(raise_exception=True)
+        data = payload.validated_data
+        with container().recipes.open_external() as external:
+            suggestions = external.suggest_from_inventory.execute(
+                user_id, data["household_id"], data["page"], data["page_size"]
+            )
+        serializer = ExternalRecipeSuggestionsSerializer(suggestions)
+        return Response(serializer.data)
 
 
 class ExternalRecipeDetailView(APIView):
     def get(self, request: Request, reference: str) -> Response:
-        with open_recipe_source() as source:
-            try:
-                recipe = build_get_external_recipe(source).execute(reference)
-            except RecipeNotFoundAtSourceError:
-                raise NotFound(
-                    detail="External recipe not found.", code="external_recipe_not_found"
-                )
-            except RecipeSourceUnavailable:
-                raise RecipeSourceUnavailableError
-            except RecipeSourceContractError:
-                raise RecipeSourceContractInvalidError
-        return Response(represent_external_recipe(recipe))
+        with container().recipes.open_external() as external:
+            recipe = external.get.execute(reference)
+        serializer = ExternalRecipeDetailSerializer(recipe)
+        return Response(serializer.data)

@@ -1,15 +1,15 @@
-from households.application.access import HouseholdAccessPolicy
 from inventory.application.ports.inventory_category_repository import InventoryCategoryRepository
 from inventory.domain.category import InventoryCategorySnapshot
+from shared.household_membership import HouseholdMembershipReader, require_membership
 
 
 class ListInventoryCategories:
     def __init__(
-        self, repository: InventoryCategoryRepository, access: HouseholdAccessPolicy
+        self, repository: InventoryCategoryRepository, memberships: HouseholdMembershipReader
     ) -> None:
         self._repository = repository
-        self._access = access
+        self._memberships = memberships
 
     def execute(self, user_id: int, household_id: int) -> list[InventoryCategorySnapshot]:
-        self._access.require_membership(user_id, household_id)
+        require_membership(self._memberships, user_id, household_id)
         return self._repository.list_categories(household_id)

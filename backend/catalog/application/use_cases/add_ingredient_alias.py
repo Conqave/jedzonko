@@ -1,8 +1,8 @@
 from catalog.application.errors import DuplicateIngredientNameError, IngredientNotFoundError
 from catalog.application.ports.ingredient_repository import IngredientRepository
-from catalog.application.ports.transaction_manager import TransactionManager
 from catalog.domain.ingredient import IngredientName, IngredientNameKind, IngredientNameSource
-from catalog.domain.names import IngredientNameText
+from catalog.domain.names import CatalogName
+from shared.transactions import TransactionManager
 
 
 class AddIngredientAlias:
@@ -13,7 +13,7 @@ class AddIngredientAlias:
     def execute(
         self, ingredient_id: int, name: str, source: IngredientNameSource
     ) -> IngredientName:
-        text = IngredientNameText.parse(name)
+        text = CatalogName.parse(name)
         with self._transactions.atomic():
             if self._repository.find(ingredient_id) is None:
                 raise IngredientNotFoundError

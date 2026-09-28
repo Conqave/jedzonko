@@ -4,7 +4,8 @@ import pytest
 from django.contrib.auth.models import User
 from rest_framework.test import APIClient
 
-from households.models import Household, HouseholdMembership, Product
+from catalog.models import Product
+from households.models import Household, HouseholdMembership
 from inventory.models import InventoryItem
 
 pytestmark = pytest.mark.django_db
@@ -144,9 +145,7 @@ def test_unknown_product_is_rejected(
 def test_corrected_quantity_becomes_authoritative(
     api_client: APIClient, ala: User, household: Household, flour: Product
 ) -> None:
-    item = InventoryItem.objects.create(
-        household=household, product=flour, unit_code="kg", quantity=Decimal("2.000")
-    )
+    item = InventoryItem.objects.create(product=flour, unit_code="kg", quantity=Decimal("2.000"))
     api_client.force_login(ala)
 
     response = api_client.patch(f"/api/inventory/{item.pk}/", {"quantity": "0.500"}, format="json")
@@ -160,9 +159,7 @@ def test_corrected_quantity_becomes_authoritative(
 def test_non_member_cannot_touch_another_households_item(
     api_client: APIClient, ola: User, household: Household, flour: Product
 ) -> None:
-    item = InventoryItem.objects.create(
-        household=household, product=flour, unit_code="kg", quantity=Decimal("2.000")
-    )
+    item = InventoryItem.objects.create(product=flour, unit_code="kg", quantity=Decimal("2.000"))
     api_client.force_login(ola)
 
     assert (
@@ -186,9 +183,7 @@ def test_missing_item_is_not_found(api_client: APIClient, ala: User) -> None:
 def test_item_edit_changes_name_quantity_and_unit_in_place(
     api_client: APIClient, ala: User, household: Household, flour: Product
 ) -> None:
-    item = InventoryItem.objects.create(
-        household=household, product=flour, unit_code="kg", quantity=Decimal("2.000")
-    )
+    item = InventoryItem.objects.create(product=flour, unit_code="kg", quantity=Decimal("2.000"))
     api_client.force_login(ala)
 
     response = api_client.patch(
@@ -222,9 +217,7 @@ def test_item_edit_rejects_rename_to_existing_product_name(
         default_unit_code="kg",
         is_food=True,
     )
-    item = InventoryItem.objects.create(
-        household=household, product=flour, unit_code="kg", quantity=Decimal("2.000")
-    )
+    item = InventoryItem.objects.create(product=flour, unit_code="kg", quantity=Decimal("2.000"))
     api_client.force_login(ala)
 
     response = api_client.patch(
@@ -240,9 +233,7 @@ def test_item_edit_rejects_rename_to_existing_product_name(
 def test_item_edit_rejects_unknown_unit(
     api_client: APIClient, ala: User, household: Household, flour: Product
 ) -> None:
-    item = InventoryItem.objects.create(
-        household=household, product=flour, unit_code="kg", quantity=Decimal("2.000")
-    )
+    item = InventoryItem.objects.create(product=flour, unit_code="kg", quantity=Decimal("2.000"))
     api_client.force_login(ala)
 
     response = api_client.patch(
@@ -258,9 +249,7 @@ def test_item_edit_rejects_unknown_unit(
 def test_item_edit_is_denied_for_non_member(
     api_client: APIClient, ola: User, household: Household, flour: Product
 ) -> None:
-    item = InventoryItem.objects.create(
-        household=household, product=flour, unit_code="kg", quantity=Decimal("2.000")
-    )
+    item = InventoryItem.objects.create(product=flour, unit_code="kg", quantity=Decimal("2.000"))
     api_client.force_login(ola)
 
     response = api_client.patch(
@@ -278,9 +267,7 @@ def test_item_edit_of_another_household_item_is_rejected(
 ) -> None:
     own = Household.objects.create(name="Dom Oli")
     HouseholdMembership.objects.create(household=own, user=ola)
-    item = InventoryItem.objects.create(
-        household=household, product=flour, unit_code="kg", quantity=Decimal("2.000")
-    )
+    item = InventoryItem.objects.create(product=flour, unit_code="kg", quantity=Decimal("2.000"))
     api_client.force_login(ola)
 
     response = api_client.patch(f"/api/inventory/{item.pk}/", {"quantity": "5"}, format="json")

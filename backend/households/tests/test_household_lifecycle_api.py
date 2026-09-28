@@ -8,45 +8,28 @@ from django.core.management import call_command
 from django.utils import timezone
 from rest_framework.test import APIClient
 
+from catalog.models import Product
 from households.domain.retention import HOUSEHOLD_RETENTION_PERIOD
-from households.models import Household, HouseholdMembership, Product
+from households.models import Household
 from inventory.models import InventoryItem
 from shopping.models import ShoppingList, ShoppingListItem
+from tests.factories import make_household, make_product
 
 pytestmark = pytest.mark.django_db
 
 
 @pytest.fixture
-def api_client() -> APIClient:
-    return APIClient()
-
-
-@pytest.fixture
-def ala() -> User:
-    return User.objects.create_user(username="ala", password="Ma-Kota-1234")
-
-
-@pytest.fixture
-def ola() -> User:
-    return User.objects.create_user(username="ola", password="Ma-Psa-1234")
-
-
-@pytest.fixture
 def household(ala: User) -> Household:
-    created = Household.objects.create(name="Dom Ali")
-    HouseholdMembership.objects.create(household=created, user=ala)
-    product = Product.objects.create(
-        household=created,
-        name="Mąka pszenna",
-        normalized_name="maka pszenna",
-        default_unit_code="kg",
-    )
-    InventoryItem.objects.create(
-        household=created, product=product, unit_code="kg", quantity=Decimal("2.000")
-    )
+    created = make_household(ala, "Dom Ali")
+    product = make_product(created, "Mąka pszenna", "kg")
+    InventoryItem.objects.create(product=product, unit_code="kg", quantity=Decimal("2.000"))
     shopping_list = ShoppingList.objects.create(household=created, name="Zakupy")
     ShoppingListItem.objects.create(
-        shopping_list=shopping_list, product=product, unit_code="kg", quantity=Decimal("1.000")
+        shopping_list=shopping_list,
+        product=product,
+        unit_code="kg",
+        quantity=Decimal("1.000"),
+        status="pending",
     )
     return created
 
@@ -196,7 +179,7 @@ def test_purge_command_removes_expired_households_with_their_data(household: Hou
 
     assert not Household.objects.filter(pk=household.pk).exists()
     assert not Product.objects.filter(household_id=household.pk).exists()
-    assert not InventoryItem.objects.filter(household_id=household.pk).exists()
+    assert not InventoryItem.objects.filter(product__household_id=household.pk).exists()
     assert not ShoppingList.objects.filter(household_id=household.pk).exists()
     assert not ShoppingListItem.objects.exists()
     assert "Purged 1 household(s)." in output.getvalue()
@@ -206,8 +189,7 @@ def test_purge_command_removes_expired_households_with_their_data(household: Hou
 def test_purge_command_leaves_fresh_and_live_households_alone(
     ala: User, household: Household
 ) -> None:
-    fresh = Household.objects.create(name="Swiezo skasowany")
-    HouseholdMembership.objects.create(household=fresh, user=ala)
+    fresh = make_household(ala, "Swiezo skasowany")
     _set_deleted_at_days_ago(fresh.pk, HOUSEHOLD_RETENTION_PERIOD.days - 1)
     output = StringIO()
 
@@ -226,5 +208,5 @@ def test_purge_command_dry_run_changes_nothing(household: Household) -> None:
 
     assert Household.objects.filter(pk=household.pk).exists()
     assert Product.objects.filter(household_id=household.pk).count() == 1
-    assert InventoryItem.objects.filter(household_id=household.pk).count() == 1
+    assert InventoryItem.objects.filter(product__household_id=household.pk).count() == 1
     assert "Would purge 1 household(s)." in output.getvalue()

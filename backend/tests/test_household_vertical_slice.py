@@ -6,9 +6,11 @@ from django.db import connection
 from django.test.utils import CaptureQueriesContext
 from rest_framework.test import APIClient
 
-from households.models import Household, Product
+from catalog.models import Ingredient, Product
+from households.models import Household
 from inventory.models import InventoryItem
 from recipes.models import Recipe
+from tests.factories import confirm_ingredient, make_product
 
 pytestmark = pytest.mark.django_db
 
@@ -57,8 +59,8 @@ def test_scenario_a_inventory_to_suggestion_to_shopping_to_inventory(
     suggestions = api_client.get("/api/recipes/suggestions/", {"household_id": household_a.pk})
     assert suggestions.status_code == 200, suggestions.data
     suggestion = next(item for item in suggestions.data if item["recipe_id"] == pancakes.pk)
-    assert suggestion["available_item_count"] == 0
-    assert suggestion["missing_item_count"] == 2
+    assert suggestion["shortfall"]["available_item_count"] == 0
+    assert len(suggestion["shortfall"]["missing_items"]) == 2
 
     missing = api_client.get(
         f"/api/recipes/{pancakes.pk}/missing-items/",
@@ -72,22 +74,22 @@ def test_scenario_a_inventory_to_suggestion_to_shopping_to_inventory(
 
     list_id = _primary_list_id(api_client, household_a)
     added = api_client.post(
-        f"/api/shopping/lists/{list_id}/items/from-recipe/",
+        f"/api/shopping/lists/{list_id}/recipe-items/",
         {"recipe_id": pancakes.pk, "servings": 4},
         format="json",
     )
     assert added.status_code == 200, added.data
 
-    flour_before = InventoryItem.objects.get(household=household_a, product=flour)
+    flour_before = InventoryItem.objects.get(product=flour)
     assert flour_before.quantity == Decimal("0.200")
 
     items = api_client.get(f"/api/shopping/lists/{list_id}/items/")
-    sugar_item = next(item for item in items.data if item["product_name"] == "Cukier")
+    sugar_item = next(item for item in items.data if item["name"] == "Cukier")
 
-    bought = api_client.post(f"/api/shopping/items/{sugar_item['id']}/buy/")
+    bought = api_client.post(f"/api/shopping/items/{sugar_item['id']}/purchase/")
     assert bought.status_code == 204, bought.data
 
-    stored_sugar = InventoryItem.objects.get(household=household_a, product=sugar)
+    stored_sugar = InventoryItem.objects.get(product=sugar)
     assert stored_sugar.quantity == Decimal("100.000")
     assert stored_sugar.unit_code == "g"
 
@@ -156,7 +158,7 @@ def test_scenario_c_household_isolation_blocks_foreign_identifiers(
         == "not_a_household_member"
     )
     assert (
-        api_client.post(f"/api/shopping/items/{foreign_item_id}/buy/").data["code"]
+        api_client.post(f"/api/shopping/items/{foreign_item_id}/purchase/").data["code"]
         == "not_a_household_member"
     )
     assert (
@@ -164,7 +166,7 @@ def test_scenario_c_household_isolation_blocks_foreign_identifiers(
         == "not_a_household_member"
     )
 
-    assert not InventoryItem.objects.filter(household=household_b).exists()
+    assert not InventoryItem.objects.filter(product__household=household_b).exists()
 
 
 def test_a_foreign_product_cannot_be_attached_to_an_own_list(
@@ -226,12 +228,12 @@ def test_scenario_d_repeated_calculations_are_idempotent(
     list_id = _primary_list_id(api_client, household_a)
 
     first_recipe_run = api_client.post(
-        f"/api/shopping/lists/{list_id}/items/from-recipe/",
+        f"/api/shopping/lists/{list_id}/recipe-items/",
         {"recipe_id": pancakes.pk, "servings": 4},
         format="json",
     )
     second_recipe_run = api_client.post(
-        f"/api/shopping/lists/{list_id}/items/from-recipe/",
+        f"/api/shopping/lists/{list_id}/recipe-items/",
         {"recipe_id": pancakes.pk, "servings": 4},
         format="json",
     )
@@ -239,8 +241,9 @@ def test_scenario_d_repeated_calculations_are_idempotent(
     assert second_recipe_run.status_code == 200
     assert first_recipe_run.data == second_recipe_run.data
 
-    first_sync = api_client.post(f"/api/shopping/lists/{list_id}/synchronize-minimum-stock/")
-    second_sync = api_client.post(f"/api/shopping/lists/{list_id}/synchronize-minimum-stock/")
+    sync_url = f"/api/shopping/households/{household_a.pk}/minimum-stock/"
+    first_sync = api_client.post(sync_url)
+    second_sync = api_client.post(sync_url)
     assert first_sync.status_code == 200, first_sync.data
     assert first_sync.data == second_sync.data
 
@@ -265,25 +268,20 @@ def test_recipe_fully_covered_by_inventory_has_no_missing_items(
     suggestions = api_client.get("/api/recipes/suggestions/", {"household_id": household_a.pk})
     suggestion = next(item for item in suggestions.data if item["recipe_id"] == pancakes.pk)
 
-    assert suggestion["available_item_count"] == 2
-    assert suggestion["missing_item_count"] == 0
-    assert suggestion["missing_items"] == []
+    assert suggestion["shortfall"]["available_item_count"] == 2
+    assert suggestion["shortfall"]["missing_items"] == []
 
 
-def test_a_more_specific_product_name_satisfies_a_recipe_requirement(
+def test_any_product_confirmed_as_the_ingredient_satisfies_a_recipe_requirement(
     api_client: APIClient,
     ala: User,
     household_a: Household,
+    flour_ingredient: Ingredient,
     pancakes: Recipe,
 ) -> None:
     api_client.force_login(ala)
-    specific = Product.objects.create(
-        household=household_a,
-        name="Mąka pszenna typ 500",
-        normalized_name="maka pszenna typ 500",
-        default_unit_code="kg",
-        is_food=True,
-    )
+    specific = make_product(household_a, "Mąka typ 500 z młyna", "kg")
+    confirm_ingredient(ala, specific, flour_ingredient)
     _add_inventory(api_client, household_a, specific, "1.000", "kg")
 
     missing = api_client.get(
@@ -312,13 +310,11 @@ def test_purchasing_locks_the_inventory_row_against_concurrent_updates(
     assert item.status_code == 201, item.data
 
     with CaptureQueriesContext(connection) as captured:
-        bought = api_client.post(f"/api/shopping/items/{item.data['id']}/buy/")
+        bought = api_client.post(f"/api/shopping/items/{item.data['id']}/purchase/")
 
     assert bought.status_code == 204, bought.data
     assert any("FOR UPDATE" in query["sql"] for query in captured.captured_queries)
-    assert InventoryItem.objects.get(household=household_a, product=sugar).quantity == Decimal(
-        "0.750"
-    )
+    assert InventoryItem.objects.get(product=sugar).quantity == Decimal("0.750")
 
 
 def test_scenario_b_preparation_consumes_inventory_exactly_once(
@@ -340,12 +336,8 @@ def test_scenario_b_preparation_consumes_inventory_exactly_once(
     )
 
     assert confirmed.status_code == 204, confirmed.data
-    assert InventoryItem.objects.get(household=household_a, product=flour).quantity == Decimal(
-        "0.500"
-    )
-    assert InventoryItem.objects.get(household=household_a, product=sugar).quantity == Decimal(
-        "0.000"
-    )
+    assert InventoryItem.objects.get(product=flour).quantity == Decimal("0.500")
+    assert InventoryItem.objects.get(product=sugar).quantity == Decimal("0.000")
 
 
 def test_scenario_b_preparation_is_rejected_for_non_members(
@@ -385,8 +377,7 @@ def test_scenario_b_minimum_stock_replenishes_the_primary_list_after_preparation
         format="json",
     )
 
-    list_id = _primary_list_id(api_client, household_a)
-    synchronized = api_client.post(f"/api/shopping/lists/{list_id}/synchronize-minimum-stock/")
+    synchronized = api_client.post(f"/api/shopping/households/{household_a.pk}/minimum-stock/")
 
     assert synchronized.status_code == 200, synchronized.data
     flour_rows = [item for item in synchronized.data if item["product_id"] == flour.pk]

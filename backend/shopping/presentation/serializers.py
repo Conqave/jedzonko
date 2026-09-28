@@ -17,14 +17,40 @@ class RenameShoppingListSerializer(serializers.Serializer[dict[str, object]]):
 
 
 class AddShoppingListItemSerializer(serializers.Serializer[dict[str, object]]):
-    product_id = serializers.IntegerField(min_value=1, required=False, allow_null=True)
-    free_text = serializers.CharField(
-        max_length=120, trim_whitespace=True, required=False, allow_null=True
+    product_id = serializers.IntegerField(
+        min_value=1, required=False, allow_null=True, default=None
     )
-    quantity = serializers.DecimalField(max_digits=12, decimal_places=3, min_value=Decimal("0"))
-    unit_code = serializers.CharField(max_length=16, required=False, allow_null=True)
+    ingredient_id = serializers.IntegerField(
+        min_value=1, required=False, allow_null=True, default=None
+    )
+    free_text = serializers.CharField(
+        max_length=120, trim_whitespace=True, required=False, allow_null=True, default=None
+    )
+    quantity = serializers.DecimalField(max_digits=12, decimal_places=3, min_value=Decimal("0.001"))
+    unit_code = serializers.CharField(max_length=16, required=False, allow_null=True, default=None)
 
 
 class AddRecipeItemsSerializer(serializers.Serializer[dict[str, int]]):
     recipe_id = serializers.IntegerField(min_value=1)
     servings = serializers.IntegerField(min_value=1)
+
+
+class ShoppingListSerializer(serializers.Serializer[object]):
+    id = serializers.IntegerField(read_only=True)
+    household_id = serializers.IntegerField(read_only=True)
+    name = serializers.CharField(read_only=True)
+    is_primary = serializers.BooleanField(read_only=True)
+    item_count = serializers.IntegerField(read_only=True)
+
+
+class ShoppingItemSerializer(serializers.Serializer[object]):
+    id = serializers.IntegerField(read_only=True)
+    list_id = serializers.IntegerField(read_only=True)
+    product_id = serializers.IntegerField(source="subject.product_id", read_only=True)
+    ingredient_id = serializers.IntegerField(source="subject.ingredient_id", read_only=True)
+    free_text = serializers.CharField(source="subject.free_text", read_only=True)
+    name = serializers.CharField(read_only=True)
+    quantity = serializers.DecimalField(max_digits=12, decimal_places=3, read_only=True)
+    unit_code = serializers.CharField(source="unit.code", read_only=True, allow_null=True)
+    status = serializers.CharField(read_only=True)
+    purchased_at = serializers.DateTimeField(read_only=True, allow_null=True)

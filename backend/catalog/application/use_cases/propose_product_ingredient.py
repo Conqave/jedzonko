@@ -5,8 +5,8 @@ from catalog.application.ports.ingredient_repository import IngredientRepository
 from catalog.application.ports.product_classification_repository import (
     ProductClassificationRepository,
 )
-from catalog.application.ports.transaction_manager import TransactionManager
 from catalog.domain.product_ingredient import ProductIngredient
+from shared.transactions import TransactionManager
 
 
 class ProposeProductIngredient:

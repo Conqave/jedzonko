@@ -13,10 +13,14 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+server = [
+  "gunicorn>=23,<24",
+]
 dev = [
   "pytest>=8.4,<9",
   "pytest-django>=4.11,<5",
   "black>=25.1",
+  "ruff>=0.13,<1",
   "isort>=6,<7",
   "mypy>=1.18,<2",
   "django-stubs[compatible-mypy]>=6.1",
@@ -24,9 +28,26 @@ dev = [
   "types-beautifulsoup4>=4.12",
 ]
 
+[tool.setuptools]
+packages = []
+
 [tool.black]
 target-version = ["py314"]
 line-length = 100
+
+[tool.ruff]
+target-version = "py314"
+line-length = 100
+extend-exclude = ["*/migrations/*"]
+
+[tool.ruff.lint]
+# pycodestyle, pyflakes, bugbear, blind except, pyupgrade, simplify, return, pie, naming,
+# tidy imports (no relative imports), comprehensions, datetime zone awareness.
+select = ["E", "W", "F", "B", "BLE", "UP", "SIM", "RET", "PIE", "N", "TID", "C4", "DTZ"]
+ignore = ["E501"]
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "all"
 
 [tool.isort]
 profile = "black"
@@ -51,3 +72,4 @@ DJANGO_SETTINGS_MODULE = "config.settings"
 python_files = ["test_*.py"]
 testpaths = ["."]
 addopts = "-q"
+filterwarnings = ["error"]

@@ -1,14 +1,14 @@
 import json
-from datetime import date
 from urllib.parse import urljoin, urlparse
 
 import httpx
 from bs4 import BeautifulSoup
+from django.utils import timezone
 
 from promotions.application.ports.promotion_source import (
     PromotionSource,
     PromotionSourceContractError,
-    PromotionSourceUnavailable,
+    PromotionSourceUnavailableError,
 )
 from promotions.domain.models import Leaflet, LeafletPage, PromotionOffer, Shop
 from promotions.infrastructure.providers.blix.leaflet_parser import BlixLeafletParser
@@ -75,16 +75,16 @@ class BlixProvider(PromotionSource):
                     cover_url = urljoin(self.base_url, source)
             label = anchor.select_one(".leaflet__availability .availability__label")
             validity_label = label.get_text(strip=True) if label is not None else None
-            result.append(
-                Leaflet(
-                    provider_id=provider_id,
-                    shop_name=shop_name,
-                    url=leaflet_url,
-                    cover_url=cover_url,
-                    validity_label=validity_label,
-                    downloaded_on=date.today(),
-                )
+            downloaded_on = timezone.localdate()
+            leaflet = Leaflet(
+                provider_id=provider_id,
+                shop_name=shop_name,
+                url=leaflet_url,
+                cover_url=cover_url,
+                validity_label=validity_label,
+                downloaded_on=downloaded_on,
             )
+            result.append(leaflet)
         return result
 
     def list_leaflet_pages(self, leaflet_provider_id: str) -> list[LeafletPage]:
@@ -123,9 +123,8 @@ class BlixProvider(PromotionSource):
         offers: list[PromotionOffer] = []
         for hit in selected_hits:
             payload = self._get_leaflet_payload(hit)
-            offers.extend(
-                self._leaflet_parser.parse_matching_offers(payload, hit, normalized_query)
-            )
+            matching = self._leaflet_parser.parse_matching_offers(payload, hit, normalized_query)
+            offers.extend(matching)
         return offers
 
     def _select_hits(
@@ -149,7 +148,7 @@ class BlixProvider(PromotionSource):
             response = self._client.get(url, params=params)
             response.raise_for_status()
         except httpx.HTTPError as error:
-            raise PromotionSourceUnavailable(f"Blix request failed: {url}") from error
+            raise PromotionSourceUnavailableError(f"Blix request failed: {url}") from error
         return response
 
     @staticmethod

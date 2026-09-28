@@ -29,3 +29,12 @@ class RecipeInput:
     tag_names: tuple[str, ...]
     steps: tuple[RecipeStepInput, ...]
     ingredients: tuple[RecipeIngredientInput, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class ResolvedIngredient:
+    name: str
+    normalized_name: str
+    ingredient_id: int | None
+    quantity: Decimal
+    unit_code: str

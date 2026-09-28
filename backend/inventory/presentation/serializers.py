@@ -38,3 +38,23 @@ class CreateInventoryCategorySerializer(serializers.Serializer[dict[str, object]
 
 class SetInventoryItemCategorySerializer(serializers.Serializer[dict[str, object]]):
     category_id = serializers.IntegerField(min_value=1, allow_null=True)
+
+
+class InventoryItemSerializer(serializers.Serializer[object]):
+    id = serializers.IntegerField(read_only=True)
+    product_id = serializers.IntegerField(read_only=True)
+    product_name = serializers.CharField(read_only=True)
+    quantity = serializers.DecimalField(max_digits=12, decimal_places=3, read_only=True)
+    unit_code = serializers.CharField(source="unit.code", read_only=True)
+    minimum_quantity = serializers.DecimalField(
+        max_digits=12, decimal_places=3, read_only=True, allow_null=True
+    )
+    category_id = serializers.IntegerField(read_only=True, allow_null=True)
+    category_name = serializers.CharField(read_only=True, allow_null=True)
+    photo_url = serializers.CharField(read_only=True, allow_null=True)
+    below_minimum = serializers.BooleanField(source="is_below_minimum", read_only=True)
+
+
+class InventoryCategorySerializer(serializers.Serializer[object]):
+    id = serializers.IntegerField(read_only=True)
+    name = serializers.CharField(read_only=True)

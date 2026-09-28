@@ -1,0 +1,33 @@
+from catalog.application.use_cases.describe_household_products import DescribeHouseholdProducts
+from catalog.application.use_cases.find_household_product import FindHouseholdProduct
+from catalog.application.use_cases.get_ingredients import GetIngredients
+from shopping.application.ports.catalog_directory import CatalogDirectory as CatalogDirectoryPort
+
+
+class CatalogDirectory(CatalogDirectoryPort):
+    def __init__(
+        self,
+        find_product: FindHouseholdProduct,
+        get_ingredients: GetIngredients,
+        describe_products: DescribeHouseholdProducts,
+    ) -> None:
+        self._find_product = find_product
+        self._get_ingredients = get_ingredients
+        self._describe_products = describe_products
+
+    def is_household_product(self, household_id: int, product_id: int) -> bool:
+        return self._find_product.execute(household_id, product_id) is not None
+
+    def has_ingredient(self, ingredient_id: int) -> bool:
+        return ingredient_id in self._get_ingredients.execute({ingredient_id})
+
+    def find_only_product_of_ingredient(self, household_id: int, ingredient_id: int) -> int | None:
+        identities = self._describe_products.execute(household_id)
+        product_ids = [
+            identity.product_id
+            for identity in identities.values()
+            if identity.ingredient_id == ingredient_id
+        ]
+        if len(product_ids) != 1:
+            return None
+        return product_ids[0]

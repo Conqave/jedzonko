@@ -4,6 +4,8 @@ from shared.measurement import MeasurementDimension, MeasurementUnit
 from shopping.domain.inventory_stock_level import InventoryStockLevel
 from shopping.domain.replenishment import calculate_replenishment_targets
 from shopping.domain.shopping_item_snapshot import ShoppingItemSnapshot
+from shopping.domain.shopping_item_status import ShoppingItemStatus
+from shopping.domain.shopping_subject import ShoppingSubject
 
 GRAM = MeasurementUnit(code="g", dimension=MeasurementDimension.MASS, factor_to_base=Decimal("1"))
 KILOGRAM = MeasurementUnit(
@@ -24,12 +26,13 @@ def _level(quantity: str, minimum: str | None) -> InventoryStockLevel:
 def _item(item_id: int, quantity: str, unit: MeasurementUnit | None) -> ShoppingItemSnapshot:
     return ShoppingItemSnapshot(
         id=item_id,
-        product_id=1,
-        product_name="Mąka",
-        free_text=None,
+        list_id=1,
+        subject=ShoppingSubject(product_id=1),
+        name="Mąka",
         quantity=Decimal(quantity),
         unit=unit,
-        is_purchased=False,
+        status=ShoppingItemStatus.PENDING,
+        purchased_at=None,
     )
 
 
@@ -71,12 +74,13 @@ def test_existing_item_with_other_unit_is_rewritten() -> None:
 def test_free_text_items_are_ignored() -> None:
     free_text_item = ShoppingItemSnapshot(
         id=9,
-        product_id=None,
-        product_name=None,
-        free_text="Ręczniki",
+        list_id=1,
+        subject=ShoppingSubject(free_text="Ręczniki"),
+        name="Ręczniki",
         quantity=Decimal("1"),
         unit=None,
-        is_purchased=False,
+        status=ShoppingItemStatus.PENDING,
+        purchased_at=None,
     )
     targets = calculate_replenishment_targets([_level("100", "300")], [free_text_item])
     assert len(targets) == 1

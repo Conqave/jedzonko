@@ -1,4 +1,4 @@
-FROM python:3.14-slim-trixie
+FROM python:3.14-slim-trixie AS base
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
@@ -9,8 +9,17 @@ RUN apt-get update \
 
 WORKDIR /srv/app
 COPY pyproject.toml ./
-RUN pip install --no-cache-dir . gunicorn
 
+
+FROM base AS tools
+
+RUN pip install --no-cache-dir ".[dev]"
+WORKDIR /src
+
+
+FROM base AS runtime
+
+RUN pip install --no-cache-dir ".[server]"
 COPY . .
 
 EXPOSE 8000

@@ -17,7 +17,6 @@ from catalog.domain.product_ingredient import (
 
 @dataclass(frozen=True, slots=True)
 class ProductClassification:
-    """Every recorded ingredient decision for one product; at most one is confirmed."""
 
     product_id: int
     household_id: int
@@ -63,7 +62,6 @@ class ProductClassification:
         )
 
     def confirm(self, ingredient_id: int, now: datetime) -> tuple[ProductIngredient, ...]:
-        """Return the changes in the order they must be stored; empty when nothing changes."""
         current = self.confirmed()
         if current is not None and current.ingredient_id == ingredient_id:
             return ()
@@ -99,7 +97,7 @@ class ProductClassification:
             raise InvalidProductIngredientTransitionError("The ingredient is already rejected.")
         return replace(existing, status=ProductIngredientStatus.REJECTED, decided_at=now)
 
-    def apply(self, changes: tuple[ProductIngredient, ...]) -> "ProductClassification":
+    def apply(self, changes: tuple[ProductIngredient, ...]) -> ProductClassification:
         links = {link.ingredient_id: link for link in self.links}
         for change in changes:
             links[change.ingredient_id] = change

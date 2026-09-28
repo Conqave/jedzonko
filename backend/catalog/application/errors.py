@@ -10,5 +10,25 @@ class ProductNotFoundError(Exception):
     pass
 
 
-class NotAHouseholdMemberError(Exception):
+class DuplicateProductError(Exception):
+    pass
+
+
+class CandidateNotFoundError(Exception):
+    pass
+
+
+class CandidateAlreadyDecidedError(Exception):
+    pass
+
+
+class IngredientClassifierError(Exception):
+    pass
+
+
+class IngredientClassifierUnavailableError(IngredientClassifierError):
+    pass
+
+
+class IngredientClassifierContractError(IngredientClassifierError):
     pass

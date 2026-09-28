@@ -7,7 +7,7 @@ class PromotionSourceError(Exception):
     pass
 
 
-class PromotionSourceUnavailable(PromotionSourceError):
+class PromotionSourceUnavailableError(PromotionSourceError):
     pass
 
 

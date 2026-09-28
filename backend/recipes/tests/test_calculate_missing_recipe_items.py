@@ -2,19 +2,18 @@ from decimal import Decimal
 
 import pytest
 
-from households.application.access import HouseholdAccessPolicy
-from households.application.errors import NotAHouseholdMemberError
-from inventory.domain.models import InventoryItemSnapshot
 from recipes.application.errors import InvalidServingsError, RecipeNotFoundError
 from recipes.application.use_cases.calculate_missing_recipe_items import CalculateMissingRecipeItems
 from recipes.domain.difficulty import RecipeDifficulty
 from recipes.domain.models import RecipeDetail, RecipeSummary
-from recipes.tests.factories import GRAM, make_requirement, make_snapshot
+from recipes.domain.stock import StockedProduct
+from recipes.tests.factories import EGGS, GRAM, make_requirement, make_stock
 from recipes.tests.fakes import (
-    FakeHouseholdInventoryReader,
-    FakeHouseholdRepository,
+    FakeHouseholdMembershipReader,
     FakeRecipeRepository,
+    FakeStockReader,
 )
+from shared.household_membership import NotAHouseholdMemberError
 
 
 def _recipe(servings: int) -> RecipeDetail:
@@ -35,18 +34,20 @@ def _recipe(servings: int) -> RecipeDetail:
 
 
 def _build(
-    repository: FakeRecipeRepository, inventory: list[InventoryItemSnapshot]
+    repository: FakeRecipeRepository, inventory: list[StockedProduct]
 ) -> CalculateMissingRecipeItems:
     return CalculateMissingRecipeItems(
         repository,
-        FakeHouseholdInventoryReader(inventory),
-        HouseholdAccessPolicy(FakeHouseholdRepository({7})),
+        FakeStockReader(inventory),
+        FakeHouseholdMembershipReader({7}),
     )
 
 
 def test_missing_amount_follows_requested_servings() -> None:
-    repository = FakeRecipeRepository([_recipe(2)], {1: [make_requirement("jajko", "2", GRAM)]})
-    use_case = _build(repository, [make_snapshot(1, "jajko", "3", GRAM)])
+    repository = FakeRecipeRepository(
+        [_recipe(2)], {1: [make_requirement("jajko", "2", GRAM, EGGS)]}
+    )
+    use_case = _build(repository, [make_stock(1, "jajko", "3", GRAM, EGGS)])
 
     shortfall = use_case.execute(5, 7, 1, 4)
 

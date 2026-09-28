@@ -1,90 +1,83 @@
-from households.composition import build_household_access_policy
+from dataclasses import dataclass
+
+from shared.household_membership import HouseholdMembershipReader
+from shared.transactions import TransactionManager
+from shopping.application.ports.catalog_directory import CatalogDirectory
 from shopping.application.ports.household_inventory_reader import HouseholdInventoryReader
 from shopping.application.ports.inventory_writer import InventoryWriter
-from shopping.application.ports.product_resolver import ProductResolver
 from shopping.application.ports.recipe_requirement_reader import RecipeRequirementReader
-from shopping.application.ports.shopping_list_repository import ShoppingListRepository
+from shopping.application.use_cases.add_missing_recipe_items_to_primary_list import (
+    AddMissingRecipeItemsToPrimaryList,
+)
 from shopping.application.use_cases.add_missing_recipe_items_to_shopping_list import (
     AddMissingRecipeItemsToShoppingList,
 )
 from shopping.application.use_cases.add_shopping_list_item import AddShoppingListItem
 from shopping.application.use_cases.buy_shopping_item import BuyShoppingItem
+from shopping.application.use_cases.create_primary_shopping_list import CreatePrimaryShoppingList
 from shopping.application.use_cases.create_shopping_list import CreateShoppingList
+from shopping.application.use_cases.delete_shopping_list import DeleteShoppingList
 from shopping.application.use_cases.delete_shopping_list_item import DeleteShoppingListItem
 from shopping.application.use_cases.get_shopping_list_items import GetShoppingListItems
 from shopping.application.use_cases.list_shopping_lists import ListShoppingLists
+from shopping.application.use_cases.reassign_shopping_ingredient import ReassignShoppingIngredient
+from shopping.application.use_cases.rename_shopping_list import RenameShoppingList
+from shopping.application.use_cases.restore_shopping_item import RestoreShoppingItem
 from shopping.application.use_cases.synchronize_minimum_stock import SynchronizeMinimumStock
 from shopping.infrastructure.django_shopping_list_repository import DjangoShoppingListRepository
-from shopping.infrastructure.household_product_gateway import HouseholdProductGateway
-from shopping.infrastructure.inventory_stock_gateway import InventoryStockGateway
-from shopping.infrastructure.inventory_writer_gateway import InventoryWriterGateway
-from shopping.infrastructure.recipe_requirement_gateway import RecipeRequirementGateway
 
 
-def build_shopping_list_repository() -> ShoppingListRepository:
-    return DjangoShoppingListRepository()
+@dataclass(frozen=True, slots=True)
+class ShoppingModule:
+    list_shopping_lists: ListShoppingLists
+    create_shopping_list: CreateShoppingList
+    rename_shopping_list: RenameShoppingList
+    delete_shopping_list: DeleteShoppingList
+    get_shopping_list_items: GetShoppingListItems
+    add_shopping_list_item: AddShoppingListItem
+    add_missing_recipe_items_to_shopping_list: AddMissingRecipeItemsToShoppingList
+    add_missing_recipe_items_to_primary_list: AddMissingRecipeItemsToPrimaryList
+    synchronize_minimum_stock: SynchronizeMinimumStock
+    buy_shopping_item: BuyShoppingItem
+    restore_shopping_item: RestoreShoppingItem
+    delete_shopping_list_item: DeleteShoppingListItem
 
 
-def build_household_inventory_reader() -> HouseholdInventoryReader:
-    return InventoryStockGateway()
+def build_create_primary_shopping_list() -> CreatePrimaryShoppingList:
+    return CreatePrimaryShoppingList(DjangoShoppingListRepository())
 
 
-def build_inventory_writer() -> InventoryWriter:
-    return InventoryWriterGateway()
+def build_reassign_shopping_ingredient() -> ReassignShoppingIngredient:
+    return ReassignShoppingIngredient(DjangoShoppingListRepository())
 
 
-def build_recipe_requirement_reader() -> RecipeRequirementReader:
-    return RecipeRequirementGateway()
-
-
-def build_product_resolver() -> ProductResolver:
-    return HouseholdProductGateway()
-
-
-def build_list_shopping_lists() -> ListShoppingLists:
-    return ListShoppingLists(build_shopping_list_repository(), build_household_access_policy())
-
-
-def build_create_shopping_list() -> CreateShoppingList:
-    return CreateShoppingList(build_shopping_list_repository(), build_household_access_policy())
-
-
-def build_get_shopping_list_items() -> GetShoppingListItems:
-    return GetShoppingListItems(build_shopping_list_repository(), build_household_access_policy())
-
-
-def build_add_shopping_list_item() -> AddShoppingListItem:
-    return AddShoppingListItem(
-        build_shopping_list_repository(),
-        build_household_access_policy(),
-        build_product_resolver(),
+def build_shopping(
+    memberships: HouseholdMembershipReader,
+    catalog: CatalogDirectory,
+    inventory_reader: HouseholdInventoryReader,
+    inventory_writer: InventoryWriter,
+    recipes: RecipeRequirementReader,
+    transactions: TransactionManager,
+) -> ShoppingModule:
+    lists = DjangoShoppingListRepository()
+    add_missing = AddMissingRecipeItemsToShoppingList(
+        lists, recipes, catalog, memberships, transactions
     )
-
-
-def build_add_missing_recipe_items_to_shopping_list() -> AddMissingRecipeItemsToShoppingList:
-    return AddMissingRecipeItemsToShoppingList(
-        build_shopping_list_repository(),
-        build_household_access_policy(),
-        build_recipe_requirement_reader(),
-        build_product_resolver(),
+    return ShoppingModule(
+        list_shopping_lists=ListShoppingLists(lists, memberships),
+        create_shopping_list=CreateShoppingList(lists, memberships),
+        rename_shopping_list=RenameShoppingList(lists, memberships),
+        delete_shopping_list=DeleteShoppingList(lists, memberships),
+        get_shopping_list_items=GetShoppingListItems(lists, memberships),
+        add_shopping_list_item=AddShoppingListItem(lists, catalog, memberships, transactions),
+        add_missing_recipe_items_to_shopping_list=add_missing,
+        add_missing_recipe_items_to_primary_list=AddMissingRecipeItemsToPrimaryList(
+            lists, add_missing
+        ),
+        synchronize_minimum_stock=SynchronizeMinimumStock(
+            lists, inventory_reader, memberships, transactions
+        ),
+        buy_shopping_item=BuyShoppingItem(lists, inventory_writer, memberships, transactions),
+        restore_shopping_item=RestoreShoppingItem(lists, memberships, transactions),
+        delete_shopping_list_item=DeleteShoppingListItem(lists, memberships),
     )
-
-
-def build_synchronize_minimum_stock() -> SynchronizeMinimumStock:
-    return SynchronizeMinimumStock(
-        build_shopping_list_repository(),
-        build_household_access_policy(),
-        build_household_inventory_reader(),
-    )
-
-
-def build_buy_shopping_item() -> BuyShoppingItem:
-    return BuyShoppingItem(
-        build_shopping_list_repository(),
-        build_household_access_policy(),
-        build_inventory_writer(),
-    )
-
-
-def build_delete_shopping_list_item() -> DeleteShoppingListItem:
-    return DeleteShoppingListItem(build_shopping_list_repository(), build_household_access_policy())

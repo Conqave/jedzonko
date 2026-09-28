@@ -1,10 +1,5 @@
 from django.urls import URLPattern, path
 
-from households.presentation.alias_proposal_views import (
-    TagProposalAcceptView,
-    TagProposalListView,
-    TagProposalRejectView,
-)
 from households.presentation.views import (
     DeletedHouseholdListView,
     HouseholdDetailView,
@@ -17,9 +12,6 @@ from households.presentation.views import (
 urlpatterns: list[URLPattern] = [
     path("", HouseholdListView.as_view()),
     path("deleted/", DeletedHouseholdListView.as_view()),
-    path("tag-proposals/<int:proposal_id>/accept/", TagProposalAcceptView.as_view()),
-    path("tag-proposals/<int:proposal_id>/reject/", TagProposalRejectView.as_view()),
-    path("<int:household_id>/tag-proposals/", TagProposalListView.as_view()),
     path("<int:household_id>/", HouseholdDetailView.as_view()),
     path("<int:household_id>/restore/", HouseholdRestoreView.as_view()),
     path("<int:household_id>/members/", HouseholdMemberListView.as_view()),

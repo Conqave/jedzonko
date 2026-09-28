@@ -1,5 +1,6 @@
 import pytest
 
+from promotions.application.errors import InvalidPromotionQueryError, InvalidShopSelectionError
 from promotions.application.shop_selection import ShopSelection
 from promotions.application.use_cases.search_promotions import SearchPromotions
 from promotions.domain.models import FavouriteShop
@@ -93,12 +94,12 @@ def test_search_promotions_returns_empty_result_without_matches() -> None:
 def test_search_promotions_rejects_blank_query() -> None:
     source = FakePromotionSource({})
 
-    with pytest.raises(ValueError):
+    with pytest.raises(InvalidPromotionQueryError):
         _build_use_case(source, []).execute(USER_ID, "   ", None)
 
 
 def test_search_promotions_rejects_blank_shop_slug() -> None:
     source = FakePromotionSource({})
 
-    with pytest.raises(ValueError):
+    with pytest.raises(InvalidShopSelectionError):
         _build_use_case(source, []).execute(USER_ID, "twaróg", ("  ",))

@@ -24,3 +24,11 @@ class DuplicateInventoryCategoryError(Exception):
 
 class InventoryPhotoNotFoundError(Exception):
     pass
+
+
+class DuplicateProductNameError(Exception):
+    pass
+
+
+class InvalidProductNameError(Exception):
+    pass

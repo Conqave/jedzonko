@@ -6,7 +6,7 @@ import pytest
 
 from promotions.application.ports.promotion_source import (
     PromotionSourceContractError,
-    PromotionSourceUnavailable,
+    PromotionSourceUnavailableError,
 )
 from promotions.infrastructure.providers.blix.provider import BlixProvider
 
@@ -183,7 +183,7 @@ def test_search_maps_transport_failure_to_provider_unavailable() -> None:
 
     client = httpx.Client(transport=httpx.MockTransport(handle_request))
 
-    with pytest.raises(PromotionSourceUnavailable):
+    with pytest.raises(PromotionSourceUnavailableError):
         BlixProvider(client, 5).search_promotions("twaróg", ())
 
 
@@ -193,7 +193,7 @@ def test_search_maps_http_error_to_provider_unavailable() -> None:
 
     client = httpx.Client(transport=httpx.MockTransport(handle_request))
 
-    with pytest.raises(PromotionSourceUnavailable):
+    with pytest.raises(PromotionSourceUnavailableError):
         BlixProvider(client, 5).search_promotions("twaróg", ())
 
 

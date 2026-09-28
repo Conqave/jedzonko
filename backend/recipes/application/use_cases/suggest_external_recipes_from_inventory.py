@@ -1,10 +1,11 @@
 from dataclasses import dataclass
 
-from households.application.access import HouseholdAccessPolicy
-from recipes.application.ports.household_inventory_reader import HouseholdInventoryReader
+from recipes.application.ports.household_stock_reader import HouseholdStockReader
+from recipes.application.ports.ingredient_resolver import IngredientResolver
 from recipes.application.ports.recipe_source import RecipeSource
 from recipes.domain.external import ExternalRecipePage, MatchedExternalRecipePage
 from recipes.domain.matching import match_external_recipes
+from shared.household_membership import HouseholdMembershipReader, require_membership
 
 
 @dataclass(frozen=True, slots=True)
@@ -18,34 +19,30 @@ class SuggestExternalRecipesFromInventory:
     def __init__(
         self,
         source: RecipeSource,
-        inventory_reader: HouseholdInventoryReader,
-        access: HouseholdAccessPolicy,
+        stock: HouseholdStockReader,
+        resolver: IngredientResolver,
+        memberships: HouseholdMembershipReader,
         ingredient_limit: int,
     ) -> None:
         if ingredient_limit < 1:
             raise ValueError("ingredient_limit must be at least 1")
         self._source = source
-        self._inventory_reader = inventory_reader
-        self._access = access
+        self._stock = stock
+        self._resolver = resolver
+        self._memberships = memberships
         self._ingredient_limit = ingredient_limit
 
     def execute(
         self, user_id: int, household_id: int, page: int, page_size: int
     ) -> ExternalRecipeSuggestions:
-        self._access.require_membership(user_id, household_id)
-        inventory = self._inventory_reader.read_inventory(user_id, household_id)
-        ordered = sorted(inventory, key=lambda item: item.normalized_name)
+        require_membership(self._memberships, user_id, household_id)
+        inventory = self._stock.get_stock(user_id, household_id)
         selected_names: list[str] = []
-        for item in ordered:
-            candidates = item.tag_names
-            for name in candidates:
-                if name not in selected_names:
-                    selected_names.append(name)
-                if len(selected_names) >= self._ingredient_limit:
-                    break
-            if len(selected_names) >= self._ingredient_limit:
-                break
-        selected = tuple(selected_names)
+        for product in sorted(inventory, key=lambda product: product.product_name):
+            name = product.ingredient_name
+            if name is not None and name not in selected_names:
+                selected_names.append(name)
+        selected = tuple(selected_names[: self._ingredient_limit])
         if not selected:
             return ExternalRecipeSuggestions(
                 page=MatchedExternalRecipePage(
@@ -54,12 +51,9 @@ class SuggestExternalRecipesFromInventory:
                 ingredient_names=(),
                 inventory_item_count=0,
             )
-        # Ania Gotuje treats comma-separated ``ing`` values as an intersection.
-        # Query each pantry tag separately, then merge the result set locally so
-        # one missing pantry item cannot hide recipes matching the other items.
         summaries = {}
-        for tag_name in selected:
-            found = self._source.search_recipes("", (tag_name,), (), 0, page_size)
+        for ingredient_name in selected:
+            found = self._source.search_recipes("", (ingredient_name,), (), 0, page_size)
             for summary in found.recipes:
                 summaries[summary.reference] = summary
         merged = sorted(summaries.values(), key=lambda summary: (summary.name, summary.reference))
@@ -72,7 +66,9 @@ class SuggestExternalRecipesFromInventory:
             total_count=len(merged),
             total_pages=(len(merged) + page_size - 1) // page_size,
         )
-        matched = match_external_recipes(found, inventory)
+        tag_names = tuple({name for summary in found.recipes for name in summary.tag_names})
+        ingredient_ids = self._resolver.find_ingredient_ids(tag_names)
+        matched = match_external_recipes(found, inventory, ingredient_ids)
         useful_matches = tuple(match for match in matched.matches if match.matched_product_names)
         matched = MatchedExternalRecipePage(
             matches=useful_matches,

@@ -1,6 +1,3 @@
-from collections.abc import Iterator
-from contextlib import contextmanager
-
 import pytest
 from django.contrib.auth.models import Permission, User
 from rest_framework.test import APIClient
@@ -9,9 +6,8 @@ from promotions.application.permissions import VIEW_PROMOTIONS_PERMISSION
 from promotions.application.ports.promotion_source import (
     PromotionSource,
     PromotionSourceContractError,
-    PromotionSourceUnavailable,
+    PromotionSourceUnavailableError,
 )
-from promotions.presentation import views
 from promotions.tests.fakes import FailingPromotionSource, FakePromotionSource, build_offer
 
 pytestmark = pytest.mark.django_db
@@ -48,11 +44,10 @@ def second_promotion_user() -> User:
 
 
 def _use_source(monkeypatch: pytest.MonkeyPatch, source: PromotionSource) -> None:
-    @contextmanager
-    def factory() -> Iterator[PromotionSource]:
-        yield source
+    def provider(client: object, search_leaflet_limit: int) -> PromotionSource:
+        return source
 
-    monkeypatch.setattr(views, "open_promotion_source", factory)
+    monkeypatch.setattr("promotions.composition.BlixProvider", provider)
 
 
 def test_search_is_denied_for_anonymous_caller(api_client: APIClient) -> None:
@@ -108,7 +103,7 @@ def test_search_requires_query_parameter(
 def test_search_maps_provider_unavailable_to_service_unavailable(
     api_client: APIClient, promotion_user: User, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    _use_source(monkeypatch, FailingPromotionSource(PromotionSourceUnavailable("down")))
+    _use_source(monkeypatch, FailingPromotionSource(PromotionSourceUnavailableError("down")))
     api_client.force_login(promotion_user)
 
     response = api_client.get("/api/promotions/search/", {"query": "twaróg"})
@@ -214,7 +209,7 @@ def test_shops_expose_name_slug_and_url(
 def test_shops_map_provider_unavailable_to_service_unavailable(
     api_client: APIClient, promotion_user: User, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    _use_source(monkeypatch, FailingPromotionSource(PromotionSourceUnavailable("down")))
+    _use_source(monkeypatch, FailingPromotionSource(PromotionSourceUnavailableError("down")))
     api_client.force_login(promotion_user)
 
     response = api_client.get("/api/promotions/shops/")

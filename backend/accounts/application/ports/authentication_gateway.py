@@ -19,3 +19,11 @@ class AuthenticationGateway(ABC):
     @abstractmethod
     def get_session_user(self) -> AuthenticatedUser | None:
         raise NotImplementedError
+
+    @abstractmethod
+    def check_password(self, user_id: int, password: str) -> bool:
+        raise NotImplementedError
+
+    @abstractmethod
+    def set_password(self, user_id: int, password: str) -> None:
+        raise NotImplementedError

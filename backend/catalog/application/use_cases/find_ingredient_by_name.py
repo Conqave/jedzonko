@@ -4,7 +4,6 @@ from shared.text import normalize_text
 
 
 class FindIngredientByName:
-    """Deterministic: normalization followed by an exact name lookup, nothing else."""
 
     def __init__(self, repository: IngredientRepository) -> None:
         self._repository = repository

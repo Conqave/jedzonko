@@ -1,5 +1,6 @@
 import pytest
 
+from promotions.application.errors import InvalidPromotionQueryError
 from promotions.application.shop_selection import ShopSelection
 from promotions.application.use_cases.compare_store_promotion_coverage import (
     CompareStorePromotionCoverage,
@@ -139,5 +140,5 @@ def test_coverage_is_empty_when_no_store_has_matches() -> None:
 def test_coverage_rejects_blank_requested_item() -> None:
     source = FakePromotionSource({})
 
-    with pytest.raises(ValueError):
+    with pytest.raises(InvalidPromotionQueryError):
         _build_use_case(source, []).execute(USER_ID, ["twaróg", "  "], None)

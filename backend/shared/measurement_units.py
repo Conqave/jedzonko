@@ -34,3 +34,8 @@ MEASUREMENT_UNIT_CODES: tuple[str, ...] = tuple(_DEFINITIONS_BY_CODE)
 def find_measurement_unit(code: str) -> MeasurementUnit | None:
     definition = _DEFINITIONS_BY_CODE.get(code)
     return None if definition is None else definition.to_unit()
+
+
+MEASUREMENT_UNIT_CHOICES: tuple[tuple[str, str], ...] = tuple(
+    (definition.code, definition.name) for definition in MEASUREMENT_UNITS
+)

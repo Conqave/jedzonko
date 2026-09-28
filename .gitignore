@@ -5,3 +5,7 @@ __pycache__/
 node_modules/
 dist/
 .quasar/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+backend/media/

@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from recipes.application.commands import RecipeInput
+from recipes.application.commands import RecipeInput, ResolvedIngredient
 from recipes.domain.models import RecipeDetail, RecipeRequirement, RecipeSummary
 
 
@@ -22,13 +22,24 @@ class RecipeRepository(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def create_recipe(self, command: RecipeInput, created_by_user_id: int) -> RecipeDetail:
+    def create_recipe(
+        self,
+        command: RecipeInput,
+        ingredients: tuple[ResolvedIngredient, ...],
+        created_by_user_id: int,
+    ) -> RecipeDetail:
         raise NotImplementedError
 
     @abstractmethod
-    def update_recipe(self, recipe_id: int, command: RecipeInput) -> RecipeDetail:
+    def update_recipe(
+        self, recipe_id: int, command: RecipeInput, ingredients: tuple[ResolvedIngredient, ...]
+    ) -> RecipeDetail:
         raise NotImplementedError
 
     @abstractmethod
     def delete_recipe(self, recipe_id: int) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def reassign_ingredient(self, source_ingredient_id: int, target_ingredient_id: int) -> None:
         raise NotImplementedError

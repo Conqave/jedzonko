@@ -4,7 +4,6 @@ import pytest
 
 from catalog.application.errors import (
     IngredientNotFoundError,
-    NotAHouseholdMemberError,
     ProductNotFoundError,
 )
 from catalog.application.use_cases.confirm_product_ingredient import ConfirmProductIngredient
@@ -19,7 +18,7 @@ from catalog.domain.errors import (
     ProductIngredientAlreadyRecordedError,
 )
 from catalog.domain.ingredient import IngredientNameSource
-from catalog.domain.names import IngredientNameText
+from catalog.domain.names import CatalogName
 from catalog.domain.product_ingredient import ProductIngredientSource, ProductIngredientStatus
 from catalog.tests.fakes import (
     FakeHouseholdMembershipReader,
@@ -27,6 +26,7 @@ from catalog.tests.fakes import (
     FakeProductClassificationRepository,
     FakeTransactionManager,
 )
+from shared.household_membership import NotAHouseholdMemberError
 
 NOW = datetime(2026, 9, 28, 12, 0, tzinfo=UTC)
 LATER = datetime(2026, 9, 29, 12, 0, tzinfo=UTC)
@@ -47,10 +47,10 @@ class Catalog:
         self.classifications.add_product(EGG_BOX, HOME)
         self.classifications.add_product(FOREIGN_PRODUCT, OTHER_HOME)
         self.eggs = self.ingredients.create(
-            IngredientNameText.parse("Jajka"), IngredientNameSource.MANUAL
+            CatalogName.parse("Jajka"), IngredientNameSource.MANUAL
         ).id
         self.butter = self.ingredients.create(
-            IngredientNameText.parse("Masło"), IngredientNameSource.MANUAL
+            CatalogName.parse("Masło"), IngredientNameSource.MANUAL
         ).id
 
     def propose(self) -> ProposeProductIngredient:

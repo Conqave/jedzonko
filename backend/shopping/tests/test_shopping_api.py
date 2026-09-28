@@ -2,447 +2,293 @@ from decimal import Decimal
 
 import pytest
 from django.contrib.auth.models import User
-from django.db import transaction
-from django.db.utils import IntegrityError
+from django.db import IntegrityError, transaction
 from rest_framework.test import APIClient
 
-from households.composition import build_household_access_policy
-from households.models import Household, HouseholdMembership, Product
+from catalog.models import Ingredient, Product
+from households.models import Household
 from inventory.models import InventoryItem
-from shopping.application.use_cases.add_missing_recipe_items_to_shopping_list import (
-    AddMissingRecipeItemsToShoppingList,
+from recipes.models import Recipe
+from shopping.models import ShoppingList, ShoppingListItem
+from tests.factories import (
+    add_recipe_line,
+    confirm_ingredient,
+    make_household,
+    make_ingredient,
+    make_product,
 )
-from shopping.composition import build_product_resolver, build_shopping_list_repository
-from shopping.domain.missing_recipe_item import MissingRecipeItem
-from shopping.models import (
-    PrimaryShoppingList,
-    PurchasedShoppingItem,
-    ShoppingList,
-    ShoppingListItem,
-)
-from shopping.presentation import views
-from shopping.tests.fakes import FakeProductResolver, FakeRecipeRequirementReader
 
-pytestmark = [pytest.mark.django_db, pytest.mark.urls("shopping.tests.urls")]
+pytestmark = pytest.mark.django_db
 
 
 @pytest.fixture
-def flour(household: Household) -> Product:
-    return Product.objects.create(
-        household=household,
-        name="Mąka",
-        normalized_name="maka",
-        default_unit_code="g",
-        is_food=True,
-    )
-
-
-@pytest.fixture
-def foreign_flour(other_household: Household) -> Product:
-    return Product.objects.create(
-        household=other_household,
-        name="Mąka",
-        normalized_name="maka",
-        default_unit_code="g",
-        is_food=True,
-    )
-
-
-@pytest.fixture
-def member() -> User:
-    return User.objects.create_user(username="member", password="secret-pass-1")
-
-
-@pytest.fixture
-def outsider() -> User:
-    return User.objects.create_user(username="outsider", password="secret-pass-2")
-
-
-@pytest.fixture
-def household(member: User) -> Household:
-    created = Household.objects.create(name="Dom")
-    HouseholdMembership.objects.create(household=created, user=member)
-    return created
-
-
-@pytest.fixture
-def other_household(outsider: User) -> Household:
-    created = Household.objects.create(name="Obcy dom")
-    HouseholdMembership.objects.create(household=created, user=outsider)
-    return created
-
-
-@pytest.fixture
-def member_client(member: User) -> APIClient:
+def member_client(ala: User) -> APIClient:
     client = APIClient()
-    client.force_authenticate(user=member)
+    client.force_authenticate(user=ala)
     return client
 
 
 @pytest.fixture
-def outsider_client(outsider: User) -> APIClient:
+def outsider_client(ola: User) -> APIClient:
     client = APIClient()
-    client.force_authenticate(user=outsider)
+    client.force_authenticate(user=ola)
     return client
+
+
+@pytest.fixture
+def home(ala: User) -> Household:
+    return make_household(ala, "Dom")
+
+
+@pytest.fixture
+def flour(home: Household) -> Product:
+    return make_product(home, "Mąka", "g")
 
 
 def _primary_list_id(client: APIClient, household: Household) -> int:
     response = client.get("/api/shopping/lists/", {"household_id": household.pk})
-    assert response.status_code == 200
-    return int(response.json()[0]["id"])
+    return int(response.data[0]["id"])
 
 
-def test_anonymous_caller_is_rejected() -> None:
-    client = APIClient()
-    assert client.get("/api/shopping/lists/?household_id=1").status_code == 403
-    assert client.post("/api/shopping/lists/", {}, format="json").status_code == 403
-    assert client.get("/api/shopping/lists/1/items/").status_code == 403
-    assert client.post("/api/shopping/lists/1/items/", {}, format="json").status_code == 403
-    assert client.post("/api/shopping/items/1/buy/").status_code == 403
-    assert client.delete("/api/shopping/items/1/").status_code == 403
+def _add(client: APIClient, list_id: int, body: dict[str, object]) -> dict[str, object]:
+    response = client.post(f"/api/shopping/lists/{list_id}/items/", body, format="json")
+    assert response.status_code == 201, response.data
+    data: dict[str, object] = response.data
+    return data
 
 
-def test_list_endpoint_creates_the_primary_list(
-    member_client: APIClient, household: Household
+def test_anonymous_caller_is_rejected(api_client: APIClient) -> None:
+    response = api_client.get("/api/shopping/lists/", {"household_id": 1})
+
+    assert response.status_code == 403
+
+
+def test_listing_shows_the_primary_list_without_creating_anything(
+    member_client: APIClient, home: Household
 ) -> None:
-    response = member_client.get("/api/shopping/lists/", {"household_id": household.pk})
+    before = ShoppingList.objects.count()
 
-    assert response.status_code == 200
-    assert response.json() == [
-        {
-            "id": ShoppingList.objects.get(household=household).pk,
-            "name": "Lista zakupów",
-            "is_primary": True,
-            "item_count": 0,
-        }
+    response = member_client.get("/api/shopping/lists/", {"household_id": home.pk})
+
+    assert [(each["name"], each["is_primary"]) for each in response.data] == [
+        ("Lista zakupów", True)
     ]
-    member_client.get("/api/shopping/lists/", {"household_id": household.pk})
-    assert ShoppingList.objects.filter(household=household).count() == 1
-    assert PrimaryShoppingList.objects.filter(household=household).count() == 1
+    assert ShoppingList.objects.count() == before
 
 
-def test_non_member_cannot_read_lists(outsider_client: APIClient, household: Household) -> None:
-    response = outsider_client.get("/api/shopping/lists/", {"household_id": household.pk})
+def test_non_member_cannot_read_lists(outsider_client: APIClient, home: Household) -> None:
+    response = outsider_client.get("/api/shopping/lists/", {"household_id": home.pk})
 
     assert response.status_code == 403
-    assert response.json()["code"] == "not_a_household_member"
+    assert response.data["code"] == "not_a_household_member"
 
 
-def test_create_named_list(member_client: APIClient, household: Household) -> None:
-    response = member_client.post(
-        "/api/shopping/lists/", {"household_id": household.pk, "name": "Weekend"}, format="json"
-    )
-
-    assert response.status_code == 201
-    assert response.json()["name"] == "Weekend"
-    assert response.json()["is_primary"] is False
-
-
-def test_non_member_cannot_create_list(outsider_client: APIClient, household: Household) -> None:
-    response = outsider_client.post(
-        "/api/shopping/lists/", {"household_id": household.pk, "name": "Weekend"}, format="json"
-    )
-
-    assert response.status_code == 403
-    assert response.json()["code"] == "not_a_household_member"
-
-
-def test_unknown_list_returns_shopping_list_not_found(member_client: APIClient) -> None:
-    response = member_client.get("/api/shopping/lists/9999/items/")
-
-    assert response.status_code == 404
-    assert response.json()["code"] == "shopping_list_not_found"
-
-
-def test_member_of_other_household_cannot_read_items(
-    member_client: APIClient, outsider_client: APIClient, other_household: Household
+def test_member_creates_renames_and_deletes_a_list(
+    member_client: APIClient, home: Household
 ) -> None:
-    list_id = _primary_list_id(outsider_client, other_household)
+    created = member_client.post(
+        "/api/shopping/lists/", {"household_id": home.pk, "name": "Impreza"}, format="json"
+    )
+    list_id = created.data["id"]
+    renamed = member_client.patch(
+        f"/api/shopping/lists/{list_id}/", {"name": "Grill"}, format="json"
+    )
+    deleted = member_client.delete(f"/api/shopping/lists/{list_id}/")
 
-    response = member_client.get(f"/api/shopping/lists/{list_id}/items/")
-
-    assert response.status_code == 403
-    assert response.json()["code"] == "not_a_household_member"
+    assert (created.status_code, renamed.data["name"], deleted.status_code) == (201, "Grill", 204)
 
 
-def test_member_of_other_household_cannot_mutate_items(
-    member_client: APIClient,
-    outsider_client: APIClient,
-    other_household: Household,
-    foreign_flour: Product,
+def test_the_primary_list_cannot_be_deleted(member_client: APIClient, home: Household) -> None:
+    list_id = _primary_list_id(member_client, home)
+
+    response = member_client.delete(f"/api/shopping/lists/{list_id}/")
+
+    assert response.status_code == 400
+    assert response.data["code"] == "primary_shopping_list_cannot_be_deleted"
+
+
+def test_an_outsider_cannot_touch_the_list(
+    member_client: APIClient, outsider_client: APIClient, home: Household
 ) -> None:
-    list_id = _primary_list_id(outsider_client, other_household)
-    created = outsider_client.post(
-        f"/api/shopping/lists/{list_id}/items/",
-        {"product_id": foreign_flour.pk, "quantity": "100.000", "unit_code": "g"},
-        format="json",
-    )
-    item_id = created.json()["id"]
+    list_id = _primary_list_id(member_client, home)
+    item = _add(member_client, list_id, {"free_text": "chleb", "quantity": "1"})
 
-    assert (
-        member_client.post(
-            f"/api/shopping/lists/{list_id}/items/",
-            {"free_text": "Ręczniki", "quantity": "1.000"},
-            format="json",
-        ).status_code
-        == 403
-    )
-    assert member_client.post(f"/api/shopping/items/{item_id}/buy/").status_code == 403
-    assert member_client.delete(f"/api/shopping/items/{item_id}/").status_code == 403
-    assert (
-        member_client.post(f"/api/shopping/lists/{list_id}/synchronize-minimum-stock/").status_code
-        == 403
-    )
+    read = outsider_client.get(f"/api/shopping/lists/{list_id}/items/")
+    bought = outsider_client.post(f"/api/shopping/items/{item['id']}/purchase/")
+    deleted = outsider_client.delete(f"/api/shopping/items/{item['id']}/")
+
+    assert (read.status_code, bought.status_code, deleted.status_code) == (403, 403, 403)
 
 
-def test_add_product_item(member_client: APIClient, household: Household, flour: Product) -> None:
-    list_id = _primary_list_id(member_client, household)
-
-    response = member_client.post(
-        f"/api/shopping/lists/{list_id}/items/",
-        {"product_id": flour.pk, "quantity": "250.000", "unit_code": "g"},
-        format="json",
-    )
-
-    assert response.status_code == 201
-    body = response.json()
-    assert body["product_id"] == flour.pk
-    assert body["product_name"] == "Mąka"
-    assert body["free_text"] is None
-    assert body["quantity"] == "250.000"
-    assert body["unit_code"] == "g"
-    assert body["is_purchased"] is False
-
-
-def test_item_with_both_product_and_free_text_is_rejected(
-    member_client: APIClient, household: Household, flour: Product
+def test_items_are_about_a_product_an_ingredient_or_text(
+    member_client: APIClient, home: Household, flour: Product
 ) -> None:
-    list_id = _primary_list_id(member_client, household)
+    eggs = make_ingredient("Jajka")
+    list_id = _primary_list_id(member_client, home)
+
+    product = _add(
+        member_client, list_id, {"product_id": flour.pk, "quantity": "500", "unit_code": "g"}
+    )
+    ingredient = _add(
+        member_client, list_id, {"ingredient_id": eggs.pk, "quantity": "6", "unit_code": "szt"}
+    )
+    text = _add(member_client, list_id, {"free_text": "ręczniki", "quantity": "1"})
+
+    assert (product["name"], product["product_id"]) == ("Mąka", flour.pk)
+    assert (ingredient["name"], ingredient["ingredient_id"]) == ("Jajka", eggs.pk)
+    assert (text["name"], text["unit_code"]) == ("ręczniki", None)
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        {"product_id": 1, "free_text": "mąka", "quantity": "1", "unit_code": "g"},
+        {"quantity": "1"},
+        {"ingredient_id": 1, "quantity": "1"},
+    ],
+)
+def test_an_ill_formed_item_is_rejected(
+    member_client: APIClient, home: Household, body: dict[str, object]
+) -> None:
+    list_id = _primary_list_id(member_client, home)
+
+    response = member_client.post(f"/api/shopping/lists/{list_id}/items/", body, format="json")
+
+    assert response.status_code == 400
+
+
+def test_a_product_of_another_household_is_rejected(
+    member_client: APIClient, home: Household, ola: User
+) -> None:
+    other = make_household(ola, "Obcy dom")
+    foreign = make_product(other, "Mąka", "g")
+    list_id = _primary_list_id(member_client, home)
 
     response = member_client.post(
         f"/api/shopping/lists/{list_id}/items/",
-        {
-            "product_id": flour.pk,
-            "free_text": "Ręczniki",
-            "quantity": "1.000",
-            "unit_code": "g",
-        },
+        {"product_id": foreign.pk, "quantity": "1", "unit_code": "g"},
         format="json",
     )
 
     assert response.status_code == 400
-    assert response.json()["code"] == "invalid_shopping_item"
+    assert response.data["code"] == "product_not_found"
 
 
-def test_item_with_neither_product_nor_free_text_is_rejected(
-    member_client: APIClient, household: Household
+def test_buying_a_product_adds_it_to_the_pantry_and_keeps_it_visible(
+    member_client: APIClient, home: Household, flour: Product
 ) -> None:
-    list_id = _primary_list_id(member_client, household)
-
-    response = member_client.post(
-        f"/api/shopping/lists/{list_id}/items/", {"quantity": "1.000"}, format="json"
+    list_id = _primary_list_id(member_client, home)
+    item = _add(
+        member_client, list_id, {"product_id": flour.pk, "quantity": "500", "unit_code": "g"}
     )
 
-    assert response.status_code == 400
-    assert response.json()["code"] == "invalid_shopping_item"
+    bought = member_client.post(f"/api/shopping/items/{item['id']}/purchase/")
+    again = member_client.post(f"/api/shopping/items/{item['id']}/purchase/")
+    items = member_client.get(f"/api/shopping/lists/{list_id}/items/")
+
+    assert (bought.status_code, again.status_code) == (204, 404)
+    assert InventoryItem.objects.get(product=flour).quantity == Decimal("500.000")
+    assert [(each["id"], each["status"]) for each in items.data] == [(item["id"], "purchased")]
 
 
-def test_buying_adds_quantity_to_inventory(
-    member_client: APIClient, household: Household, flour: Product
+def test_a_bought_item_is_restored_with_the_same_id(
+    member_client: APIClient, home: Household, flour: Product
 ) -> None:
-    list_id = _primary_list_id(member_client, household)
-    created = member_client.post(
-        f"/api/shopping/lists/{list_id}/items/",
-        {"product_id": flour.pk, "quantity": "250.000", "unit_code": "g"},
-        format="json",
-    )
-    item_id = created.json()["id"]
+    list_id = _primary_list_id(member_client, home)
+    item = _add(member_client, list_id, {"free_text": "chleb", "quantity": "1"})
+    member_client.post(f"/api/shopping/items/{item['id']}/purchase/")
 
-    response = member_client.post(f"/api/shopping/items/{item_id}/buy/")
+    restored = member_client.post(f"/api/shopping/items/{item['id']}/restore/")
 
-    assert response.status_code == 204
-    stored = InventoryItem.objects.get(household=household, product=flour)
-    assert stored.quantity == Decimal("250.000")
-    assert ShoppingListItem.objects.filter(pk=item_id).exists() is False
-    assert PurchasedShoppingItem.objects.filter(shopping_list__household=household).count() == 1
+    assert (restored.data["id"], restored.data["status"]) == (item["id"], "pending")
 
 
-def test_buying_twice_is_rejected(
-    member_client: APIClient, household: Household, flour: Product
+def test_recipe_shortfall_goes_to_the_primary_list_in_one_request(
+    member_client: APIClient, ala: User, home: Household, flour: Product
 ) -> None:
-    list_id = _primary_list_id(member_client, household)
-    created = member_client.post(
-        f"/api/shopping/lists/{list_id}/items/",
-        {"product_id": flour.pk, "quantity": "250.000", "unit_code": "g"},
-        format="json",
+    flour_ingredient = make_ingredient("Mąka pszenna")
+    eggs = make_ingredient("Jajka")
+    confirm_ingredient(ala, flour, flour_ingredient)
+    InventoryItem.objects.create(product=flour, unit_code="g", quantity=Decimal("100"))
+    recipe = Recipe.objects.create(
+        name="Naleśniki",
+        servings=2,
+        preparation_time_minutes=5,
+        cooking_time_minutes=10,
+        difficulty="easy",
+        created_by=ala,
     )
-    item_id = created.json()["id"]
-    member_client.post(f"/api/shopping/items/{item_id}/buy/")
+    add_recipe_line(recipe, flour_ingredient, "Mąka pszenna", "300")
+    add_recipe_line(recipe, eggs, "Jajka", "120")
+    body = {"recipe_id": recipe.pk, "servings": 2}
+    url = f"/api/shopping/households/{home.pk}/primary-list/recipe-items/"
 
-    response = member_client.post(f"/api/shopping/items/{item_id}/buy/")
-
-    assert response.status_code == 404
-    assert response.json()["code"] == "shopping_item_not_found"
-    assert InventoryItem.objects.get(household=household, product=flour).quantity == Decimal(
-        "250.000"
-    )
-
-
-def test_delete_item(member_client: APIClient, household: Household, flour: Product) -> None:
-    list_id = _primary_list_id(member_client, household)
-    created = member_client.post(
-        f"/api/shopping/lists/{list_id}/items/",
-        {"product_id": flour.pk, "quantity": "250.000", "unit_code": "g"},
-        format="json",
-    )
-    item_id = created.json()["id"]
-
-    assert member_client.delete(f"/api/shopping/items/{item_id}/").status_code == 204
-    assert member_client.delete(f"/api/shopping/items/{item_id}/").status_code == 404
-
-
-def test_buy_unknown_item_returns_shopping_item_not_found(member_client: APIClient) -> None:
-    response = member_client.post("/api/shopping/items/9999/buy/")
-
-    assert response.status_code == 404
-    assert response.json()["code"] == "shopping_item_not_found"
-
-
-def test_from_recipe_is_idempotent(
-    member_client: APIClient,
-    household: Household,
-    flour: Product,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    list_id = _primary_list_id(member_client, household)
-    recipes = FakeRecipeRequirementReader(
-        [
-            MissingRecipeItem(
-                name="Mąka",
-                normalized_name="maka",
-                amount=Decimal("300"),
-                unit_code="g",
-            )
-        ]
-    )
-
-    def _build() -> AddMissingRecipeItemsToShoppingList:
-        return AddMissingRecipeItemsToShoppingList(
-            build_shopping_list_repository(),
-            build_household_access_policy(),
-            recipes,
-            build_product_resolver(),
-        )
-
-    monkeypatch.setattr(views, "build_add_missing_recipe_items_to_shopping_list", _build)
-
-    first = member_client.post(
-        f"/api/shopping/lists/{list_id}/items/from-recipe/",
-        {"recipe_id": 1, "servings": 4},
-        format="json",
-    )
-    second = member_client.post(
-        f"/api/shopping/lists/{list_id}/items/from-recipe/",
-        {"recipe_id": 1, "servings": 4},
-        format="json",
-    )
+    first = member_client.post(url, body, format="json")
+    second = member_client.post(url, body, format="json")
 
     assert first.status_code == 200
-    assert second.status_code == 200
-    assert first.json() == second.json()
-    assert ShoppingListItem.objects.filter(shopping_list_id=list_id).count() == 1
-    assert second.json()[0]["quantity"] == "300.000"
+    summary = [(each["name"], each["quantity"], each["unit_code"]) for each in second.data]
+    assert summary == [("Jajka", "120.000", "g"), ("Mąka", "200.000", "g")]
 
 
-def test_synchronize_minimum_stock_is_idempotent(
-    member_client: APIClient, household: Household, flour: Product
+def test_minimum_stock_fills_the_primary_list(
+    member_client: APIClient, home: Household, flour: Product
 ) -> None:
-    list_id = _primary_list_id(member_client, household)
     InventoryItem.objects.create(
-        household=household,
-        product=flour,
-        unit_code="g",
-        quantity=Decimal("100"),
-        minimum_quantity=Decimal("300"),
+        product=flour, unit_code="g", quantity=Decimal("100"), minimum_quantity=Decimal("500")
+    )
+    url = f"/api/shopping/households/{home.pk}/minimum-stock/"
+
+    member_client.post(url)
+    response = member_client.post(url)
+
+    assert [(each["name"], each["quantity"]) for each in response.data] == [("Mąka", "400.000")]
+
+
+def _pending(shopping_list: ShoppingList, **subject: object) -> ShoppingListItem:
+    return ShoppingListItem.objects.create(
+        shopping_list=shopping_list, quantity=Decimal("1"), status="pending", **subject
     )
 
-    first = member_client.post(f"/api/shopping/lists/{list_id}/synchronize-minimum-stock/")
-    second = member_client.post(f"/api/shopping/lists/{list_id}/synchronize-minimum-stock/")
 
-    assert first.status_code == 200
-    assert first.json() == second.json()
-    assert ShoppingListItem.objects.filter(shopping_list_id=list_id).count() == 1
-    assert second.json()[0]["quantity"] == "200.000"
-    assert second.json()[0]["unit_code"] == "g"
+def test_the_database_keeps_one_pending_row_per_product(home: Household, flour: Product) -> None:
+    shopping_list = ShoppingList.objects.get(household=home, is_primary=True)
+    _pending(shopping_list, product=flour, unit_code="g")
 
-
-def test_purchased_items_stay_visible_and_can_be_rebought(
-    member_client: APIClient, household: Household, flour: Product
-) -> None:
-    list_id = _primary_list_id(member_client, household)
-    first = member_client.post(
-        f"/api/shopping/lists/{list_id}/items/",
-        {"product_id": flour.pk, "quantity": "250.000", "unit_code": "g"},
-        format="json",
-    )
-    member_client.post(f"/api/shopping/items/{first.json()['id']}/buy/")
-
-    second = member_client.post(
-        f"/api/shopping/lists/{list_id}/items/",
-        {"product_id": flour.pk, "quantity": "100.000", "unit_code": "g"},
-        format="json",
-    )
-
-    assert second.status_code == 201
-    items = member_client.get(f"/api/shopping/lists/{list_id}/items/").json()
-    assert [item["is_purchased"] for item in items] == [True, False]
-    assert [item["quantity"] for item in items] == ["250.000", "100.000"]
+    with pytest.raises(IntegrityError), transaction.atomic():
+        _pending(shopping_list, product=flour, unit_code="g")
 
 
-def test_database_rejects_a_second_pending_row_for_the_same_product(
-    household: Household, flour: Product
-) -> None:
-    shopping_list = ShoppingList.objects.create(household=household, name="Lista")
-    ShoppingListItem.objects.create(
-        shopping_list=shopping_list, product=flour, unit_code="g", quantity=Decimal("1.000")
-    )
+def test_the_database_keeps_one_pending_row_per_ingredient(home: Household) -> None:
+    shopping_list = ShoppingList.objects.get(household=home, is_primary=True)
+    eggs: Ingredient = make_ingredient("Jajka")
+    _pending(shopping_list, ingredient=eggs, unit_code="szt")
+
+    with pytest.raises(IntegrityError), transaction.atomic():
+        _pending(shopping_list, ingredient=eggs, unit_code="szt")
+
+
+def test_the_database_allows_several_text_rows(home: Household) -> None:
+    shopping_list = ShoppingList.objects.get(household=home, is_primary=True)
+
+    _pending(shopping_list, free_text="chleb")
+    _pending(shopping_list, free_text="chleb")
+
+    assert shopping_list.items.count() == 2
+
+
+def test_the_database_keeps_one_primary_list_per_household(home: Household) -> None:
+    with pytest.raises(IntegrityError), transaction.atomic():
+        ShoppingList.objects.create(household=home, name="Druga", is_primary=True)
+
+
+def test_the_database_requires_a_purchase_time_exactly_for_bought_rows(home: Household) -> None:
+    shopping_list = ShoppingList.objects.get(household=home, is_primary=True)
 
     with pytest.raises(IntegrityError), transaction.atomic():
         ShoppingListItem.objects.create(
-            shopping_list=shopping_list, product=flour, unit_code="g", quantity=Decimal("2.000")
+            shopping_list=shopping_list,
+            free_text="chleb",
+            quantity=Decimal("1"),
+            status="purchased",
         )
-
-
-def test_database_allows_several_pending_free_text_rows(
-    household: Household,
-) -> None:
-    shopping_list = ShoppingList.objects.create(household=household, name="Lista")
-    ShoppingListItem.objects.create(
-        shopping_list=shopping_list, free_text="Ręczniki", quantity=Decimal("1.000")
-    )
-    ShoppingListItem.objects.create(
-        shopping_list=shopping_list, free_text="Mydło", quantity=Decimal("1.000")
-    )
-
-    assert ShoppingListItem.objects.filter(shopping_list=shopping_list).count() == 2
-
-
-def test_database_rejects_a_second_primary_list_for_one_household(
-    household: Household,
-) -> None:
-    first = ShoppingList.objects.create(household=household, name="Lista")
-    second = ShoppingList.objects.create(household=household, name="Inna")
-    PrimaryShoppingList.objects.create(household=household, shopping_list=first)
-
-    with pytest.raises(IntegrityError), transaction.atomic():
-        PrimaryShoppingList.objects.create(household=household, shopping_list=second)
-
-
-def test_database_rejects_one_list_being_primary_for_two_households(
-    household: Household, other_household: Household
-) -> None:
-    shopping_list = ShoppingList.objects.create(household=household, name="Lista")
-    PrimaryShoppingList.objects.create(household=household, shopping_list=shopping_list)
-
-    with pytest.raises(IntegrityError), transaction.atomic():
-        PrimaryShoppingList.objects.create(household=other_household, shopping_list=shopping_list)

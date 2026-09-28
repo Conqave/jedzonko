@@ -7,7 +7,7 @@ class RecipeSourceError(Exception):
     pass
 
 
-class RecipeSourceUnavailable(RecipeSourceError):
+class RecipeSourceUnavailableError(RecipeSourceError):
     pass
 
 

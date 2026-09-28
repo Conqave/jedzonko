@@ -99,3 +99,26 @@ def test_granting_and_revoking_promotion_access_changes_current_user(
     api_client.force_login(User.objects.get(pk=normal_user.pk))
 
     assert api_client.get("/api/accounts/me/").data["can_view_promotions"] is False
+
+
+def test_changing_the_password_keeps_the_session(api_client: APIClient, ala: User) -> None:
+    api_client.force_login(ala)
+
+    wrong = api_client.post(
+        "/api/accounts/change-password/",
+        {"current_password": "nope", "new_password": "Nowe-Haslo-123"},
+        format="json",
+    )
+    changed = api_client.post(
+        "/api/accounts/change-password/",
+        {"current_password": "Ma-Kota-1234", "new_password": "Nowe-Haslo-123"},
+        format="json",
+    )
+    still_signed_in = api_client.get("/api/accounts/me/")
+
+    assert wrong.status_code == 400
+    assert wrong.data["code"] == "wrong_current_password"
+    assert changed.status_code == 204
+    assert still_signed_in.status_code == 200
+    ala.refresh_from_db()
+    assert ala.check_password("Nowe-Haslo-123")

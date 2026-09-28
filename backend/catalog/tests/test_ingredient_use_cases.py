@@ -4,7 +4,7 @@ from catalog.application.errors import DuplicateIngredientNameError, IngredientN
 from catalog.application.use_cases.add_ingredient_alias import AddIngredientAlias
 from catalog.application.use_cases.create_ingredient import CreateIngredient
 from catalog.application.use_cases.find_ingredient_by_name import FindIngredientByName
-from catalog.domain.errors import InvalidIngredientNameError
+from catalog.domain.errors import InvalidNameError
 from catalog.domain.ingredient import IngredientName, IngredientNameKind, IngredientNameSource
 from catalog.tests.fakes import FakeIngredientRepository, FakeTransactionManager
 
@@ -52,7 +52,7 @@ def test_an_ingredient_name_that_normalizes_to_an_existing_one_is_a_duplicate(
 def test_an_empty_ingredient_name_is_rejected_before_touching_storage(
     repository: FakeIngredientRepository, transactions: FakeTransactionManager
 ) -> None:
-    with pytest.raises(InvalidIngredientNameError):
+    with pytest.raises(InvalidNameError):
         CreateIngredient(repository, transactions).execute("  ", IngredientNameSource.MANUAL)
 
     assert transactions.opened == 0

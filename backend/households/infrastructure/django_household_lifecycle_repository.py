@@ -1,6 +1,5 @@
 from datetime import datetime
 
-from django.db import models, transaction
 from django.db.models import Count
 
 from households.application.errors import HouseholdNotFoundError
@@ -9,11 +8,11 @@ from households.application.ports.household_lifecycle_repository import (
 )
 from households.domain.deleted_household import DeletedHousehold
 from households.domain.models import HouseholdSummary
-from households.models import Household, HouseholdMembership, Product
+from households.models import Household, HouseholdMembership
 
 
 class DjangoHouseholdLifecycleRepository(HouseholdLifecycleRepository):
-    def is_member(self, user_id: int, household_id: int) -> bool:
+    def is_member_including_deleted(self, user_id: int, household_id: int) -> bool:
         return HouseholdMembership.objects.filter(
             user_id=user_id, household_id=household_id
         ).exists()
@@ -73,26 +72,8 @@ class DjangoHouseholdLifecycleRepository(HouseholdLifecycleRepository):
             for row in rows
         ]
 
-    @transaction.atomic
     def purge(self, household_ids: list[int]) -> None:
-        _delete_rows_protecting_products(household_ids)
         Household.objects.filter(pk__in=household_ids).delete()
-
-
-def _delete_rows_protecting_products(household_ids: list[int]) -> None:
-    # Django refuses a cascading delete while any PROTECT reference to the cascaded
-    # products still exists, even when those referencing rows are cascaded away too.
-    product_ids = list(
-        Product.objects.filter(household_id__in=household_ids).values_list("pk", flat=True)
-    )
-    if not product_ids:
-        return
-    for relation in Product._meta.related_objects:
-        if relation.on_delete is not models.PROTECT:
-            continue
-        relation.related_model._default_manager.filter(
-            **{f"{relation.field.name}__in": product_ids}
-        ).delete()
 
 
 def _to_deleted_household(
