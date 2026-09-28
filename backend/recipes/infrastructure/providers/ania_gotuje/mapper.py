@@ -60,14 +60,11 @@ class AniaGotujeRecipeMapper:
         )
 
     def _build_detail(self, payload: dict[str, object]) -> ExternalRecipeDetail:
-        total_time = self._read_text(payload, "recipeTotalTime")
-        preparation_time = self._read_text(payload, "recipePrepTime")
-        cooking_time = self._read_text(payload, "recipeCookTime")
+        total_time_minutes = self._read_optional_duration(payload, "recipeTotalTime")
+        preparation_time_minutes = self._read_optional_duration(payload, "recipePrepTime")
+        cooking_time_minutes = self._read_optional_duration(payload, "recipeCookTime")
         body = self._read_text(payload, "body")
-        total_time_minutes = parse_iso_duration_minutes(total_time)
         summary = self._build_summary(payload, total_time_minutes)
-        preparation_time_minutes = parse_iso_duration_minutes(preparation_time)
-        cooking_time_minutes = parse_iso_duration_minutes(cooking_time)
         steps = read_paragraphs(body)
         ingredients = self._read_ingredients(payload)
         return ExternalRecipeDetail(
@@ -155,6 +152,17 @@ class AniaGotujeRecipeMapper:
     def _read_optional_text(payload: dict[str, object], key: str) -> str:
         value = payload.get(key)
         return value.strip() if isinstance(value, str) else ""
+
+    @staticmethod
+    def _read_optional_duration(payload: dict[str, object], key: str) -> int | None:
+        value = payload.get(key)
+        if value is None:
+            return None
+        if not isinstance(value, str):
+            raise RecipeSourceContractError(f"Recipe payload field {key!r} is not a duration.")
+        if not value.strip():
+            return None
+        return parse_iso_duration_minutes(value)
 
     @staticmethod
     def _read_int(payload: dict[str, object], key: str) -> int:

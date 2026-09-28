@@ -29,8 +29,12 @@
       />
       <div class="text-body2 q-mb-md">{{ recipe.description }}</div>
       <div class="text-caption q-mb-md">
-        przygotowanie {{ recipe.preparationTimeMinutes }} min · gotowanie
-        {{ recipe.cookingTimeMinutes }} min
+        <span v-if="recipe.preparationTimeMinutes !== null"
+          >przygotowanie {{ recipe.preparationTimeMinutes }} min</span
+        >
+        <span v-if="recipe.cookingTimeMinutes !== null">
+          · gotowanie {{ recipe.cookingTimeMinutes }} min</span
+        >
         <span v-if="recipe.yieldLabel !== ''"> · {{ recipe.yieldLabel }}</span>
       </div>
 

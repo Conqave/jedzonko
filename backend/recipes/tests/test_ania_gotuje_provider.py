@@ -1,3 +1,4 @@
+import json
 from decimal import Decimal
 from pathlib import Path
 
@@ -119,6 +120,18 @@ def test_get_recipe_flattens_multiple_ingredient_groups() -> None:
     assert recipe.ingredients[6].name == "1 kg mielonego twarogu np. z kubełka"
     assert recipe.ingredients[6].quantity is None
     assert recipe.cooking_time_minutes == 60
+
+
+@pytest.mark.parametrize("cook_time", [None, ""])
+def test_a_recipe_without_cooking_has_no_cooking_time(cook_time: str | None) -> None:
+    payload = json.loads(NALESNIKI)
+    payload["recipeCookTime"] = cook_time
+    provider = build_provider([], body=json.dumps(payload))
+
+    recipe = provider.get_recipe("jak-zrobic-ciasto-na-nalesniki")
+
+    assert recipe.cooking_time_minutes is None
+    assert recipe.preparation_time_minutes == 5
 
 
 def test_empty_reference_is_rejected() -> None:

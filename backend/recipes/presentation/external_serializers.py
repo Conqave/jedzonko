@@ -89,7 +89,7 @@ class ExternalRecipeDetailSerializer(serializers.Serializer[object]):
     tags = serializers.ListField(
         source="summary.tag_names", child=serializers.CharField(), read_only=True
     )
-    preparation_time_minutes = serializers.IntegerField(read_only=True)
-    cooking_time_minutes = serializers.IntegerField(read_only=True)
+    preparation_time_minutes = serializers.IntegerField(read_only=True, allow_null=True)
+    cooking_time_minutes = serializers.IntegerField(read_only=True, allow_null=True)
     steps = serializers.ListField(child=serializers.CharField(), read_only=True)
     ingredients = ExternalRecipeIngredientSerializer(many=True, read_only=True)

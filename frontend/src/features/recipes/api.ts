@@ -172,8 +172,8 @@ const externalSuggestionsSchema = z
 const externalRecipeSchema = z
   .object({
     ...externalSummaryFields,
-    preparation_time_minutes: z.number().int(),
-    cooking_time_minutes: z.number().int(),
+    preparation_time_minutes: z.number().int().nullable(),
+    cooking_time_minutes: z.number().int().nullable(),
     steps: z.array(z.string()),
     ingredients: z.array(
       z.object({
