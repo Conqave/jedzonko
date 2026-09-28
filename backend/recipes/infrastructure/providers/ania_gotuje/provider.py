@@ -2,12 +2,12 @@ import json
 
 import httpx
 
-from recipes.application.ports.recipe_source import (
+from recipes.application.errors import (
     RecipeNotFoundAtSourceError,
-    RecipeSource,
     RecipeSourceContractError,
     RecipeSourceUnavailableError,
 )
+from recipes.application.ports.recipe_source import RecipeSource
 from recipes.domain.external import ExternalRecipeDetail, ExternalRecipePage
 from recipes.infrastructure.providers.ania_gotuje.mapper import AniaGotujeRecipeMapper
 

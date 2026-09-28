@@ -14,6 +14,9 @@ from shopping.application.errors import (
     ShoppingListItemNotFoundError,
     ShoppingListNotFoundError,
 )
+from shopping.application.use_cases.add_missing_external_recipe_items_to_shopping_list import (
+    AddMissingExternalRecipeItemsToShoppingList,
+)
 from shopping.application.use_cases.add_missing_recipe_items_to_primary_list import (
     AddMissingRecipeItemsToPrimaryList,
 )
@@ -184,6 +187,30 @@ def test_missing_recipe_items_raise_a_smaller_pending_amount(shopping: Shopping)
     shopping.add_missing([MissingRecipeItem("Jajka", EGGS, None, Decimal("3"), "szt")])
 
     assert shopping.quantities() == [(ShoppingSubject(ingredient_id=EGGS), Decimal("3"), "szt")]
+
+
+def test_external_recipe_items_go_to_the_list_with_unmeasured_ones_as_text(
+    shopping: Shopping,
+) -> None:
+    missing = [
+        MissingRecipeItem("Jajka", EGGS, None, Decimal("3"), "szt"),
+        MissingRecipeItem("sól", None, None, None, None),
+    ]
+    use_case = AddMissingExternalRecipeItemsToShoppingList(
+        shopping.repository,
+        FakeRecipeRequirementReader(missing),
+        shopping.catalog,
+        shopping.memberships,
+        shopping.transactions,
+    )
+
+    use_case.execute(ALA, shopping.primary, "omlet")
+    use_case.execute(ALA, shopping.primary, "omlet")
+
+    assert shopping.quantities() == [
+        (ShoppingSubject(ingredient_id=EGGS), Decimal("3"), "szt"),
+        (ShoppingSubject(free_text="sól"), Decimal("1"), None),
+    ]
 
 
 def test_minimum_stock_fills_the_primary_list_once(shopping: Shopping) -> None:

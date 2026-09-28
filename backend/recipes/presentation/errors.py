@@ -7,10 +7,8 @@ from recipes.application.errors import (
     InvalidServingsError,
     MeasurementUnitNotFoundError,
     RecipeCategoryNotFoundError,
-    RecipeNotFoundError,
-)
-from recipes.application.ports.recipe_source import (
     RecipeNotFoundAtSourceError,
+    RecipeNotFoundError,
     RecipeSourceContractError,
     RecipeSourceUnavailableError,
 )

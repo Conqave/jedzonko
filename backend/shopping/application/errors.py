@@ -32,3 +32,27 @@ class ShoppingItemAlreadyPendingError(Exception):
 
 class ShoppingItemMergeConflictError(Exception):
     pass
+
+
+class NoShopsChosenError(Exception):
+    pass
+
+
+class NothingToSplitError(Exception):
+    pass
+
+
+class PromotionsNotAllowedError(Exception):
+    pass
+
+
+class PromotionsUnavailableError(Exception):
+    pass
+
+
+class ExternalRecipeNotFoundError(Exception):
+    pass
+
+
+class RecipesUnavailableError(Exception):
+    pass

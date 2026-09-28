@@ -4,7 +4,7 @@ from pathlib import Path
 import httpx
 import pytest
 
-from recipes.application.ports.recipe_source import (
+from recipes.application.errors import (
     RecipeNotFoundAtSourceError,
     RecipeSourceContractError,
     RecipeSourceUnavailableError,

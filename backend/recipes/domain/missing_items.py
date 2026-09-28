@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from recipes.domain.matching import find_stock
+from recipes.domain.matching import find_stock, has_stock
 from recipes.domain.models import RecipeRequirement
 from recipes.domain.stock import StockedProduct
 from recipes.domain.suggestion import MissingRecipeItem, RecipeShortfall
@@ -11,16 +11,17 @@ def scale_requirements(
     requirements: list[RecipeRequirement], recipe_servings: int, requested_servings: int
 ) -> list[RecipeRequirement]:
     factor = Decimal(requested_servings) / Decimal(recipe_servings)
-    return [
-        RecipeRequirement(
-            name=requirement.name,
-            ingredient_id=requirement.ingredient_id,
-            quantity=Quantity(
-                amount=requirement.quantity.amount * factor, unit=requirement.quantity.unit
-            ),
+    scaled: list[RecipeRequirement] = []
+    for requirement in requirements:
+        quantity = requirement.quantity
+        if quantity is not None:
+            quantity = Quantity(amount=quantity.amount * factor, unit=quantity.unit)
+        scaled.append(
+            RecipeRequirement(
+                name=requirement.name, ingredient_id=requirement.ingredient_id, quantity=quantity
+            )
         )
-        for requirement in requirements
-    ]
+    return scaled
 
 
 def calculate_shortfall(
@@ -30,6 +31,11 @@ def calculate_shortfall(
     unmeasured: list[str] = []
     for requirement in requirements:
         required = requirement.quantity
+        if required is None:
+            if not has_stock(requirement.ingredient_id, stock):
+                unquantified = _to_missing_item(requirement, None, None)
+                missing.append(unquantified)
+            continue
         match = find_stock(requirement.ingredient_id, required.unit, stock)
         if match is None:
             absent = _to_missing_item(requirement, None, required.amount)
@@ -53,12 +59,14 @@ def calculate_shortfall(
 
 
 def _to_missing_item(
-    requirement: RecipeRequirement, stocked_product_id: int | None, amount: Decimal
+    requirement: RecipeRequirement, stocked_product_id: int | None, amount: Decimal | None
 ) -> MissingRecipeItem:
+    quantity = requirement.quantity
+    unit_code = None if quantity is None else quantity.unit.code
     return MissingRecipeItem(
         name=requirement.name,
         ingredient_id=requirement.ingredient_id,
         stocked_product_id=stocked_product_id,
         amount=amount,
-        unit_code=requirement.quantity.unit.code,
+        unit_code=unit_code,
     )

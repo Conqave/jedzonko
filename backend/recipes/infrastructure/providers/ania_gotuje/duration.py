@@ -1,6 +1,6 @@
 import re
 
-from recipes.application.ports.recipe_source import RecipeSourceContractError
+from recipes.application.errors import RecipeSourceContractError
 
 _ISO_DURATION = re.compile(
     r"^P(?:(?P<days>\d+)D)?(?:T(?:(?P<hours>\d+)H)?(?:(?P<minutes>\d+)M)?(?:(?P<seconds>\d+)S)?)?$"

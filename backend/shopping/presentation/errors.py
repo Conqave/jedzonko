@@ -1,12 +1,19 @@
-from rest_framework.exceptions import NotFound, ValidationError
+from rest_framework import status
+from rest_framework.exceptions import APIException, NotFound, PermissionDenied, ValidationError
 
 from config.api_errors import ApiErrors
 from shopping.application.errors import (
+    ExternalRecipeNotFoundError,
     IngredientNotFoundError,
     InvalidShoppingItemError,
+    NoShopsChosenError,
+    NothingToSplitError,
     PrimaryShoppingListCannotBeDeletedError,
     PrimaryShoppingListNotFoundError,
     ProductNotFoundError,
+    PromotionsNotAllowedError,
+    PromotionsUnavailableError,
+    RecipesUnavailableError,
     ShoppingItemAlreadyPendingError,
     ShoppingItemMergeConflictError,
     ShoppingListItemNotFoundError,
@@ -14,7 +21,38 @@ from shopping.application.errors import (
 )
 from shopping.domain.errors import InvalidShoppingSubjectError
 
+
+class ServiceUnavailable(APIException):
+    status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+
+
 API_ERRORS: ApiErrors = {
+    ExternalRecipeNotFoundError: (
+        NotFound,
+        "External recipe not found.",
+        "external_recipe_not_found",
+    ),
+    RecipesUnavailableError: (
+        ServiceUnavailable,
+        "The external recipe source is unavailable.",
+        "recipe_source_unavailable",
+    ),
+    NoShopsChosenError: (ValidationError, "Choose at least one shop.", "no_shops_chosen"),
+    NothingToSplitError: (
+        ValidationError,
+        "The list has no items left to buy.",
+        "nothing_to_split",
+    ),
+    PromotionsNotAllowedError: (
+        PermissionDenied,
+        "You do not have access to promotions.",
+        "promotions_not_allowed",
+    ),
+    PromotionsUnavailableError: (
+        ServiceUnavailable,
+        "The promotion provider is currently unavailable.",
+        "promotion_source_unavailable",
+    ),
     ShoppingListNotFoundError: (NotFound, "Shopping list not found.", "shopping_list_not_found"),
     PrimaryShoppingListNotFoundError: (
         NotFound,

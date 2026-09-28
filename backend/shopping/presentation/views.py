@@ -8,6 +8,7 @@ from config.api import current_user_id
 from config.composition import container
 from shopping.domain.shopping_subject import ShoppingSubject
 from shopping.presentation.serializers import (
+    AddExternalRecipeItemsSerializer,
     AddRecipeItemsSerializer,
     AddShoppingListItemSerializer,
     CreateShoppingListSerializer,
@@ -15,6 +16,7 @@ from shopping.presentation.serializers import (
     RenameShoppingListSerializer,
     ShoppingItemSerializer,
     ShoppingListSerializer,
+    SplitByPromotionsSerializer,
 )
 
 
@@ -146,3 +148,26 @@ class ShoppingItemDetailView(APIView):
         use_case = container().shopping.delete_shopping_list_item
         use_case.execute(user_id, item_id)
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class ShoppingListPromotionSplitView(APIView):
+    def post(self, request: Request, list_id: int) -> Response:
+        user_id = current_user_id(request)
+        payload = SplitByPromotionsSerializer(data=request.data)
+        payload.is_valid(raise_exception=True)
+        shop_slugs = tuple(payload.validated_data["shops"])
+        use_case = container().shopping.split_shopping_list_by_promotions
+        lists = use_case.execute(user_id, list_id, shop_slugs)
+        serializer = ShoppingListSerializer(lists, many=True)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class ShoppingListExternalRecipeItemsView(APIView):
+    def post(self, request: Request, list_id: int) -> Response:
+        user_id = current_user_id(request)
+        payload = AddExternalRecipeItemsSerializer(data=request.data)
+        payload.is_valid(raise_exception=True)
+        use_case = container().shopping.add_missing_external_recipe_items_to_shopping_list
+        items = use_case.execute(user_id, list_id, payload.validated_data["reference"])
+        serializer = ShoppingItemSerializer(items, many=True)
+        return Response(serializer.data)

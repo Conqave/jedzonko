@@ -3,7 +3,7 @@ from urllib.parse import parse_qs, urljoin, urlparse
 
 from bs4 import BeautifulSoup, Tag
 
-from promotions.application.ports.promotion_source import PromotionSourceContractError
+from promotions.application.errors import PromotionSourceContractError
 
 
 @dataclass(frozen=True, slots=True)

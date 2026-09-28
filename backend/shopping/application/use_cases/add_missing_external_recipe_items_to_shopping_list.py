@@ -8,7 +8,7 @@ from shopping.application.shopping_list_rules import put_missing_items_on_list
 from shopping.domain.shopping_item_snapshot import ShoppingItemSnapshot
 
 
-class AddMissingRecipeItemsToShoppingList:
+class AddMissingExternalRecipeItemsToShoppingList:
     def __init__(
         self,
         repository: ShoppingListRepository,
@@ -23,15 +23,13 @@ class AddMissingRecipeItemsToShoppingList:
         self._memberships = memberships
         self._transactions = transactions
 
-    def execute(
-        self, user_id: int, list_id: int, recipe_id: int, servings: int
-    ) -> list[ShoppingItemSnapshot]:
+    def execute(self, user_id: int, list_id: int, reference: str) -> list[ShoppingItemSnapshot]:
         shopping_list = self._repository.find_list(list_id)
         if shopping_list is None:
             raise ShoppingListNotFoundError
         require_membership(self._memberships, user_id, shopping_list.household_id)
-        missing = self._recipes.get_missing_items(
-            user_id, shopping_list.household_id, recipe_id, servings
+        missing = self._recipes.get_missing_external_items(
+            user_id, shopping_list.household_id, reference
         )
         with self._transactions.atomic():
             put_missing_items_on_list(

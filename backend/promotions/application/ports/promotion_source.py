@@ -3,18 +3,6 @@ from abc import ABC, abstractmethod
 from promotions.domain.models import Leaflet, LeafletPage, PromotionOffer, Shop
 
 
-class PromotionSourceError(Exception):
-    pass
-
-
-class PromotionSourceUnavailableError(PromotionSourceError):
-    pass
-
-
-class PromotionSourceContractError(PromotionSourceError):
-    pass
-
-
 class PromotionSource(ABC):
     @abstractmethod
     def list_shops(self) -> list[Shop]:

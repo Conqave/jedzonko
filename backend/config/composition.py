@@ -37,6 +37,7 @@ from shopping.composition import (
 from shopping.infrastructure.catalog_directory import CatalogDirectory
 from shopping.infrastructure.inventory_stock_gateway import InventoryStockGateway
 from shopping.infrastructure.inventory_writer_gateway import InventoryWriterGateway
+from shopping.infrastructure.promotions_coverage_reader import PromotionsCoverageReader
 from shopping.infrastructure.recipe_requirement_gateway import RecipeRequirementGateway
 
 
@@ -99,21 +100,6 @@ def container() -> Container:
         transactions,
     )
 
-    catalog_directory = CatalogDirectory(
-        catalog.find_household_product, catalog.get_ingredients, catalog.describe_household_products
-    )
-    stock_levels = InventoryStockGateway(inventory.get_household_inventory)
-    inventory_writer = InventoryWriterGateway(inventory.add_quantity_to_inventory)
-    recipe_requirements = RecipeRequirementGateway(recipes.calculate_missing_recipe_items)
-    shopping = build_shopping(
-        memberships,
-        catalog_directory,
-        stock_levels,
-        inventory_writer,
-        recipe_requirements,
-        transactions,
-    )
-
     promotion_source_settings = PromotionSourceSettings(
         timeout_seconds=settings.PROMOTIONS_HTTP_TIMEOUT_SECONDS,
         user_agent=settings.PROMOTIONS_HTTP_USER_AGENT,
@@ -121,6 +107,28 @@ def container() -> Container:
         search_result_limit=settings.PROMOTIONS_SEARCH_RESULT_LIMIT,
     )
     promotions = build_promotions(promotion_source_settings)
+
+    catalog_directory = CatalogDirectory(
+        catalog.find_household_product, catalog.get_ingredients, catalog.describe_household_products
+    )
+    stock_levels = InventoryStockGateway(inventory.get_household_inventory)
+    inventory_writer = InventoryWriterGateway(inventory.add_quantity_to_inventory)
+    recipe_requirements = RecipeRequirementGateway(
+        recipes.calculate_missing_recipe_items, recipes.open_external
+    )
+    promotion_coverage = PromotionsCoverageReader(
+        promotions.open_source, promotions.check_promotion_access
+    )
+    shopping = build_shopping(
+        memberships,
+        catalog_directory,
+        stock_levels,
+        inventory_writer,
+        recipe_requirements,
+        promotion_coverage,
+        transactions,
+    )
+
     promotion_access = PromotionsAccess(promotions.check_promotion_access)
     accounts = build_accounts(promotion_access)
 

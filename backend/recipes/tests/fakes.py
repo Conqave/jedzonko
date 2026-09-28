@@ -2,6 +2,7 @@ from collections.abc import Iterator
 from contextlib import AbstractContextManager, contextmanager
 
 from recipes.application.commands import RecipeInput, ResolvedIngredient
+from recipes.application.errors import RecipeNotFoundAtSourceError
 from recipes.application.ports.household_stock_reader import HouseholdStockReader
 from recipes.application.ports.ingredient_resolver import IngredientResolver
 from recipes.application.ports.inventory_consumer import HouseholdInventoryConsumer
@@ -108,12 +109,16 @@ class FakeInventoryConsumer(HouseholdInventoryConsumer):
 
 
 class FakeRecipeSource(RecipeSource):
-    def __init__(self, page: ExternalRecipePage) -> None:
+    def __init__(self, page: ExternalRecipePage, recipes: dict[str, ExternalRecipeDetail]) -> None:
         self._page = page
+        self._recipes = recipes
         self.search_calls: list[tuple[str, tuple[str, ...], tuple[str, ...], int, int]] = []
 
     def get_recipe(self, reference: str) -> ExternalRecipeDetail:
-        raise AssertionError("Not used by these tests.")
+        recipe = self._recipes.get(reference)
+        if recipe is None:
+            raise RecipeNotFoundAtSourceError
+        return recipe
 
     def search_recipes(
         self,

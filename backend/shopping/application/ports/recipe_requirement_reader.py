@@ -9,3 +9,9 @@ class RecipeRequirementReader(ABC):
         self, user_id: int, household_id: int, recipe_id: int, servings: int
     ) -> list[MissingRecipeItem]:
         raise NotImplementedError
+
+    @abstractmethod
+    def get_missing_external_items(
+        self, user_id: int, household_id: int, reference: str
+    ) -> list[MissingRecipeItem]:
+        raise NotImplementedError

@@ -5,11 +5,11 @@ import httpx
 from bs4 import BeautifulSoup
 from django.utils import timezone
 
-from promotions.application.ports.promotion_source import (
-    PromotionSource,
+from promotions.application.errors import (
     PromotionSourceContractError,
     PromotionSourceUnavailableError,
 )
+from promotions.application.ports.promotion_source import PromotionSource
 from promotions.domain.models import Leaflet, LeafletPage, PromotionOffer, Shop
 from promotions.infrastructure.providers.blix.leaflet_parser import BlixLeafletParser
 from promotions.infrastructure.providers.blix.parser import BlixLeafletHit, BlixSearchParser

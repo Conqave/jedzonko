@@ -2,8 +2,9 @@ from rest_framework import status
 from rest_framework.exceptions import APIException, ValidationError
 
 from config.api_errors import ApiErrors
-from promotions.application.errors import InvalidPromotionQueryError, InvalidShopSelectionError
-from promotions.application.ports.promotion_source import (
+from promotions.application.errors import (
+    InvalidPromotionQueryError,
+    InvalidShopSelectionError,
     PromotionSourceContractError,
     PromotionSourceUnavailableError,
 )

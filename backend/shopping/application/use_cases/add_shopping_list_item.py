@@ -3,9 +3,13 @@ from decimal import Decimal
 from shared.household_membership import HouseholdMembershipReader, require_membership
 from shared.transactions import TransactionManager
 from shopping.application.errors import ShoppingListNotFoundError
-from shopping.application.items import add_to_list, require_known_subject, require_valid_amount
 from shopping.application.ports.catalog_directory import CatalogDirectory
 from shopping.application.ports.shopping_list_repository import ShoppingListRepository
+from shopping.application.shopping_list_rules import (
+    add_to_list,
+    require_known_subject,
+    require_valid_amount,
+)
 from shopping.domain.shopping_item_snapshot import ShoppingItemSnapshot
 from shopping.domain.shopping_subject import ShoppingSubject
 

@@ -292,3 +292,17 @@ def test_the_database_requires_a_purchase_time_exactly_for_bought_rows(home: Hou
             quantity=Decimal("1"),
             status="purchased",
         )
+
+
+def test_splitting_by_promotions_requires_promotion_access(
+    member_client: APIClient, home: Household
+) -> None:
+    list_id = _primary_list_id(member_client, home)
+    _add(member_client, list_id, {"free_text": "mleko", "quantity": "1"})
+
+    response = member_client.post(
+        f"/api/shopping/lists/{list_id}/promotion-split/", {"shops": ["lidl"]}, format="json"
+    )
+
+    assert response.status_code == 403
+    assert response.data["code"] == "promotions_not_allowed"

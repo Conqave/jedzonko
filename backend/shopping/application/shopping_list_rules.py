@@ -8,8 +8,11 @@ from shopping.application.errors import (
 )
 from shopping.application.ports.catalog_directory import CatalogDirectory
 from shopping.application.ports.shopping_list_repository import ShoppingListRepository
+from shopping.domain.missing_recipe_item import MissingRecipeItem
 from shopping.domain.shopping_item_snapshot import ShoppingItemSnapshot
 from shopping.domain.shopping_subject import ShoppingSubject
+
+UNQUANTIFIED_AMOUNT = Decimal("1")
 
 
 def require_known_subject(
@@ -67,3 +70,29 @@ def ensure_on_list(
 
 def _unit_code(item: ShoppingItemSnapshot) -> str | None:
     return None if item.unit is None else item.unit.code
+
+
+def put_missing_items_on_list(
+    repository: ShoppingListRepository,
+    catalog: CatalogDirectory,
+    household_id: int,
+    list_id: int,
+    missing: list[MissingRecipeItem],
+) -> None:
+    for item in missing:
+        known_product = _find_only_product(catalog, household_id, item)
+        subject = item.subject(known_product)
+        if item.amount is None or item.unit_code is None:
+            text_subject = ShoppingSubject(free_text=item.name)
+            if repository.find_pending_item(list_id, text_subject) is None:
+                repository.add_item(list_id, text_subject, UNQUANTIFIED_AMOUNT, None)
+            continue
+        ensure_on_list(repository, list_id, subject, item.amount, item.unit_code)
+
+
+def _find_only_product(
+    catalog: CatalogDirectory, household_id: int, item: MissingRecipeItem
+) -> int | None:
+    if item.stocked_product_id is not None or item.ingredient_id is None:
+        return None
+    return catalog.find_only_product_of_ingredient(household_id, item.ingredient_id)

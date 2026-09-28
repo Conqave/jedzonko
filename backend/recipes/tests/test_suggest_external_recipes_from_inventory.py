@@ -32,7 +32,7 @@ def _page() -> ExternalRecipePage:
 
 
 def test_pantry_selection_is_bounded_and_echoed_back() -> None:
-    source = FakeRecipeSource(_page())
+    source = FakeRecipeSource(_page(), {})
     use_case = SuggestExternalRecipesFromInventory(
         source,
         FakeStockReader(
@@ -60,7 +60,7 @@ def test_pantry_selection_is_bounded_and_echoed_back() -> None:
 
 
 def test_empty_pantry_does_not_call_the_provider() -> None:
-    source = FakeRecipeSource(_page())
+    source = FakeRecipeSource(_page(), {})
     use_case = SuggestExternalRecipesFromInventory(
         source,
         FakeStockReader([]),
@@ -79,7 +79,7 @@ def test_empty_pantry_does_not_call_the_provider() -> None:
 
 def test_non_member_is_rejected() -> None:
     use_case = SuggestExternalRecipesFromInventory(
-        FakeRecipeSource(_page()),
+        FakeRecipeSource(_page(), {}),
         FakeStockReader([]),
         FakeIngredientResolver({"jajko": EGGS}),
         FakeHouseholdMembershipReader({7}),
@@ -93,7 +93,7 @@ def test_non_member_is_rejected() -> None:
 def test_ingredient_limit_must_be_positive() -> None:
     with pytest.raises(ValueError):
         SuggestExternalRecipesFromInventory(
-            FakeRecipeSource(_page()),
+            FakeRecipeSource(_page(), {}),
             FakeStockReader([]),
             FakeIngredientResolver({}),
             FakeHouseholdMembershipReader({7}),

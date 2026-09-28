@@ -5,7 +5,11 @@ from shared.transactions import TransactionManager
 from shopping.application.ports.catalog_directory import CatalogDirectory
 from shopping.application.ports.household_inventory_reader import HouseholdInventoryReader
 from shopping.application.ports.inventory_writer import InventoryWriter
+from shopping.application.ports.promotion_coverage_reader import PromotionCoverageReader
 from shopping.application.ports.recipe_requirement_reader import RecipeRequirementReader
+from shopping.application.use_cases.add_missing_external_recipe_items_to_shopping_list import (
+    AddMissingExternalRecipeItemsToShoppingList,
+)
 from shopping.application.use_cases.add_missing_recipe_items_to_primary_list import (
     AddMissingRecipeItemsToPrimaryList,
 )
@@ -23,6 +27,9 @@ from shopping.application.use_cases.list_shopping_lists import ListShoppingLists
 from shopping.application.use_cases.reassign_shopping_ingredient import ReassignShoppingIngredient
 from shopping.application.use_cases.rename_shopping_list import RenameShoppingList
 from shopping.application.use_cases.restore_shopping_item import RestoreShoppingItem
+from shopping.application.use_cases.split_shopping_list_by_promotions import (
+    SplitShoppingListByPromotions,
+)
 from shopping.application.use_cases.synchronize_minimum_stock import SynchronizeMinimumStock
 from shopping.infrastructure.django_shopping_list_repository import DjangoShoppingListRepository
 
@@ -37,10 +44,12 @@ class ShoppingModule:
     add_shopping_list_item: AddShoppingListItem
     add_missing_recipe_items_to_shopping_list: AddMissingRecipeItemsToShoppingList
     add_missing_recipe_items_to_primary_list: AddMissingRecipeItemsToPrimaryList
+    add_missing_external_recipe_items_to_shopping_list: AddMissingExternalRecipeItemsToShoppingList
     synchronize_minimum_stock: SynchronizeMinimumStock
     buy_shopping_item: BuyShoppingItem
     restore_shopping_item: RestoreShoppingItem
     delete_shopping_list_item: DeleteShoppingListItem
+    split_shopping_list_by_promotions: SplitShoppingListByPromotions
 
 
 def build_create_primary_shopping_list() -> CreatePrimaryShoppingList:
@@ -57,6 +66,7 @@ def build_shopping(
     inventory_reader: HouseholdInventoryReader,
     inventory_writer: InventoryWriter,
     recipes: RecipeRequirementReader,
+    promotions: PromotionCoverageReader,
     transactions: TransactionManager,
 ) -> ShoppingModule:
     lists = DjangoShoppingListRepository()
@@ -74,10 +84,18 @@ def build_shopping(
         add_missing_recipe_items_to_primary_list=AddMissingRecipeItemsToPrimaryList(
             lists, add_missing
         ),
+        add_missing_external_recipe_items_to_shopping_list=(
+            AddMissingExternalRecipeItemsToShoppingList(
+                lists, recipes, catalog, memberships, transactions
+            )
+        ),
         synchronize_minimum_stock=SynchronizeMinimumStock(
             lists, inventory_reader, memberships, transactions
         ),
         buy_shopping_item=BuyShoppingItem(lists, inventory_writer, memberships, transactions),
         restore_shopping_item=RestoreShoppingItem(lists, memberships, transactions),
         delete_shopping_list_item=DeleteShoppingListItem(lists, memberships),
+        split_shopping_list_by_promotions=SplitShoppingListByPromotions(
+            lists, promotions, memberships, transactions
+        ),
     )

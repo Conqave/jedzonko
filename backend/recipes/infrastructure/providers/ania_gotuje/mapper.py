@@ -1,4 +1,4 @@
-from recipes.application.ports.recipe_source import RecipeSourceContractError
+from recipes.application.errors import RecipeSourceContractError
 from recipes.domain.external import (
     ExternalRecipeDetail,
     ExternalRecipeIngredient,

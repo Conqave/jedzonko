@@ -36,10 +36,13 @@ class ConfirmRecipePreparation:
         with self._transactions.atomic():
             stock = self._stock.get_stock(user_id, household_id)
             for requirement in scaled:
-                match = find_stock(requirement.ingredient_id, requirement.quantity.unit, stock)
+                required = requirement.quantity
+                if required is None:
+                    continue
+                match = find_stock(requirement.ingredient_id, required.unit, stock)
                 if match is None:
                     continue
-                used = consumption_in_stock_unit(match.product, requirement.quantity)
+                used = consumption_in_stock_unit(match.product, required)
                 if used is None:
                     continue
                 self._consumer.consume(household_id, match.product.product_id, used)

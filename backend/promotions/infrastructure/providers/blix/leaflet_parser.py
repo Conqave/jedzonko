@@ -4,7 +4,7 @@ from decimal import Decimal
 from urllib.parse import urljoin
 from zoneinfo import ZoneInfo
 
-from promotions.application.ports.promotion_source import PromotionSourceContractError
+from promotions.application.errors import PromotionSourceContractError
 from promotions.domain.matching import matches_query
 from promotions.domain.models import PromotionOffer
 from promotions.infrastructure.providers.blix.parser import BlixLeafletHit
