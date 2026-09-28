@@ -1,7 +1,6 @@
-from rest_framework import status
-from rest_framework.exceptions import APIException, ValidationError
+from rest_framework.exceptions import ValidationError
 
-from config.api_errors import ApiErrors
+from config.api_errors import ApiErrors, BadGateway, ServiceUnavailable
 from promotions.application.errors import (
     InvalidPromotionQueryError,
     InvalidShopSelectionError,
@@ -9,15 +8,6 @@ from promotions.application.errors import (
     PromotionSourceUnavailableError,
 )
 from promotions.application.use_cases.set_favourite_shops import UnknownShopError
-
-
-class ServiceUnavailable(APIException):
-    status_code = status.HTTP_503_SERVICE_UNAVAILABLE
-
-
-class BadGateway(APIException):
-    status_code = status.HTTP_502_BAD_GATEWAY
-
 
 API_ERRORS: ApiErrors = {
     PromotionSourceUnavailableError: (
