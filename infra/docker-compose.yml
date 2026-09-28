@@ -29,22 +29,11 @@ services:
       dockerfile: ../infra/backend.Dockerfile
       target: runtime
     restart: unless-stopped
+    env_file: ../.env
     environment:
-      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
-      DJANGO_DEBUG: ${DJANGO_DEBUG:-false}
-      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS}
-      DJANGO_CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS}
       DJANGO_MEDIA_ROOT: /srv/media
-      MARIADB_DATABASE: ${MARIADB_DATABASE}
-      MARIADB_USER: ${MARIADB_USER}
-      MARIADB_PASSWORD: ${MARIADB_PASSWORD}
       MARIADB_HOST: database
       MARIADB_PORT: 3306
-      ALIAS_MATCHER_BASE_URL: ${ALIAS_MATCHER_BASE_URL}
-      ALIAS_MATCHER_MODEL: ${ALIAS_MATCHER_MODEL}
-      ALIAS_MATCHER_REASONING_EFFORT: ${ALIAS_MATCHER_REASONING_EFFORT}
-      ALIAS_MATCHER_HTTP_TIMEOUT_SECONDS: ${ALIAS_MATCHER_HTTP_TIMEOUT_SECONDS}
-      ALIAS_ANALYSIS_QUESTION_LIMIT: ${ALIAS_ANALYSIS_QUESTION_LIMIT}
     depends_on:
       database:
         condition: service_healthy
@@ -78,6 +67,8 @@ services:
       - backend
     ports:
       - "9000:80"
+    volumes:
+      - media_data:/srv/media:ro
 
 volumes:
   database_data:

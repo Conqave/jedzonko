@@ -9,7 +9,7 @@ django_stubs_ext.monkeypatch()
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.environ["DJANGO_SECRET_KEY"]
-DEBUG_SETTING = os.environ.get("DJANGO_DEBUG", "false")
+DEBUG_SETTING = os.environ["DJANGO_DEBUG"]
 if DEBUG_SETTING not in {"true", "false"}:
     raise ImproperlyConfigured("DJANGO_DEBUG must be 'true' or 'false'.")
 DEBUG = DEBUG_SETTING == "true"
@@ -35,11 +35,13 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -70,7 +72,6 @@ DATABASES = {
         "PORT": int(os.environ["MARIADB_PORT"]),
         "OPTIONS": {"charset": "utf8mb4"},
         "TEST": {
-            "NAME": os.environ.get("DJANGO_TEST_DATABASE", "test_jedzonko"),
             "CHARSET": "utf8mb4",
             "COLLATION": "utf8mb4_unicode_ci",
         },
@@ -91,8 +92,12 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
+}
 MEDIA_URL = "media/"
-MEDIA_ROOT = Path(os.environ.get("DJANGO_MEDIA_ROOT", BASE_DIR / "media"))
+MEDIA_ROOT = Path(os.environ["DJANGO_MEDIA_ROOT"])
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
@@ -102,35 +107,25 @@ CSRF_COOKIE_SAMESITE = "Lax"
 SESSION_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_SECURE = not DEBUG
 
-PROMOTIONS_HTTP_TIMEOUT_SECONDS = float(os.environ.get("PROMOTIONS_HTTP_TIMEOUT_SECONDS", "10"))
-PROMOTIONS_HTTP_USER_AGENT = os.environ.get(
-    "PROMOTIONS_HTTP_USER_AGENT", "jedzonko/0.1 (+https://github.com/Conqave/jedzonko)"
-)
-PROMOTIONS_SEARCH_LEAFLET_LIMIT = int(os.environ.get("PROMOTIONS_SEARCH_LEAFLET_LIMIT", "5"))
-PROMOTIONS_SEARCH_RESULT_LIMIT = int(os.environ.get("PROMOTIONS_SEARCH_RESULT_LIMIT", "200"))
+PROMOTIONS_HTTP_TIMEOUT_SECONDS = float(os.environ["PROMOTIONS_HTTP_TIMEOUT_SECONDS"])
+PROMOTIONS_HTTP_USER_AGENT = os.environ["PROMOTIONS_HTTP_USER_AGENT"]
+PROMOTIONS_SEARCH_LEAFLET_LIMIT = int(os.environ["PROMOTIONS_SEARCH_LEAFLET_LIMIT"])
+PROMOTIONS_SEARCH_RESULT_LIMIT = int(os.environ["PROMOTIONS_SEARCH_RESULT_LIMIT"])
 
-RECIPE_SOURCE_HTTP_TIMEOUT_SECONDS = float(
-    os.environ.get("RECIPE_SOURCE_HTTP_TIMEOUT_SECONDS", "10")
-)
-RECIPE_SOURCE_HTTP_USER_AGENT = os.environ.get(
-    "RECIPE_SOURCE_HTTP_USER_AGENT", "jedzonko/0.1 (+https://github.com/Conqave/jedzonko)"
-)
-RECIPE_SOURCE_PAGE_SIZE_LIMIT = int(os.environ.get("RECIPE_SOURCE_PAGE_SIZE_LIMIT", "24"))
+RECIPE_SOURCE_HTTP_TIMEOUT_SECONDS = float(os.environ["RECIPE_SOURCE_HTTP_TIMEOUT_SECONDS"])
+RECIPE_SOURCE_HTTP_USER_AGENT = os.environ["RECIPE_SOURCE_HTTP_USER_AGENT"]
+RECIPE_SOURCE_PAGE_SIZE_LIMIT = int(os.environ["RECIPE_SOURCE_PAGE_SIZE_LIMIT"])
 RECIPE_SOURCE_SUGGESTION_INGREDIENT_LIMIT = int(
-    os.environ.get("RECIPE_SOURCE_SUGGESTION_INGREDIENT_LIMIT", "50")
+    os.environ["RECIPE_SOURCE_SUGGESTION_INGREDIENT_LIMIT"]
 )
 
-INGREDIENT_CLASSIFIER_BASE_URL = os.environ.get("INGREDIENT_CLASSIFIER_BASE_URL", "")
-INGREDIENT_CLASSIFIER_MODEL = os.environ.get("INGREDIENT_CLASSIFIER_MODEL", "gpt-oss:20b")
-INGREDIENT_CLASSIFIER_REASONING_EFFORT = os.environ.get(
-    "INGREDIENT_CLASSIFIER_REASONING_EFFORT", "high"
-)
+INGREDIENT_CLASSIFIER_BASE_URL = os.environ["INGREDIENT_CLASSIFIER_BASE_URL"]
+INGREDIENT_CLASSIFIER_MODEL = os.environ["INGREDIENT_CLASSIFIER_MODEL"]
+INGREDIENT_CLASSIFIER_REASONING_EFFORT = os.environ["INGREDIENT_CLASSIFIER_REASONING_EFFORT"]
 INGREDIENT_CLASSIFIER_HTTP_TIMEOUT_SECONDS = float(
-    os.environ.get("INGREDIENT_CLASSIFIER_HTTP_TIMEOUT_SECONDS", "120")
+    os.environ["INGREDIENT_CLASSIFIER_HTTP_TIMEOUT_SECONDS"]
 )
-INGREDIENT_CLASSIFIER_QUESTION_LIMIT = int(
-    os.environ.get("INGREDIENT_CLASSIFIER_QUESTION_LIMIT", "20")
-)
+INGREDIENT_CLASSIFIER_QUESTION_LIMIT = int(os.environ["INGREDIENT_CLASSIFIER_QUESTION_LIMIT"])
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": ["rest_framework.authentication.SessionAuthentication"],
