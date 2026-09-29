@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from datetime import datetime
 
+from catalog.application.classification_candidates import find_undecided_candidate_ids
 from catalog.application.errors import (
     IngredientClassifierContractError,
     IngredientClassifierError,
@@ -11,8 +12,6 @@ from catalog.application.ports.product_classification_repository import (
     ProductClassificationRepository,
 )
 from catalog.application.ports.product_repository import ProductRepository
-from catalog.domain.candidate_selection import select_classification_candidates
-from catalog.domain.names import CatalogName
 from catalog.domain.product_ingredient import ProductIngredient
 from shared.transactions import TransactionManager
 
@@ -55,13 +54,7 @@ class ProposeIngredientsForProducts:
             classification = self._classifications.find(product.id)
             if classification is None or classification.confirmed() is not None:
                 continue
-            candidate_ids = [
-                ingredient_id
-                for ingredient_id in select_classification_candidates(
-                    CatalogName.parse(product.name).normalized_name, names
-                )
-                if classification.find(ingredient_id) is None
-            ]
+            candidate_ids = find_undecided_candidate_ids(product.name, names, classification)
             if not candidate_ids:
                 continue
             candidates = self._ingredients.find_many(set(candidate_ids))

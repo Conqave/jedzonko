@@ -28,14 +28,6 @@
             flat
             dense
             round
-            icon="category"
-            aria-label="Składnik"
-            @click="emit('classify', listing.product)"
-          />
-          <q-btn
-            flat
-            dense
-            round
             icon="edit"
             aria-label="Edytuj"
             @click="emit('edit', listing.product)"
@@ -56,5 +48,5 @@ import type { Product, ProductListing } from '../model';
 
 defineProps<{ listings: ProductListing[]; findUnitName: (code: string) => string }>();
 
-const emit = defineEmits<{ classify: [product: Product]; edit: [product: Product] }>();
+const emit = defineEmits<{ edit: [product: Product] }>();
 </script>

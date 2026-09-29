@@ -17,12 +17,7 @@
         <template #prepend><q-icon name="search" /></template>
       </q-input>
       <q-linear-progress v-if="busy" indeterminate class="q-mb-sm" />
-      <ProductListingList
-        :listings="listings"
-        :find-unit-name="findUnitName"
-        @classify="classify"
-        @edit="edit"
-      />
+      <ProductListingList :listings="listings" :find-unit-name="findUnitName" @edit="edit" />
     </template>
   </q-page>
 </template>
@@ -30,7 +25,6 @@
 <script setup lang="ts">
 import { useQuasar } from 'quasar';
 import { toRef } from 'vue';
-import ProductClassificationDialog from '@/features/catalog/components/ProductClassificationDialog.vue';
 import ProductEditDialog from '@/features/catalog/components/ProductEditDialog.vue';
 import ProductListingList from '@/features/catalog/components/ProductListingList.vue';
 import type { Product, ProductChanges } from '@/features/catalog/model';
@@ -44,20 +38,20 @@ const selectedId = toRef(households, 'selectedId');
 const { listings, search, busy, load, update } = useProductCatalog(selectedId);
 const { units, findUnitName } = useMeasurementUnits();
 
-function classify(product: Product): void {
-  quasar
-    .dialog({ component: ProductClassificationDialog, componentProps: { product } })
-    .onDismiss(() => {
-      void load();
-    });
-}
-
 function edit(product: Product): void {
   const componentProps = { product, units: units.value };
   quasar
     .dialog({ component: ProductEditDialog, componentProps })
     .onOk((changes: ProductChanges) => {
-      void update(product.id, changes);
+      void saveAndReload(product.id, changes);
+    })
+    .onCancel(() => {
+      void load();
     });
+}
+
+async function saveAndReload(productId: number, changes: ProductChanges): Promise<void> {
+  await update(productId, changes);
+  await load();
 }
 </script>

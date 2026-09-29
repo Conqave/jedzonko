@@ -3,6 +3,8 @@ from rest_framework.exceptions import NotFound, ValidationError
 from catalog.application.errors import (
     DuplicateIngredientNameError,
     DuplicateProductError,
+    IngredientClassifierContractError,
+    IngredientClassifierUnavailableError,
     IngredientNotFoundError,
     ProductNotFoundError,
 )
@@ -10,12 +12,28 @@ from catalog.domain.errors import (
     InvalidNameError,
     InvalidProductIngredientTransitionError,
     InvalidProductPackageError,
+    ProductAlreadyClassifiedError,
     ProductIngredientNotFoundError,
     UnknownMeasurementUnitError,
 )
-from config.api_errors import ApiErrors
+from config.api_errors import ApiErrors, BadGateway, ServiceUnavailable
 
 API_ERRORS: ApiErrors = {
+    IngredientClassifierUnavailableError: (
+        ServiceUnavailable,
+        "The ingredient classification model is unavailable.",
+        "ingredient_classifier_unavailable",
+    ),
+    IngredientClassifierContractError: (
+        BadGateway,
+        "The ingredient classification model gave an unusable answer.",
+        "ingredient_classifier_contract_invalid",
+    ),
+    ProductAlreadyClassifiedError: (
+        ValidationError,
+        "The product already has a confirmed ingredient.",
+        "product_already_classified",
+    ),
     ProductNotFoundError: (NotFound, "Product not found.", "product_not_found"),
     DuplicateProductError: (
         ValidationError,

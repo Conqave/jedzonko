@@ -1,6 +1,6 @@
 <template>
   <q-dialog ref="dialogRef" @hide="onDialogHide">
-    <q-card style="min-width: 340px">
+    <q-card style="min-width: 380px">
       <q-card-section class="text-h6">Edytuj produkt</q-card-section>
       <q-form @submit="submit">
         <q-card-section class="q-gutter-sm">
@@ -18,6 +18,9 @@
             :default-unit-code="product.defaultUnitCode"
           />
         </q-card-section>
+        <q-separator />
+        <ProductIngredientSection :product="product" class="q-py-sm" />
+        <q-separator />
         <q-card-actions align="right">
           <q-btn flat no-caps label="Anuluj" @click="onDialogCancel" />
           <q-btn type="submit" color="primary" no-caps label="Zapisz" />
@@ -33,6 +36,7 @@ import { ref } from 'vue';
 import { toDecimalText } from '@/shared/decimal';
 import type { MeasurementUnit, Product, ProductChanges, ProductPackage } from '../model';
 import PackageFields from './PackageFields.vue';
+import ProductIngredientSection from './ProductIngredientSection.vue';
 
 const props = defineProps<{ product: Product; units: MeasurementUnit[] }>();
 

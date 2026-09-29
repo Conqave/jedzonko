@@ -9,5 +9,9 @@ export const CATALOG_ERROR_MESSAGES: ErrorMessages = {
   measurement_unit_not_found: 'Nieznana jednostka miary.',
   invalid_package: 'Opakowanie musi mieć dodatnią ilość.',
   product_ingredient_not_found: 'Ten produkt nie ma takiej propozycji składnika.',
+  ingredient_classifier_unavailable: 'Model analizujący produkty jest chwilowo niedostępny.',
+  ingredient_classifier_contract_invalid: 'Model zwrócił nieczytelną odpowiedź.',
+  product_already_classified:
+    'Produkt ma już potwierdzony składnik. Odrzuć go, aby przeanalizować ponownie.',
   invalid_product_ingredient_transition: 'Ten składnik został już odrzucony.',
 };

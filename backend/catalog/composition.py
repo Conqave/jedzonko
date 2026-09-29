@@ -4,6 +4,7 @@ from dataclasses import dataclass
 
 from catalog.application.ports.ingredient_references import IngredientReferences
 from catalog.application.use_cases.add_ingredient_alias import AddIngredientAlias
+from catalog.application.use_cases.analyze_product_ingredient import AnalyzeProductIngredient
 from catalog.application.use_cases.confirm_product_ingredient import ConfirmProductIngredient
 from catalog.application.use_cases.create_ingredient import CreateIngredient
 from catalog.application.use_cases.create_product import CreateProduct
@@ -77,7 +78,20 @@ class CatalogModule:
     accept_candidate_as_alias: AcceptCandidateAsAlias
     dismiss_candidate: DismissCandidate
     classifier_settings: ClassifierSettings
+    memberships: HouseholdMembershipReader
     transactions: TransactionManager
+
+    @contextmanager
+    def open_product_analysis(self) -> Iterator[AnalyzeProductIngredient]:
+        with open_ollama_chat(self.classifier_settings.ollama) as chat:
+            yield AnalyzeProductIngredient(
+                DjangoProductRepository(),
+                DjangoIngredientRepository(),
+                DjangoProductClassificationRepository(),
+                OllamaIngredientClassifier(chat),
+                self.memberships,
+                self.transactions,
+            )
 
     @contextmanager
     def open_classification(self) -> Iterator[ProposeIngredientsForProducts]:
@@ -140,5 +154,6 @@ def build_catalog(
         accept_candidate_as_alias=AcceptCandidateAsAlias(candidates, ingredients, transactions),
         dismiss_candidate=DismissCandidate(candidates, ingredients, transactions),
         classifier_settings=classifier_settings,
+        memberships=memberships,
         transactions=transactions,
     )

@@ -72,6 +72,16 @@ class ProductIngredientListView(APIView):
         return Response(serializer.data)
 
 
+class ProductIngredientAnalysisView(APIView):
+    def post(self, request: Request, product_id: int) -> Response:
+        user_id = current_user_id(request)
+        now = timezone.now()
+        with container().catalog.open_product_analysis() as analysis:
+            proposal = analysis.execute(user_id, product_id, now)
+        is_proposed = proposal is not None
+        return Response({"is_proposed": is_proposed})
+
+
 class ProductIngredientConfirmationView(APIView):
     def post(self, request: Request, product_id: int, ingredient_id: int) -> Response:
         user_id = current_user_id(request)

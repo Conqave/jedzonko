@@ -136,6 +136,14 @@ export async function rejectProductIngredient(
   await http.post(`/products/${productId}/ingredients/${ingredientId}/rejection/`);
 }
 
+const analysisSchema = z.object({ is_proposed: z.boolean() });
+
+export async function analyzeProductIngredient(productId: number): Promise<boolean> {
+  const response = await http.post(`/products/${productId}/ingredient-analysis/`);
+  const body = analysisSchema.parse(response.data);
+  return body.is_proposed;
+}
+
 export async function searchIngredients(search: string): Promise<Ingredient[]> {
   const response = await http.get('/ingredients/', { params: { search } });
   return ingredientSchema.array().parse(response.data);
