@@ -131,6 +131,14 @@ class DjangoShoppingListRepository(ShoppingListRepository):
     def list_items_about_ingredient(self, ingredient_id: int) -> list[ShoppingItemSnapshot]:
         return [_to_item(row) for row in _items().filter(ingredient_id=ingredient_id)]
 
+    def set_item_product(self, item_id: int, product_id: int) -> ShoppingItemSnapshot:
+        updated = ShoppingListItem.objects.filter(pk=item_id).update(
+            product_id=product_id, ingredient_id=None, free_text=None
+        )
+        if updated == 0:
+            raise ShoppingListItemNotFoundError
+        return self._read(item_id)
+
     def set_item_ingredient(self, item_id: int, ingredient_id: int) -> None:
         if ShoppingListItem.objects.filter(pk=item_id).update(ingredient_id=ingredient_id) == 0:
             raise ShoppingListItemNotFoundError

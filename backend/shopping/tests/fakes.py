@@ -166,6 +166,11 @@ class FakeShoppingListRepository(ShoppingListRepository):
     def list_items_about_ingredient(self, ingredient_id: int) -> list[ShoppingItemSnapshot]:
         return [item for item in self.items.values() if item.subject.ingredient_id == ingredient_id]
 
+    def set_item_product(self, item_id: int, product_id: int) -> ShoppingItemSnapshot:
+        item = self._item(item_id)
+        self.items[item_id] = replace(item, subject=ShoppingSubject(product_id=product_id))
+        return self.items[item_id]
+
     def set_item_ingredient(self, item_id: int, ingredient_id: int) -> None:
         item = self._item(item_id)
         self.items[item_id] = replace(item, subject=ShoppingSubject(ingredient_id=ingredient_id))

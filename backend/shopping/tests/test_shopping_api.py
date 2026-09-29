@@ -252,6 +252,22 @@ def _pending(shopping_list: ShoppingList, **subject: object) -> ShoppingListItem
     )
 
 
+def test_an_ingredient_item_is_pinned_to_a_product(
+    member_client: APIClient, home: Household, flour: Product
+) -> None:
+    shopping_list = ShoppingList.objects.get(household=home, is_primary=True)
+    eggs = make_ingredient("Jajka")
+    body = {"ingredient_id": eggs.pk, "quantity": "200", "unit_code": "g"}
+    item = member_client.post(f"/api/shopping/lists/{shopping_list.pk}/items/", body, format="json")
+
+    response = member_client.put(
+        f"/api/shopping/items/{item.data['id']}/product/", {"product_id": flour.pk}, format="json"
+    )
+
+    assert response.status_code == 200
+    assert (response.data["product_id"], response.data["ingredient_id"]) == (flour.pk, None)
+
+
 def test_the_database_keeps_one_pending_row_per_product(home: Household, flour: Product) -> None:
     shopping_list = ShoppingList.objects.get(household=home, is_primary=True)
     _pending(shopping_list, product=flour, unit_code="g")

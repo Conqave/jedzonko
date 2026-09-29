@@ -79,5 +79,9 @@ class ShoppingListRepository(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def set_item_product(self, item_id: int, product_id: int) -> ShoppingItemSnapshot:
+        raise NotImplementedError
+
+    @abstractmethod
     def set_item_ingredient(self, item_id: int, ingredient_id: int) -> None:
         raise NotImplementedError

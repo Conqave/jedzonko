@@ -3,6 +3,7 @@ import { useApiAction } from '@/shared/useApiAction';
 import {
   addShoppingItem,
   buyShoppingItem,
+  chooseShoppingItemProduct,
   deleteShoppingItem,
   fetchShoppingItems,
   restoreShoppingItem,
@@ -55,6 +56,13 @@ export function useShoppingItems(listId: Ref<number | null>) {
     });
   }
 
+  function chooseProduct(item: ShoppingItem, productId: number): Promise<boolean> {
+    return run(async () => {
+      await chooseShoppingItemProduct(item.id, productId);
+      await reload(item.listId);
+    });
+  }
+
   function remove(item: ShoppingItem): Promise<boolean> {
     return run(async () => {
       await deleteShoppingItem(item.id);
@@ -64,5 +72,16 @@ export function useShoppingItems(listId: Ref<number | null>) {
 
   watch(listId, load, { immediate: true });
 
-  return { items, pendingItems, purchasedItems, busy, load, add, buy, restore, remove };
+  return {
+    items,
+    pendingItems,
+    purchasedItems,
+    busy,
+    load,
+    add,
+    buy,
+    restore,
+    chooseProduct,
+    remove,
+  };
 }

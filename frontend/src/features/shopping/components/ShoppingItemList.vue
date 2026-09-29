@@ -18,6 +18,17 @@
       <q-item-section side>{{ describeQuantity(item) }}</q-item-section>
       <q-item-section side>
         <q-btn
+          v-if="item.subject.kind === 'ingredient'"
+          flat
+          dense
+          round
+          icon="inventory_2"
+          :aria-label="`Wybierz produkt dla ${item.name}`"
+          @click="emit('choose-product', item)"
+        />
+      </q-item-section>
+      <q-item-section side>
+        <q-btn
           flat
           dense
           round
@@ -73,6 +84,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   buy: [item: ShoppingItem];
   restore: [item: ShoppingItem];
+  'choose-product': [item: ShoppingItem];
   remove: [item: ShoppingItem];
 }>();
 

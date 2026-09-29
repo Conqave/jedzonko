@@ -15,6 +15,7 @@ from shopping.application.use_cases.add_missing_recipe_items_to_shopping_list im
 )
 from shopping.application.use_cases.add_shopping_list_item import AddShoppingListItem
 from shopping.application.use_cases.buy_shopping_item import BuyShoppingItem
+from shopping.application.use_cases.choose_shopping_item_product import ChooseShoppingItemProduct
 from shopping.application.use_cases.create_primary_shopping_list import CreatePrimaryShoppingList
 from shopping.application.use_cases.create_shopping_list import CreateShoppingList
 from shopping.application.use_cases.delete_shopping_list import DeleteShoppingList
@@ -45,6 +46,7 @@ class ShoppingModule:
     buy_shopping_item: BuyShoppingItem
     restore_shopping_item: RestoreShoppingItem
     delete_shopping_list_item: DeleteShoppingListItem
+    choose_shopping_item_product: ChooseShoppingItemProduct
     split_shopping_list_by_promotions: SplitShoppingListByPromotions
 
 
@@ -88,6 +90,9 @@ def build_shopping(
         buy_shopping_item=BuyShoppingItem(lists, inventory_writer, memberships, transactions),
         restore_shopping_item=RestoreShoppingItem(lists, memberships, transactions),
         delete_shopping_list_item=DeleteShoppingListItem(lists, memberships),
+        choose_shopping_item_product=ChooseShoppingItemProduct(
+            lists, catalog, memberships, transactions
+        ),
         split_shopping_list_by_promotions=SplitShoppingListByPromotions(
             lists, promotions, memberships, transactions
         ),

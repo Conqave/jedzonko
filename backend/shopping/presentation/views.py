@@ -11,6 +11,7 @@ from shopping.presentation.serializers import (
     AddExternalRecipeItemsSerializer,
     AddRecipeItemsSerializer,
     AddShoppingListItemSerializer,
+    ChooseItemProductSerializer,
     CreateShoppingListSerializer,
     HouseholdQuerySerializer,
     RenameShoppingListSerializer,
@@ -132,6 +133,17 @@ class ShoppingItemDetailView(APIView):
         use_case = container().shopping.delete_shopping_list_item
         use_case.execute(user_id, item_id)
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class ShoppingItemProductView(APIView):
+    def put(self, request: Request, item_id: int) -> Response:
+        user_id = current_user_id(request)
+        payload = ChooseItemProductSerializer(data=request.data)
+        payload.is_valid(raise_exception=True)
+        use_case = container().shopping.choose_shopping_item_product
+        item = use_case.execute(user_id, item_id, payload.validated_data["product_id"])
+        serializer = ShoppingItemSerializer(item)
+        return Response(serializer.data)
 
 
 class ShoppingListPromotionSplitView(APIView):

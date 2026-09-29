@@ -22,6 +22,7 @@ from shopping.application.use_cases.add_missing_recipe_items_to_shopping_list im
 )
 from shopping.application.use_cases.add_shopping_list_item import AddShoppingListItem
 from shopping.application.use_cases.buy_shopping_item import BuyShoppingItem
+from shopping.application.use_cases.choose_shopping_item_product import ChooseShoppingItemProduct
 from shopping.application.use_cases.create_primary_shopping_list import CreatePrimaryShoppingList
 from shopping.application.use_cases.delete_shopping_list import DeleteShoppingList
 from shopping.application.use_cases.get_shopping_list_items import GetShoppingListItems
@@ -266,6 +267,52 @@ def test_a_bought_item_can_be_put_back_unless_it_is_listed_again(shopping: Shopp
     assert restored.is_purchased is False
     with pytest.raises(ShoppingItemAlreadyPendingError):
         restore.execute(ALA, first)
+
+
+def choose_product(shopping: Shopping, item_id: int, product_id: int) -> None:
+    use_case = ChooseShoppingItemProduct(
+        shopping.repository, shopping.catalog, shopping.memberships, shopping.transactions
+    )
+    use_case.execute(ALA, item_id, product_id)
+
+
+def test_an_ingredient_item_becomes_a_chosen_product(shopping: Shopping) -> None:
+    item_id = shopping.add(ShoppingSubject(ingredient_id=EGGS), "200", "g")
+
+    choose_product(shopping, item_id, FLOUR)
+
+    assert shopping.quantities() == [(ShoppingSubject(product_id=FLOUR), Decimal("200"), "g")]
+
+
+def test_choosing_a_product_already_on_the_list_adds_up(shopping: Shopping) -> None:
+    shopping.add(ShoppingSubject(product_id=FLOUR), "100", "g")
+    item_id = shopping.add(ShoppingSubject(ingredient_id=EGGS), "200", "g")
+
+    choose_product(shopping, item_id, FLOUR)
+
+    assert shopping.quantities() == [(ShoppingSubject(product_id=FLOUR), Decimal("300"), "g")]
+
+
+def test_choosing_a_product_in_another_unit_stops(shopping: Shopping) -> None:
+    shopping.add(ShoppingSubject(product_id=FLOUR), "1", "kg")
+    item_id = shopping.add(ShoppingSubject(ingredient_id=EGGS), "200", "g")
+
+    with pytest.raises(ShoppingItemMergeConflictError):
+        choose_product(shopping, item_id, FLOUR)
+
+
+def test_only_an_ingredient_item_gets_a_product(shopping: Shopping) -> None:
+    item_id = shopping.add(ShoppingSubject(free_text="chleb"), "1", None)
+
+    with pytest.raises(InvalidShoppingItemError):
+        choose_product(shopping, item_id, FLOUR)
+
+
+def test_a_product_of_another_household_cannot_be_chosen(shopping: Shopping) -> None:
+    item_id = shopping.add(ShoppingSubject(ingredient_id=EGGS), "200", "g")
+
+    with pytest.raises(ProductNotFoundError):
+        choose_product(shopping, item_id, FOREIGN_PRODUCT)
 
 
 def test_merging_ingredients_moves_or_adds_up_items(shopping: Shopping) -> None:

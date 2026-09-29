@@ -141,6 +141,15 @@ export async function buyShoppingItem(itemId: number): Promise<void> {
   await http.post(`/shopping/items/${itemId}/purchase/`);
 }
 
+export async function chooseShoppingItemProduct(
+  itemId: number,
+  productId: number,
+): Promise<ShoppingItem> {
+  const payload = { product_id: productId };
+  const response = await http.put(`/shopping/items/${itemId}/product/`, payload);
+  return itemSchema.parse(response.data);
+}
+
 export async function restoreShoppingItem(itemId: number): Promise<ShoppingItem> {
   const response = await http.post(`/shopping/items/${itemId}/restore/`);
   return itemSchema.parse(response.data);

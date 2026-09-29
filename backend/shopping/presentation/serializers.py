@@ -64,3 +64,7 @@ class SplitByPromotionsSerializer(serializers.Serializer[dict[str, list[str]]]):
 
 class AddExternalRecipeItemsSerializer(serializers.Serializer[dict[str, str]]):
     reference = serializers.SlugField(max_length=200)
+
+
+class ChooseItemProductSerializer(serializers.Serializer[dict[str, int]]):
+    product_id = serializers.IntegerField(min_value=1)

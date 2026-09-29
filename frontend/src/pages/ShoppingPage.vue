@@ -33,6 +33,7 @@
         :find-unit-name="findUnitName"
         @buy="buyItem"
         @restore="restoreItem"
+        @choose-product="chooseItemProduct"
         @remove="removeItem"
       />
     </template>
@@ -46,6 +47,7 @@ import { useAccountStore } from '@/features/accounts/store';
 import { useMeasurementUnits } from '@/features/catalog/useMeasurementUnits';
 import { useHouseholdStore } from '@/features/households/store';
 import { useFavouriteShops } from '@/features/promotions/useFavouriteShops';
+import ChooseProductDialog from '@/features/shopping/components/ChooseProductDialog.vue';
 import PromotionSplitDialog from '@/features/shopping/components/PromotionSplitDialog.vue';
 import ShoppingItemForm from '@/features/shopping/components/ShoppingItemForm.vue';
 import ShoppingItemList from '@/features/shopping/components/ShoppingItemList.vue';
@@ -80,6 +82,7 @@ const {
   add: addItem,
   buy: buyItem,
   restore: restoreItem,
+  chooseProduct,
   remove: removeShoppingItem,
 } = useShoppingItems(selectedListId);
 
@@ -88,6 +91,17 @@ const { shops: promotionShops, favouriteShops, load: loadPromotionShops } = useF
 function findSplitShopOptions(): ShopOption[] {
   const preferred = favouriteShops.value.length > 0 ? favouriteShops.value : promotionShops.value;
   return preferred.map((shop) => ({ slug: shop.slug, name: shop.name }));
+}
+
+function chooseItemProduct(item: ShoppingItem): void {
+  const householdIdValue = households.selectedId;
+  if (householdIdValue === null) {
+    return;
+  }
+  const componentProps = { itemName: item.name, householdId: householdIdValue, units: units.value };
+  quasar.dialog({ component: ChooseProductDialog, componentProps }).onOk((productId: number) => {
+    void chooseProduct(item, productId);
+  });
 }
 
 async function createList(): Promise<void> {
