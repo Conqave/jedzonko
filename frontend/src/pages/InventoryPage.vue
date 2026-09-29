@@ -29,6 +29,13 @@
         @photo="openPhotoDialog"
         @remove="confirmRemove"
       />
+      <q-expansion-item class="q-mt-lg" icon="label" label="Kategorie zapasów">
+        <InventoryCategoryList
+          :categories="categories"
+          @rename="renameCategoryNamed"
+          @remove="confirmRemoveCategory"
+        />
+      </q-expansion-item>
     </template>
   </q-page>
 </template>
@@ -40,13 +47,15 @@ import { useMeasurementUnits } from '@/features/catalog/useMeasurementUnits';
 import { useHouseholdStore } from '@/features/households/store';
 import AddInventoryItemDialog from '@/features/inventory/components/AddInventoryItemDialog.vue';
 import EditInventoryItemDialog from '@/features/inventory/components/EditInventoryItemDialog.vue';
+import InventoryCategoryList from '@/features/inventory/components/InventoryCategoryList.vue';
 import InventoryPhotoDialog from '@/features/inventory/components/InventoryPhotoDialog.vue';
 import InventoryTable from '@/features/inventory/components/InventoryTable.vue';
 import LowStockBanner from '@/features/inventory/components/LowStockBanner.vue';
 import {
   stepQuantity,
+  type InventoryCategory,
   type InventoryItem,
-  type InventoryItemChanges,
+  type InventoryItemEdit,
   type NewInventoryEntry,
   type QuantityDirection,
 } from '@/features/inventory/model';
@@ -66,7 +75,10 @@ const {
   savingItemId,
   add,
   update,
+  edit,
   remove,
+  renameCategory,
+  removeCategory,
   setCategory,
   createCategory,
   setPhoto,
@@ -95,8 +107,8 @@ function openEditDialog(item: InventoryItem): void {
   const componentProps = { item, units: units.value };
   quasar
     .dialog({ component: EditInventoryItemDialog, componentProps })
-    .onOk((changes: InventoryItemChanges) => {
-      void update(item.id, changes);
+    .onOk((itemEdit: InventoryItemEdit) => {
+      void edit(item, itemEdit);
     });
 }
 
@@ -115,6 +127,22 @@ async function stepItem(item: InventoryItem, direction: QuantityDirection): Prom
   }
   const quantity = stepQuantity(item.quantity, unit.dimension, direction);
   await update(item.id, { quantity });
+}
+
+async function renameCategoryNamed(category: InventoryCategory): Promise<void> {
+  const prompt = { title: 'Zmień nazwę kategorii', label: 'Nazwa', initial: category.name };
+  const name = await dialogs.promptText(prompt);
+  if (name !== null) {
+    await renameCategory(category.id, name);
+  }
+}
+
+async function confirmRemoveCategory(category: InventoryCategory): Promise<void> {
+  const message = `Pozycje z kategorii „${category.name}” zostaną bez kategorii.`;
+  const isConfirmed = await dialogs.confirm('Usunąć kategorię?', message);
+  if (isConfirmed) {
+    await removeCategory(category.id);
+  }
 }
 
 async function confirmRemove(item: InventoryItem): Promise<void> {

@@ -36,6 +36,16 @@ class CreateInventoryCategorySerializer(serializers.Serializer[dict[str, object]
     name = serializers.CharField(max_length=80, trim_whitespace=True)
 
 
+class RenameInventoryCategorySerializer(serializers.Serializer[dict[str, object]]):
+    name = serializers.CharField(max_length=80, trim_whitespace=True)
+
+
+class SetInventoryItemMinimumSerializer(serializers.Serializer[dict[str, object]]):
+    minimum_quantity = serializers.DecimalField(
+        max_digits=12, decimal_places=3, min_value=0, allow_null=True
+    )
+
+
 class SetInventoryItemCategorySerializer(serializers.Serializer[dict[str, object]]):
     category_id = serializers.IntegerField(min_value=1, allow_null=True)
 

@@ -3,11 +3,14 @@ import { useApiAction } from '@/shared/useApiAction';
 import {
   addInventoryItem,
   createInventoryCategory,
+  deleteInventoryCategory,
   deleteInventoryItem,
   deleteInventoryItemPhoto,
   fetchInventory,
   fetchInventoryCategories,
+  renameInventoryCategory,
   setInventoryItemCategory,
+  setInventoryItemMinimum,
   updateInventoryItem,
   uploadInventoryItemPhoto,
 } from './api';
@@ -16,6 +19,7 @@ import type {
   InventoryCategory,
   InventoryItem,
   InventoryItemChanges,
+  InventoryItemEdit,
   NewInventoryEntry,
 } from './model';
 
@@ -38,10 +42,16 @@ export function useInventory(householdId: Ref<number | null>) {
     if (id === null) {
       return;
     }
-    await run(async () => {
-      items.value = await fetchInventory(id);
-      categories.value = await fetchInventoryCategories(id);
-    });
+    await run(reload);
+  }
+
+  async function reload(): Promise<void> {
+    const id = householdId.value;
+    if (id === null) {
+      return;
+    }
+    items.value = await fetchInventory(id);
+    categories.value = await fetchInventoryCategories(id);
   }
 
   function add(entry: NewInventoryEntry): Promise<boolean> {
@@ -63,6 +73,34 @@ export function useInventory(householdId: Ref<number | null>) {
     });
     savingItemId.value = null;
     return isUpdated;
+  }
+
+  async function edit(item: InventoryItem, itemEdit: InventoryItemEdit): Promise<boolean> {
+    savingItemId.value = item.id;
+    const isEdited = await run(async () => {
+      const updated = await updateInventoryItem(item.id, itemEdit.changes);
+      replaceItem(updated);
+      if (itemEdit.minimumQuantity !== item.minimumQuantity) {
+        const withMinimum = await setInventoryItemMinimum(item.id, itemEdit.minimumQuantity);
+        replaceItem(withMinimum);
+      }
+    });
+    savingItemId.value = null;
+    return isEdited;
+  }
+
+  function renameCategory(categoryId: number, name: string): Promise<boolean> {
+    return run(async () => {
+      await renameInventoryCategory(categoryId, name);
+      await reload();
+    });
+  }
+
+  function removeCategory(categoryId: number): Promise<boolean> {
+    return run(async () => {
+      await deleteInventoryCategory(categoryId);
+      await reload();
+    });
   }
 
   function remove(itemId: number): Promise<boolean> {
@@ -116,7 +154,10 @@ export function useInventory(householdId: Ref<number | null>) {
     savingItemId,
     add,
     update,
+    edit,
     remove,
+    renameCategory,
+    removeCategory,
     setCategory,
     createCategory,
     setPhoto,

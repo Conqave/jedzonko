@@ -1,9 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { addInventoryItem, fetchInventory, updateInventoryItem } from './api';
+import {
+  addInventoryItem,
+  fetchInventory,
+  setInventoryItemMinimum,
+  updateInventoryItem,
+} from './api';
 
-const { get, post, patch } = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), patch: vi.fn() }));
+const { get, post, patch, put } = vi.hoisted(() => ({
+  get: vi.fn(),
+  post: vi.fn(),
+  patch: vi.fn(),
+  put: vi.fn(),
+}));
 
-vi.mock('@/shared/http', () => ({ http: { get, post, patch } }));
+vi.mock('@/shared/http', () => ({ http: { get, post, patch, put } }));
 
 const ITEM_DTO = {
   id: 5,
@@ -76,5 +86,14 @@ describe('inventory api', () => {
     get.mockResolvedValue({ data: [{ ...ITEM_DTO, quantity: 1.5 }] });
 
     await expect(fetchInventory(1)).rejects.toThrow();
+  });
+
+  it('clears the minimum quantity with an explicit null', async () => {
+    put.mockResolvedValue({ data: { ...ITEM_DTO, minimum_quantity: null, below_minimum: false } });
+
+    const item = await setInventoryItemMinimum(5, null);
+
+    expect(put).toHaveBeenCalledWith('/inventory/5/minimum/', { minimum_quantity: null });
+    expect(item.minimumQuantity).toBeNull();
   });
 });

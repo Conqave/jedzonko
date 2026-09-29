@@ -14,7 +14,9 @@ from inventory.presentation.serializers import (
     HouseholdQuerySerializer,
     InventoryCategorySerializer,
     InventoryItemSerializer,
+    RenameInventoryCategorySerializer,
     SetInventoryItemCategorySerializer,
+    SetInventoryItemMinimumSerializer,
     UpdateInventoryItemSerializer,
 )
 
@@ -92,6 +94,34 @@ class InventoryCategoryListView(APIView):
         )
         serializer = InventoryCategorySerializer(category)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class InventoryCategoryDetailView(APIView):
+    def patch(self, request: Request, category_id: int) -> Response:
+        user_id = current_user_id(request)
+        payload = RenameInventoryCategorySerializer(data=request.data)
+        payload.is_valid(raise_exception=True)
+        use_case = container().inventory.rename_inventory_category
+        category = use_case.execute(user_id, category_id, payload.validated_data["name"])
+        serializer = InventoryCategorySerializer(category)
+        return Response(serializer.data)
+
+    def delete(self, request: Request, category_id: int) -> Response:
+        user_id = current_user_id(request)
+        use_case = container().inventory.delete_inventory_category
+        use_case.execute(user_id, category_id)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class InventoryItemMinimumView(APIView):
+    def put(self, request: Request, item_id: int) -> Response:
+        user_id = current_user_id(request)
+        payload = SetInventoryItemMinimumSerializer(data=request.data)
+        payload.is_valid(raise_exception=True)
+        use_case = container().inventory.set_inventory_item_minimum
+        item = use_case.execute(user_id, item_id, payload.validated_data["minimum_quantity"])
+        serializer = InventoryItemSerializer(item)
+        return Response(serializer.data)
 
 
 class InventoryItemCategoryView(APIView):

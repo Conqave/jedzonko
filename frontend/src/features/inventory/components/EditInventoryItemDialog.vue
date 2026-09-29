@@ -30,6 +30,16 @@
             label="Jednostka"
             :options="units"
           />
+          <q-input
+            v-model="minimumQuantity"
+            dense
+            outlined
+            clearable
+            inputmode="decimal"
+            label="Minimalny zapas"
+            hint="Puste pole oznacza brak minimum"
+            :rules="[(value: string | null) => isOptionalQuantity(value) || 'Podaj ilość']"
+          />
         </q-card-section>
         <q-card-actions align="right">
           <q-btn flat no-caps label="Anuluj" @click="onDialogCancel" />
@@ -46,7 +56,7 @@ import { ref } from 'vue';
 import type { MeasurementUnit } from '@/features/catalog/model';
 import { formatQuantity } from '@/shared/formatQuantity';
 import { isPositiveDecimal, toDecimalText } from '@/shared/decimal';
-import type { InventoryItem, InventoryItemChanges } from '../model';
+import type { InventoryItem, InventoryItemEdit } from '../model';
 
 const props = defineProps<{ item: InventoryItem; units: MeasurementUnit[] }>();
 
@@ -56,17 +66,38 @@ const { dialogRef, onDialogHide, onDialogOK, onDialogCancel } = useDialogPluginC
 const productName = ref(props.item.productName);
 const quantity = ref(formatQuantity(props.item.quantity));
 const unitCode = ref(props.item.unitCode);
+const initialMinimum = props.item.minimumQuantity;
+const minimumQuantity = ref<string | null>(
+  initialMinimum === null ? null : formatQuantity(initialMinimum),
+);
 
 function isQuantity(value: string): boolean {
   return value.trim() === '0' || isPositiveDecimal(value);
 }
 
+function isOptionalQuantity(value: string | null): boolean {
+  return value === null || value.trim() === '' || isQuantity(value);
+}
+
+function readMinimum(): string | null {
+  const entered = minimumQuantity.value;
+  if (entered === null || entered.trim() === '') {
+    return null;
+  }
+  const text = toDecimalText(entered);
+  const isUnchanged = initialMinimum !== null && Number(text) === Number(initialMinimum);
+  return isUnchanged ? initialMinimum : text;
+}
+
 function submit(): void {
-  const changes: InventoryItemChanges = {
-    productName: productName.value.trim(),
-    quantity: toDecimalText(quantity.value),
-    unitCode: unitCode.value,
+  const itemEdit: InventoryItemEdit = {
+    changes: {
+      productName: productName.value.trim(),
+      quantity: toDecimalText(quantity.value),
+      unitCode: unitCode.value,
+    },
+    minimumQuantity: readMinimum(),
   };
-  onDialogOK(changes);
+  onDialogOK(itemEdit);
 }
 </script>

@@ -97,6 +97,15 @@ class DjangoInventoryRepository(InventoryRepository):
             raise InventoryItemNotFoundError
         return self._to_snapshot(row)
 
+    def set_minimum_quantity(
+        self, item_id: int, minimum_quantity: Decimal | None
+    ) -> InventoryItemSnapshot:
+        updated = InventoryItem.objects.filter(pk=item_id).update(minimum_quantity=minimum_quantity)
+        if updated == 0:
+            raise InventoryItemNotFoundError
+        row = InventoryItem.objects.select_related("product", "category").get(pk=item_id)
+        return self._to_snapshot(row)
+
     def set_category(self, item_id: int, category_id: int | None) -> InventoryItemSnapshot:
         updated = InventoryItem.objects.filter(pk=item_id).update(category_id=category_id)
         if updated == 0:

@@ -86,6 +86,27 @@ export async function createInventoryCategory(
   return categorySchema.parse(response.data);
 }
 
+export async function renameInventoryCategory(
+  categoryId: number,
+  name: string,
+): Promise<InventoryCategory> {
+  const response = await http.patch(`/inventory/categories/${categoryId}/`, { name });
+  return categorySchema.parse(response.data);
+}
+
+export async function deleteInventoryCategory(categoryId: number): Promise<void> {
+  await http.delete(`/inventory/categories/${categoryId}/`);
+}
+
+export async function setInventoryItemMinimum(
+  itemId: number,
+  minimumQuantity: string | null,
+): Promise<InventoryItem> {
+  const payload = { minimum_quantity: minimumQuantity };
+  const response = await http.put(`/inventory/${itemId}/minimum/`, payload);
+  return itemSchema.parse(response.data);
+}
+
 export async function setInventoryItemCategory(
   itemId: number,
   categoryId: number | null,

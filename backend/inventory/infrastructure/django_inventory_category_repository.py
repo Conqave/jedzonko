@@ -22,3 +22,19 @@ class DjangoInventoryCategoryRepository(InventoryCategoryRepository):
             .first()
         )
         return None if row is None else int(row)
+
+    def rename_category(self, category_id: int, name: str) -> InventoryCategorySnapshot:
+        row = InventoryCategory.objects.get(pk=category_id)
+        is_taken = (
+            InventoryCategory.objects.filter(household_id=row.household_id, name=name)
+            .exclude(pk=category_id)
+            .exists()
+        )
+        if is_taken:
+            raise DuplicateInventoryCategoryError
+        row.name = name
+        row.save(update_fields=["name"])
+        return InventoryCategorySnapshot(id=row.pk, name=row.name)
+
+    def delete_category(self, category_id: int) -> None:
+        InventoryCategory.objects.filter(pk=category_id).delete()

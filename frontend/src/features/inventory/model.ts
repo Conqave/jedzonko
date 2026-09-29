@@ -33,6 +33,11 @@ export interface InventoryItemChanges {
   unitCode: string;
 }
 
+export interface InventoryItemEdit {
+  changes: InventoryItemChanges;
+  minimumQuantity: string | null;
+}
+
 export interface NewInventoryEntry {
   item: NewInventoryItem;
   photo: File | null;

@@ -213,3 +213,106 @@ def test_item_cannot_be_added_with_a_foreign_category(
 
     assert response.status_code == 400
     assert response.data["code"] == "inventory_category_not_found"
+
+
+def test_member_renames_a_category(api_client: APIClient, ala: User, household: Household) -> None:
+    category = InventoryCategory.objects.create(household=household, name="Spiżarnia")
+    api_client.force_authenticate(ala)
+
+    response = api_client.patch(
+        f"/api/inventory/categories/{category.pk}/", {"name": "Szafka"}, format="json"
+    )
+
+    assert response.status_code == 200
+    assert response.data == {"id": category.pk, "name": "Szafka"}
+
+
+def test_renaming_to_a_taken_name_is_rejected(
+    api_client: APIClient, ala: User, household: Household
+) -> None:
+    category = InventoryCategory.objects.create(household=household, name="Spiżarnia")
+    InventoryCategory.objects.create(household=household, name="Lodówka")
+    api_client.force_authenticate(ala)
+
+    response = api_client.patch(
+        f"/api/inventory/categories/{category.pk}/", {"name": "Lodówka"}, format="json"
+    )
+
+    assert response.status_code == 400
+    assert response.data["code"] == "duplicate_inventory_category"
+
+
+def test_deleting_a_category_leaves_its_items_uncategorised(
+    api_client: APIClient, ala: User, household: Household, item: InventoryItem
+) -> None:
+    category = InventoryCategory.objects.create(household=household, name="Spiżarnia")
+    item.category = category
+    item.save()
+    api_client.force_authenticate(ala)
+
+    response = api_client.delete(f"/api/inventory/categories/{category.pk}/")
+
+    item.refresh_from_db()
+    assert response.status_code == 204
+    assert item.category_id is None
+    assert not InventoryCategory.objects.filter(pk=category.pk).exists()
+
+
+def test_another_household_cannot_touch_a_category(
+    api_client: APIClient, ola: User, household: Household, other_household: Household
+) -> None:
+    category = InventoryCategory.objects.create(household=household, name="Spiżarnia")
+    api_client.force_authenticate(ola)
+
+    renamed = api_client.patch(
+        f"/api/inventory/categories/{category.pk}/", {"name": "Moja"}, format="json"
+    )
+    deleted = api_client.delete(f"/api/inventory/categories/{category.pk}/")
+
+    assert (renamed.status_code, deleted.status_code) == (403, 403)
+    assert InventoryCategory.objects.get(pk=category.pk).name == "Spiżarnia"
+
+
+def test_an_unknown_category_is_not_found(api_client: APIClient, ala: User) -> None:
+    api_client.force_authenticate(ala)
+
+    response = api_client.delete("/api/inventory/categories/999/")
+
+    assert response.data["code"] == "inventory_category_not_found"
+
+
+def test_member_sets_and_clears_the_minimum_quantity(
+    api_client: APIClient, ala: User, item: InventoryItem
+) -> None:
+    api_client.force_authenticate(ala)
+    url = f"/api/inventory/{item.pk}/minimum/"
+
+    raised = api_client.put(url, {"minimum_quantity": "5"}, format="json")
+    cleared = api_client.put(url, {"minimum_quantity": None}, format="json")
+
+    assert (raised.data["minimum_quantity"], raised.data["below_minimum"]) == ("5.000", True)
+    assert (cleared.data["minimum_quantity"], cleared.data["below_minimum"]) == (None, False)
+
+
+def test_a_negative_minimum_is_rejected(
+    api_client: APIClient, ala: User, item: InventoryItem
+) -> None:
+    api_client.force_authenticate(ala)
+
+    response = api_client.put(
+        f"/api/inventory/{item.pk}/minimum/", {"minimum_quantity": "-1"}, format="json"
+    )
+
+    assert response.status_code == 400
+
+
+def test_another_household_cannot_change_the_minimum(
+    api_client: APIClient, ola: User, other_household: Household, item: InventoryItem
+) -> None:
+    api_client.force_authenticate(ola)
+
+    response = api_client.put(
+        f"/api/inventory/{item.pk}/minimum/", {"minimum_quantity": "1"}, format="json"
+    )
+
+    assert response.status_code == 403
