@@ -59,16 +59,16 @@ def setup() -> Setup:
     return Setup()
 
 
-def test_the_model_answer_is_stored_as_a_proposal_only(setup: Setup) -> None:
+def test_the_model_answer_is_assigned_as_tags_from_the_model(setup: Setup) -> None:
     product_id = setup.product("Jajka wiejskie")
     classifier = FakeIngredientClassifier({"Jajka wiejskie": ("jajka",)})
 
     proposals = setup.run(classifier)
 
     assert [(each.product_id, each.status, each.source) for each in proposals] == [
-        (product_id, ProductIngredientStatus.PROPOSED, ProductIngredientSource.MODEL)
+        (product_id, ProductIngredientStatus.CONFIRMED, ProductIngredientSource.MODEL)
     ]
-    assert setup.classifications.list_confirmed(HOME) == {}
+    assert len(setup.classifications.list_confirmed(HOME)[product_id]) == 1
 
 
 def test_the_model_sees_every_tag_and_may_choose_several(setup: Setup) -> None:

@@ -56,11 +56,11 @@ def analysis() -> Analysis:
     return Analysis()
 
 
-def test_the_model_proposes_an_ingredient_for_one_product(analysis: Analysis) -> None:
+def test_the_model_assigns_tags_to_one_product(analysis: Analysis) -> None:
     classifier = FakeIngredientClassifier({"Mleko 3,2%": ("mleko",)})
 
     assert analysis.analyze(classifier) is True
-    assert analysis.statuses() == {"mleko": ProductIngredientStatus.PROPOSED}
+    assert analysis.statuses() == {"mleko": ProductIngredientStatus.CONFIRMED}
 
 
 def test_analysing_again_offers_only_ingredients_not_decided_yet(analysis: Analysis) -> None:

@@ -52,6 +52,21 @@ class ProductClassification:
             decided_at=None,
         )
 
+    def assign_from_model(
+        self, ingredient_id: int, model_name: str, now: datetime
+    ) -> ProductIngredient:
+        if self.find(ingredient_id) is not None:
+            raise ProductIngredientAlreadyRecordedError
+        return ProductIngredient(
+            product_id=self.product_id,
+            ingredient_id=ingredient_id,
+            status=ProductIngredientStatus.CONFIRMED,
+            source=ProductIngredientSource.MODEL,
+            model_name=model_name,
+            proposed_at=now,
+            decided_at=now,
+        )
+
     def confirm(self, ingredient_id: int, now: datetime) -> tuple[ProductIngredient, ...]:
         existing = self.find(ingredient_id)
         if existing is not None and existing.status is ProductIngredientStatus.CONFIRMED:

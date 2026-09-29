@@ -48,7 +48,7 @@ class AnalyzeProductIngredient:
             raise IngredientClassifierContractError(f"Choices {choices} are not all tags.")
         chosen_ids = sorted({tags[choice].id for choice in choices})
         proposals = tuple(
-            classification.propose(ingredient_id, self._classifier.model_name, now)
+            classification.assign_from_model(ingredient_id, self._classifier.model_name, now)
             for ingredient_id in chosen_ids
         )
         with self._transactions.atomic():

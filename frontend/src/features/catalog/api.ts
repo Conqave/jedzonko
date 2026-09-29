@@ -136,12 +136,12 @@ export async function rejectProductIngredient(
   await http.post(`/products/${productId}/ingredients/${ingredientId}/rejection/`);
 }
 
-const analysisSchema = z.object({ proposed_count: z.number().int() });
+const analysisSchema = z.object({ assigned_count: z.number().int() });
 
 export async function analyzeProductIngredient(productId: number): Promise<number> {
   const response = await http.post(`/products/${productId}/ingredient-analysis/`);
   const body = analysisSchema.parse(response.data);
-  return body.proposed_count;
+  return body.assigned_count;
 }
 
 export async function searchIngredients(search: string): Promise<Ingredient[]> {

@@ -70,7 +70,7 @@ class ProposeIngredientsForProducts:
                 )
             chosen_ids = sorted({tags[choice].id for choice in choices})
             product_proposals = tuple(
-                classification.propose(ingredient_id, self._classifier.model_name, now)
+                classification.assign_from_model(ingredient_id, self._classifier.model_name, now)
                 for ingredient_id in chosen_ids
             )
             if not dry_run:

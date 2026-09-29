@@ -90,7 +90,7 @@ class CatalogModule:
             )
 
     @contextmanager
-    def open_classification(self) -> Iterator[ProposeIngredientsForProducts]:
+    def open_classification(self, question_limit: int) -> Iterator[ProposeIngredientsForProducts]:
         settings = self.classifier_settings
         with open_ollama_chat(settings.ollama) as chat:
             yield ProposeIngredientsForProducts(
@@ -99,7 +99,7 @@ class CatalogModule:
                 DjangoProductClassificationRepository(),
                 OllamaIngredientClassifier(chat),
                 self.transactions,
-                settings.question_limit,
+                question_limit,
             )
 
 

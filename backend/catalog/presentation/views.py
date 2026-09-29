@@ -84,7 +84,7 @@ class ProductIngredientAnalysisView(APIView):
         now = timezone.now()
         with container().catalog.open_product_analysis() as analysis:
             proposals = analysis.execute(user_id, product_id, now)
-        return Response({"proposed_count": len(proposals)})
+        return Response({"assigned_count": len(proposals)})
 
 
 class ProductIngredientConfirmationView(APIView):
