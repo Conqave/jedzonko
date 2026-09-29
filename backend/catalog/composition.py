@@ -34,6 +34,7 @@ from catalog.application.use_cases.propose_ingredients_for_products import (
 from catalog.application.use_cases.propose_product_ingredient import ProposeProductIngredient
 from catalog.application.use_cases.reject_product_ingredient import RejectProductIngredient
 from catalog.application.use_cases.search_ingredients import SearchIngredients
+from catalog.application.use_cases.split_alias import SplitAlias
 from catalog.application.use_cases.unify_tags import UnifyTags
 from catalog.application.use_cases.update_product import UpdateProduct
 from catalog.infrastructure.django_candidate_repository import DjangoCandidateRepository
@@ -79,6 +80,7 @@ class CatalogModule:
     search_ingredients: SearchIngredients
     list_tags: ListTags
     merge_ingredients: MergeIngredients
+    split_alias: SplitAlias
     find_ingredient_lines: FindIngredientLines
     get_product_classification: GetProductClassification
     propose_product_ingredient: ProposeProductIngredient
@@ -177,6 +179,7 @@ def build_catalog(
             ingredients, classifications, references, lines, transactions
         ),
         find_ingredient_lines=FindIngredientLines(lines),
+        split_alias=SplitAlias(ingredients, transactions),
         get_product_classification=GetProductClassification(
             classifications, ingredients, memberships
         ),

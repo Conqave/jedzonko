@@ -4,6 +4,7 @@ import pytest
 
 from catalog.application.errors import IngredientNotFoundError
 from catalog.application.use_cases.merge_ingredients import MergeIngredients
+from catalog.application.use_cases.split_alias import SplitAlias
 from catalog.domain.errors import IngredientMergeError
 from catalog.domain.ingredient import IngredientNameKind, IngredientNameSource
 from catalog.domain.names import CatalogName
@@ -123,3 +124,17 @@ def test_both_ingredients_must_exist(setup: Setup) -> None:
         setup.merge.execute(404, setup.jajka)
     with pytest.raises(IngredientNotFoundError):
         setup.merge.execute(setup.jaja, 404)
+
+
+def test_a_mistaken_merge_is_undone_by_splitting_the_alias(setup: Setup) -> None:
+    setup.merge.execute(setup.jaja, setup.jajka)
+
+    restored = SplitAlias(setup.ingredients, setup.transactions).execute("jaja")
+
+    canonical = sorted(
+        name.name
+        for name in setup.ingredients.list_names()
+        if name.kind is IngredientNameKind.CANONICAL
+    )
+    assert restored.name == "jaja"
+    assert canonical == ["jaja", "jajka"]

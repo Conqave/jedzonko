@@ -53,5 +53,9 @@ class IngredientRepository(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def split_alias(self, normalized_name: str) -> Ingredient | None:
+        raise NotImplementedError
+
+    @abstractmethod
     def delete(self, ingredient_id: int) -> None:
         raise NotImplementedError

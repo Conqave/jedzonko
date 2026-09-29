@@ -24,7 +24,9 @@ _INSTRUCTIONS = (
     "Rodzaje, gatunki i odmiany to różne tagi: mąka, mąka pszenna tortowa i mąka pszenna "
     "chlebowa; ryż i ryż jaśminowy; pomidory i pomidorki koktajlowe; cebula i cebula czerwona. "
     "Różne są też składniki tylko podobne: herbata i herbatniki, masło i maślanka, mąka i "
-    "makaron, mleko i mleko kokosowe.\n"
+    "makaron, mleko i mleko kokosowe, oliwki i oliwa, śmietanka i śmietana, olejek i olej, "
+    "maślak i maślanka, pieczarki i pieczywo. Nie łącz nazw, które nie są prawdziwymi "
+    "słowami, z innymi tagami. W razie wątpliwości nie łącz.\n"
     "Dla każdej grupy wybierz nazwę główną: najprostszą i najczęściej używaną w przepisach. "
     "Używaj nazw dokładnie tak, jak są zapisane na liście."
 )

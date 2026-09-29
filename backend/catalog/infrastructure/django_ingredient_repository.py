@@ -75,6 +75,18 @@ class DjangoIngredientRepository(IngredientRepository):
             ingredient_id=target_id, kind=ALIAS
         )
 
+    def split_alias(self, normalized_name: str) -> Ingredient | None:
+        alias = IngredientNameRow.objects.filter(
+            normalized_name=normalized_name, kind=ALIAS
+        ).first()
+        if alias is None:
+            return None
+        row = IngredientRow.objects.create(name=alias.name)
+        alias.ingredient = row
+        alias.kind = CANONICAL
+        alias.save(update_fields=["ingredient", "kind"])
+        return _to_ingredient(row)
+
     def delete(self, ingredient_id: int) -> None:
         IngredientRow.objects.filter(pk=ingredient_id).delete()
 

@@ -117,6 +117,17 @@ class FakeIngredientRepository(IngredientRepository):
             for name in self.names
         ]
 
+    def split_alias(self, normalized_name: str) -> Ingredient | None:
+        for position, name in enumerate(self.names):
+            if name.normalized_name == normalized_name and name.kind is IngredientNameKind.ALIAS:
+                ingredient = Ingredient(id=max(self.ingredients) + 1, name=name.name)
+                self.ingredients[ingredient.id] = ingredient
+                self.names[position] = replace(
+                    name, ingredient_id=ingredient.id, kind=IngredientNameKind.CANONICAL
+                )
+                return ingredient
+        return None
+
     def delete(self, ingredient_id: int) -> None:
         if any(name.ingredient_id == ingredient_id for name in self.names):
             raise AssertionError("Names would cascade away; a merge moves them first.")
