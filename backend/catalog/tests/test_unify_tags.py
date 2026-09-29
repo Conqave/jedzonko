@@ -137,3 +137,20 @@ def test_a_tag_joins_only_one_group() -> None:
 def test_an_answer_that_is_not_json_breaks_the_contract() -> None:
     with pytest.raises(IngredientClassifierContractError):
         _unifier("nie wiem").find_same_ingredients(NAMES)
+
+
+class FailingWholeListUnifier(ScriptedUnifier):
+    def find_same_ingredients(self, tag_names: tuple[str, ...]) -> tuple[TagGroup, ...]:
+        if len(tag_names) == len(NAMES):
+            raise IngredientClassifierContractError("Ollama stopped at the output token limit.")
+        return super().find_same_ingredients(tag_names)
+
+
+def test_a_failed_pass_is_reported_and_the_other_passes_still_run() -> None:
+    tags = Tags()
+    unifier = FailingWholeListUnifier({("ogórek", "ogórki"): (("ogórek", ("ogórek", "ogórki")),)})
+
+    run = UnifyTags(ListTags(tags.ingredients), unifier, tags.merge).execute(dry_run=True)
+
+    assert [merge.target.name for merge in run.merges] == ["ogórek"]
+    assert run.skipped == ("6 tag(s) from cebula: Ollama stopped at the output token limit.",)

@@ -21,3 +21,5 @@ class Command(BaseCommand):
         for merge in run.merges:
             sources = ", ".join(source.name for source in merge.sources)
             self.stdout.write(f"{verb} {sources} -> {merge.target.name}")
+        for skipped in run.skipped:
+            self.stdout.write(f"skipped {skipped}")

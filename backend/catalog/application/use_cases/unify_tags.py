@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 
+from catalog.application.errors import IngredientClassifierContractError
 from catalog.application.ports.tag_unifier import TagUnifier
 from catalog.application.use_cases.list_tags import ListTags
 from catalog.application.use_cases.merge_ingredients import MergeIngredients
@@ -16,6 +17,7 @@ class TagMerge:
 @dataclass(frozen=True, slots=True)
 class UnificationRun:
     merges: tuple[TagMerge, ...]
+    skipped: tuple[str, ...]
 
 
 class UnifyTags:
@@ -29,10 +31,16 @@ class UnifyTags:
     def execute(self, dry_run: bool) -> UnificationRun:
         tags = self._list_tags.execute()
         merges: list[TagMerge] = []
+        skipped: list[str] = []
         merged_ids: set[int] = set()
         passes = (tags, *find_stem_clusters(tags))
         for candidates in passes:
-            for merge in self._ask(candidates):
+            try:
+                answered = self._ask(candidates)
+            except IngredientClassifierContractError as error:
+                skipped.append(f"{len(candidates)} tag(s) from {candidates[0].name}: {error}")
+                continue
+            for merge in answered:
                 ids = {merge.target.id, *(source.id for source in merge.sources)}
                 if ids & merged_ids:
                     continue
@@ -41,7 +49,7 @@ class UnifyTags:
         if not dry_run:
             for merge in merges:
                 self._apply(merge)
-        return UnificationRun(merges=tuple(merges))
+        return UnificationRun(merges=tuple(merges), skipped=tuple(skipped))
 
     def _ask(self, candidates: tuple[Ingredient, ...]) -> tuple[TagMerge, ...]:
         names = tuple(tag.name for tag in candidates)
