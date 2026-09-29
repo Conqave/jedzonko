@@ -97,6 +97,17 @@ class DjangoRecipeRepository(RecipeRepository):
             ingredient_id=target_ingredient_id
         )
 
+    def list_untagged_ingredient_names(self) -> tuple[str, ...]:
+        rows = RecipeIngredient.objects.filter(ingredient__isnull=True).values_list(
+            "name", flat=True
+        )
+        return tuple(sorted(set(rows)))
+
+    def tag_ingredient_lines(self, name: str, ingredient_id: int) -> int:
+        return RecipeIngredient.objects.filter(name=name, ingredient__isnull=True).update(
+            ingredient_id=ingredient_id
+        )
+
     def delete_recipe(self, recipe_id: int) -> None:
         deleted, _ = Recipe.objects.filter(pk=recipe_id).delete()
         if deleted == 0:

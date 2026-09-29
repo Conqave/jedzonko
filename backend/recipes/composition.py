@@ -33,6 +33,7 @@ from recipes.application.use_cases.suggest_external_recipes_from_inventory impor
 from recipes.application.use_cases.suggest_recipes_from_inventory import (
     SuggestRecipesFromInventory,
 )
+from recipes.application.use_cases.tag_recipe_ingredients import TagRecipeIngredients
 from recipes.application.use_cases.update_recipe import UpdateRecipe
 from recipes.infrastructure.django_recipe_repository import DjangoRecipeRepository
 from recipes.infrastructure.providers.ania_gotuje.provider import AniaGotujeProvider
@@ -59,6 +60,7 @@ class RecipesModule:
     calculate_missing_recipe_items: CalculateMissingRecipeItems
     confirm_recipe_preparation: ConfirmRecipePreparation
     reassign_recipe_ingredient: ReassignRecipeIngredient
+    tag_recipe_ingredients: TagRecipeIngredients
     stock: HouseholdStockReader
     resolver: IngredientResolver
     lines: IngredientLines
@@ -132,6 +134,7 @@ def build_recipes(
             recipes, stock, consumer, transactions, memberships
         ),
         reassign_recipe_ingredient=reassign_recipe_ingredient,
+        tag_recipe_ingredients=TagRecipeIngredients(recipes, lines),
         stock=stock,
         resolver=resolver,
         lines=lines,

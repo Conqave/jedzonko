@@ -52,12 +52,26 @@ class FakeRecipeRepository(RecipeRepository):
         self._recipes = recipes
         self._requirements = requirements
         self.requirement_query_count = 0
+        self.tagged: list[tuple[str, int]] = []
 
     def list_recipes(self) -> list[RecipeSummary]:
         return [recipe.summary for recipe in self._recipes]
 
     def list_categories(self) -> list[RecipeCategory]:
         return []
+
+    def list_untagged_ingredient_names(self) -> tuple[str, ...]:
+        names = {
+            line.name
+            for recipe in self._recipes
+            for line in recipe.ingredients
+            if line.ingredient_id is None
+        }
+        return tuple(sorted(names))
+
+    def tag_ingredient_lines(self, name: str, ingredient_id: int) -> int:
+        self.tagged.append((name, ingredient_id))
+        return 1
 
     def find_recipe(self, recipe_id: int) -> RecipeDetail | None:
         for recipe in self._recipes:

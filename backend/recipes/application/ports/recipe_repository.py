@@ -52,3 +52,11 @@ class RecipeRepository(ABC):
     @abstractmethod
     def reassign_ingredient(self, source_ingredient_id: int, target_ingredient_id: int) -> None:
         raise NotImplementedError
+
+    @abstractmethod
+    def list_untagged_ingredient_names(self) -> tuple[str, ...]:
+        raise NotImplementedError
+
+    @abstractmethod
+    def tag_ingredient_lines(self, name: str, ingredient_id: int) -> int:
+        raise NotImplementedError
