@@ -17,10 +17,12 @@ from catalog.application.use_cases.delete_product import DeleteProduct
 from catalog.application.use_cases.describe_household_products import DescribeHouseholdProducts
 from catalog.application.use_cases.find_household_product import FindHouseholdProduct
 from catalog.application.use_cases.find_ingredient_by_name import FindIngredientByName
+from catalog.application.use_cases.find_ingredient_lines import FindIngredientLines
 from catalog.application.use_cases.find_ingredients_by_names import FindIngredientsByNames
 from catalog.application.use_cases.get_ingredients import GetIngredients
 from catalog.application.use_cases.get_product_classification import GetProductClassification
 from catalog.application.use_cases.import_ingredient_names import ImportIngredientNames
+from catalog.application.use_cases.interpret_ingredient_lines import InterpretIngredientLines
 from catalog.application.use_cases.list_household_products import ListHouseholdProducts
 from catalog.application.use_cases.list_measurement_units import ListMeasurementUnits
 from catalog.application.use_cases.list_tags import ListTags
@@ -34,12 +36,18 @@ from catalog.application.use_cases.search_ingredients import SearchIngredients
 from catalog.application.use_cases.unify_tags import UnifyTags
 from catalog.application.use_cases.update_product import UpdateProduct
 from catalog.infrastructure.django_candidate_repository import DjangoCandidateRepository
+from catalog.infrastructure.django_ingredient_line_repository import (
+    DjangoIngredientLineRepository,
+)
 from catalog.infrastructure.django_ingredient_repository import DjangoIngredientRepository
 from catalog.infrastructure.django_product_classification_repository import (
     DjangoProductClassificationRepository,
 )
 from catalog.infrastructure.django_product_repository import DjangoProductRepository
 from catalog.infrastructure.providers.ollama.classifier import OllamaIngredientClassifier
+from catalog.infrastructure.providers.ollama.line_interpreter import (
+    OllamaIngredientLineInterpreter,
+)
 from catalog.infrastructure.providers.ollama.tag_unifier import OllamaTagUnifier
 from shared.household_membership import HouseholdMembershipReader
 from shared.infrastructure.ollama_chat import OllamaSettings, open_ollama_chat
@@ -69,6 +77,7 @@ class CatalogModule:
     search_ingredients: SearchIngredients
     list_tags: ListTags
     merge_ingredients: MergeIngredients
+    find_ingredient_lines: FindIngredientLines
     get_product_classification: GetProductClassification
     propose_product_ingredient: ProposeProductIngredient
     confirm_product_ingredient: ConfirmProductIngredient
@@ -91,6 +100,15 @@ class CatalogModule:
                 OllamaIngredientClassifier(chat),
                 self.memberships,
                 self.transactions,
+            )
+
+    @contextmanager
+    def open_line_interpretation(self) -> Iterator[InterpretIngredientLines]:
+        with open_ollama_chat(self.classifier_settings.ollama) as chat:
+            yield InterpretIngredientLines(
+                DjangoIngredientLineRepository(),
+                OllamaIngredientLineInterpreter(chat),
+                self.list_tags,
             )
 
     @contextmanager
@@ -118,6 +136,7 @@ def build_catalog(
     classifier_settings: ClassifierSettings,
     transactions: TransactionManager,
 ) -> CatalogModule:
+    lines = DjangoIngredientLineRepository()
     products = DjangoProductRepository()
     ingredients = DjangoIngredientRepository()
     classifications = DjangoProductClassificationRepository()
@@ -139,7 +158,10 @@ def build_catalog(
         get_ingredients=GetIngredients(ingredients),
         search_ingredients=SearchIngredients(ingredients),
         list_tags=ListTags(ingredients),
-        merge_ingredients=MergeIngredients(ingredients, classifications, references, transactions),
+        merge_ingredients=MergeIngredients(
+            ingredients, classifications, references, lines, transactions
+        ),
+        find_ingredient_lines=FindIngredientLines(lines),
         get_product_classification=GetProductClassification(
             classifications, ingredients, memberships
         ),

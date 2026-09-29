@@ -24,8 +24,8 @@ from recipes.composition import (
     build_reassign_recipe_ingredient,
     build_recipes,
 )
+from recipes.infrastructure.catalog_ingredient_lines import CatalogIngredientLines
 from recipes.infrastructure.catalog_ingredient_resolver import CatalogIngredientResolver
-from recipes.infrastructure.catalog_tag_vocabulary import CatalogTagVocabulary
 from recipes.infrastructure.inventory_consumer import InventoryConsumer
 from recipes.infrastructure.pantry_stock_reader import PantryStockReader
 from shared.infrastructure.ollama_chat import OllamaSettings
@@ -88,7 +88,9 @@ def container() -> Container:
         inventory.get_household_inventory, catalog.describe_household_products
     )
     resolver = CatalogIngredientResolver(catalog.find_ingredients_by_names)
-    vocabulary = CatalogTagVocabulary(catalog.list_tags)
+    recipe_lines = CatalogIngredientLines(
+        catalog.find_ingredient_lines, catalog.open_line_interpretation
+    )
     consumer = InventoryConsumer(inventory.consume_inventory_quantity)
     recipe_source_settings = RecipeSourceSettings(
         timeout_seconds=settings.RECIPE_SOURCE_HTTP_TIMEOUT_SECONDS,
@@ -99,11 +101,10 @@ def container() -> Container:
         memberships,
         stock,
         resolver,
-        vocabulary,
+        recipe_lines,
         consumer,
         reassign_recipe_ingredient,
         recipe_source_settings,
-        ollama_settings,
         transactions,
     )
 

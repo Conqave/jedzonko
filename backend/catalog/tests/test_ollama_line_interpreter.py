@@ -5,17 +5,18 @@ from decimal import Decimal
 import httpx
 import pytest
 
-from recipes.application.errors import (
-    IngredientLineInterpreterContractError,
-    IngredientLineInterpreterUnavailableError,
+from catalog.application.errors import (
+    IngredientClassifierContractError,
+    IngredientClassifierUnavailableError,
 )
-from recipes.domain.external_line import IngredientChoice, LineInterpretation
-from recipes.infrastructure.providers.ollama.line_interpreter import (
+from catalog.domain.ingredient import Ingredient
+from catalog.domain.ingredient_line import LineInterpretation
+from catalog.infrastructure.providers.ollama.line_interpreter import (
     OllamaIngredientLineInterpreter,
 )
 from shared.infrastructure.ollama_chat import OllamaChat, OllamaSettings
 
-CHOICES = (IngredientChoice(id=11, name="jajko"), IngredientChoice(id=22, name="mleko"))
+CHOICES = (Ingredient(id=11, name="jajko"), Ingredient(id=22, name="mleko"))
 LINES = ("3 średnie jajka", "szklanka mleka", "szczypta soli")
 
 
@@ -90,12 +91,12 @@ def test_an_amount_without_a_unit_is_no_amount() -> None:
 def test_an_answer_breaking_the_contract_is_rejected(entries: list[dict[str, object]]) -> None:
     interpreter = _interpreter(lambda request: _answer(entries))
 
-    with pytest.raises(IngredientLineInterpreterContractError):
+    with pytest.raises(IngredientClassifierContractError):
         interpreter.interpret(LINES, CHOICES)
 
 
 def test_an_unreachable_model_is_unavailable() -> None:
     interpreter = _interpreter(lambda request: httpx.Response(503))
 
-    with pytest.raises(IngredientLineInterpreterUnavailableError):
+    with pytest.raises(IngredientClassifierUnavailableError):
         interpreter.interpret(LINES, CHOICES)

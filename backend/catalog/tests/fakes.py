@@ -5,6 +5,7 @@ from datetime import datetime
 
 from catalog.application.ports.candidate_repository import CandidateRepository
 from catalog.application.ports.ingredient_classifier import IngredientClassifier
+from catalog.application.ports.ingredient_line_repository import IngredientLineRepository
 from catalog.application.ports.ingredient_references import IngredientReferences
 from catalog.application.ports.ingredient_repository import IngredientRepository
 from catalog.application.ports.product_classification_repository import (
@@ -19,6 +20,7 @@ from catalog.domain.ingredient import (
     IngredientNameKind,
     IngredientNameSource,
 )
+from catalog.domain.ingredient_line import LineInterpretation
 from catalog.domain.names import CatalogName
 from catalog.domain.product import Product, ProductListing, ProductPackage
 from catalog.domain.product_ingredient import ProductIngredient, ProductIngredientStatus
@@ -318,3 +320,36 @@ class FakeHouseholdMembershipReader(HouseholdMembershipReader):
 
     def is_member(self, user_id: int, household_id: int) -> bool:
         return (user_id, household_id) in self._memberships
+
+
+class FakeIngredientLineRepository(IngredientLineRepository):
+    def __init__(self, interpretations: dict[str, LineInterpretation]) -> None:
+        self.interpretations = dict(interpretations)
+        self.saved_model_names: list[str] = []
+
+    def find_interpretations(
+        self, normalized_texts: tuple[str, ...]
+    ) -> dict[str, LineInterpretation]:
+        return {
+            text: self.interpretations[text]
+            for text in normalized_texts
+            if text in self.interpretations
+        }
+
+    def reassign(self, source_ingredient_id: int, target_ingredient_id: int) -> None:
+        for text, meaning in list(self.interpretations.items()):
+            if meaning.ingredient_id == source_ingredient_id:
+                self.interpretations[text] = LineInterpretation(
+                    ingredient_id=target_ingredient_id,
+                    quantity=meaning.quantity,
+                    unit_code=meaning.unit_code,
+                )
+
+    def save_interpretations(
+        self,
+        interpretations: dict[str, LineInterpretation],
+        model_name: str,
+        interpreted_at: datetime,
+    ) -> None:
+        self.interpretations.update(interpretations)
+        self.saved_model_names.append(model_name)

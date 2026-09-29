@@ -1,6 +1,7 @@
 from dataclasses import replace
 
 from catalog.application.errors import IngredientNotFoundError
+from catalog.application.ports.ingredient_line_repository import IngredientLineRepository
 from catalog.application.ports.ingredient_references import IngredientReferences
 from catalog.application.ports.ingredient_repository import IngredientRepository
 from catalog.application.ports.product_classification_repository import (
@@ -19,11 +20,13 @@ class MergeIngredients:
         ingredients: IngredientRepository,
         classifications: ProductClassificationRepository,
         references: tuple[IngredientReferences, ...],
+        lines: IngredientLineRepository,
         transactions: TransactionManager,
     ) -> None:
         self._ingredients = ingredients
         self._classifications = classifications
         self._references = references
+        self._lines = lines
         self._transactions = transactions
 
     def execute(self, source_id: int, target_id: int) -> Ingredient:
@@ -43,6 +46,7 @@ class MergeIngredients:
                 self._classifications.save((replace(kept, ingredient_id=target_id),))
             for references in self._references:
                 references.reassign(source_id, target_id)
+            self._lines.reassign(source_id, target_id)
             self._ingredients.move_names_as_aliases(source_id, target_id)
             self._ingredients.delete(source_id)
             return target

@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 
-from recipes.domain.external_line import IngredientChoice, LineInterpretation
+from catalog.domain.ingredient import Ingredient
+from catalog.domain.ingredient_line import LineInterpretation
 
 
 class IngredientLineInterpreter(ABC):
@@ -11,6 +12,6 @@ class IngredientLineInterpreter(ABC):
 
     @abstractmethod
     def interpret(
-        self, lines: tuple[str, ...], choices: tuple[IngredientChoice, ...]
+        self, lines: tuple[str, ...], tags: tuple[Ingredient, ...]
     ) -> tuple[LineInterpretation, ...]:
         raise NotImplementedError

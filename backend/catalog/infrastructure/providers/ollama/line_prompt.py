@@ -1,4 +1,4 @@
-from recipes.domain.external_line import IngredientChoice
+from catalog.domain.ingredient import Ingredient
 from shared.measurement_units import MEASUREMENT_UNIT_CODES
 
 _INSTRUCTIONS = (
@@ -11,11 +11,11 @@ _INSTRUCTIONS = (
 )
 
 
-def build_line_prompt(lines: tuple[str, ...], choices: tuple[IngredientChoice, ...]) -> str:
+def build_line_prompt(lines: tuple[str, ...], tags: tuple[Ingredient, ...]) -> str:
     units = ", ".join(MEASUREMENT_UNIT_CODES)
     instructions = _INSTRUCTIONS.format(units=units)
     choice_listing = "\n".join(
-        f"{position}. {choice.name}" for position, choice in enumerate(choices, start=1)
+        f"{position}. {choice.name}" for position, choice in enumerate(tags, start=1)
     )
     line_listing = "\n".join(f"{position}. {line}" for position, line in enumerate(lines, start=1))
     return (

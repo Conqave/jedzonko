@@ -16,7 +16,7 @@ from recipes.domain.models import (
     RecipeStepDetail,
     RecipeSummary,
 )
-from recipes.models import ExternalIngredientLine, Recipe
+from recipes.models import Recipe
 from recipes.models import RecipeCategory as RecipeCategoryRow
 from recipes.models import RecipeIngredient, RecipeStep, RecipeTag
 from shared.measurement import MeasurementUnit, Quantity
@@ -94,9 +94,6 @@ class DjangoRecipeRepository(RecipeRepository):
 
     def reassign_ingredient(self, source_ingredient_id: int, target_ingredient_id: int) -> None:
         RecipeIngredient.objects.filter(ingredient_id=source_ingredient_id).update(
-            ingredient_id=target_ingredient_id
-        )
-        ExternalIngredientLine.objects.filter(ingredient_id=source_ingredient_id).update(
             ingredient_id=target_ingredient_id
         )
 

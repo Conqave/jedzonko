@@ -13,6 +13,7 @@ from catalog.domain.names import CatalogName
 from catalog.domain.tag_duplicates import TagGroup, find_stem_clusters
 from catalog.infrastructure.providers.ollama.tag_unifier import OllamaTagUnifier
 from catalog.tests.fakes import (
+    FakeIngredientLineRepository,
     FakeIngredientReferences,
     FakeIngredientRepository,
     FakeProductClassificationRepository,
@@ -47,6 +48,7 @@ class Tags:
             self.ingredients,
             FakeProductClassificationRepository(transactions),
             (FakeIngredientReferences(),),
+            FakeIngredientLineRepository({}),
             transactions,
         )
 

@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
 
-from recipes.domain.external_line import LineInterpretation
+from catalog.domain.ingredient_line import LineInterpretation
 
 
 class IngredientLineRepository(ABC):
@@ -18,4 +18,8 @@ class IngredientLineRepository(ABC):
         model_name: str,
         interpreted_at: datetime,
     ) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def reassign(self, source_ingredient_id: int, target_ingredient_id: int) -> None:
         raise NotImplementedError

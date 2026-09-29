@@ -5,15 +5,13 @@ from datetime import datetime
 from recipes.application.commands import RecipeInput, ResolvedIngredient
 from recipes.application.errors import RecipeNotFoundAtSourceError
 from recipes.application.ports.household_stock_reader import HouseholdStockReader
-from recipes.application.ports.ingredient_line_interpreter import IngredientLineInterpreter
-from recipes.application.ports.ingredient_line_repository import IngredientLineRepository
+from recipes.application.ports.ingredient_lines import IngredientLines
 from recipes.application.ports.ingredient_resolver import IngredientResolver
 from recipes.application.ports.inventory_consumer import HouseholdInventoryConsumer
 from recipes.application.ports.recipe_repository import RecipeRepository
 from recipes.application.ports.recipe_source import RecipeSource
-from recipes.application.ports.tag_vocabulary import TagVocabulary
 from recipes.domain.external import ExternalRecipeDetail, ExternalRecipePage
-from recipes.domain.external_line import IngredientChoice, LineInterpretation
+from recipes.domain.external_line import LineInterpretation
 from recipes.domain.models import RecipeCategory, RecipeDetail, RecipeRequirement, RecipeSummary
 from recipes.domain.stock import StockedProduct
 from shared.household_membership import HouseholdMembershipReader
@@ -141,49 +139,14 @@ class FakeRecipeSource(RecipeSource):
         return self._page
 
 
-class FakeIngredientLineRepository(IngredientLineRepository):
+class FakeIngredientLines(IngredientLines):
     def __init__(self, interpretations: dict[str, LineInterpretation]) -> None:
-        self.interpretations = dict(interpretations)
-        self.saved_model_names: list[str] = []
+        self.interpretations = interpretations
+        self.interpreted: list[tuple[str, ...]] = []
 
-    def find_interpretations(
-        self, normalized_texts: tuple[str, ...]
-    ) -> dict[str, LineInterpretation]:
-        return {
-            text: self.interpretations[text]
-            for text in normalized_texts
-            if text in self.interpretations
-        }
+    def find_interpretations(self, texts: tuple[str, ...]) -> dict[str, LineInterpretation]:
+        return {text: self.interpretations[text] for text in texts if text in self.interpretations}
 
-    def save_interpretations(
-        self,
-        interpretations: dict[str, LineInterpretation],
-        model_name: str,
-        interpreted_at: datetime,
-    ) -> None:
-        self.interpretations.update(interpretations)
-        self.saved_model_names.append(model_name)
-
-
-class FakeIngredientLineInterpreter(IngredientLineInterpreter):
-    def __init__(self, answers: dict[str, LineInterpretation]) -> None:
-        self._answers = answers
-        self.calls: list[tuple[tuple[str, ...], tuple[IngredientChoice, ...]]] = []
-
-    @property
-    def model_name(self) -> str:
-        return "fake-model"
-
-    def interpret(
-        self, lines: tuple[str, ...], choices: tuple[IngredientChoice, ...]
-    ) -> tuple[LineInterpretation, ...]:
-        self.calls.append((lines, choices))
-        return tuple(self._answers[line] for line in lines)
-
-
-class FakeTagVocabulary(TagVocabulary):
-    def __init__(self, tags: tuple[IngredientChoice, ...]) -> None:
-        self._tags = tags
-
-    def list_tags(self) -> tuple[IngredientChoice, ...]:
-        return self._tags
+    def interpret(self, texts: tuple[str, ...], now: datetime) -> int:
+        self.interpreted.append(texts)
+        return len([text for text in texts if text not in self.interpretations])

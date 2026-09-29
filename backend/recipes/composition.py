@@ -5,9 +5,9 @@ from dataclasses import dataclass
 import httpx
 
 from recipes.application.ports.household_stock_reader import HouseholdStockReader
+from recipes.application.ports.ingredient_lines import IngredientLines
 from recipes.application.ports.ingredient_resolver import IngredientResolver
 from recipes.application.ports.inventory_consumer import HouseholdInventoryConsumer
-from recipes.application.ports.tag_vocabulary import TagVocabulary
 from recipes.application.use_cases.calculate_external_recipe_shortfall import (
     CalculateExternalRecipeShortfall,
 )
@@ -34,16 +34,9 @@ from recipes.application.use_cases.suggest_recipes_from_inventory import (
     SuggestRecipesFromInventory,
 )
 from recipes.application.use_cases.update_recipe import UpdateRecipe
-from recipes.infrastructure.django_ingredient_line_repository import (
-    DjangoIngredientLineRepository,
-)
 from recipes.infrastructure.django_recipe_repository import DjangoRecipeRepository
 from recipes.infrastructure.providers.ania_gotuje.provider import AniaGotujeProvider
-from recipes.infrastructure.providers.ollama.line_interpreter import (
-    OllamaIngredientLineInterpreter,
-)
 from shared.household_membership import HouseholdMembershipReader
-from shared.infrastructure.ollama_chat import OllamaSettings, open_ollama_chat
 from shared.transactions import TransactionManager
 
 
@@ -68,20 +61,14 @@ class RecipesModule:
     reassign_recipe_ingredient: ReassignRecipeIngredient
     stock: HouseholdStockReader
     resolver: IngredientResolver
-    vocabulary: TagVocabulary
+    lines: IngredientLines
     memberships: HouseholdMembershipReader
     source_settings: RecipeSourceSettings
-    ollama_settings: OllamaSettings
 
     @contextmanager
     def open_line_matching(self) -> Iterator[MatchExternalRecipeIngredients]:
-        with self._open_source() as source, open_ollama_chat(self.ollama_settings) as chat:
-            yield MatchExternalRecipeIngredients(
-                source,
-                self.vocabulary,
-                DjangoIngredientLineRepository(),
-                OllamaIngredientLineInterpreter(chat),
-            )
+        with self._open_source() as source:
+            yield MatchExternalRecipeIngredients(source, self.lines)
 
     @contextmanager
     def _open_source(self) -> Iterator[AniaGotujeProvider]:
@@ -111,7 +98,7 @@ class RecipesModule:
                     source,
                     self.stock,
                     self.resolver,
-                    DjangoIngredientLineRepository(),
+                    self.lines,
                     self.memberships,
                 ),
             )
@@ -125,11 +112,10 @@ def build_recipes(
     memberships: HouseholdMembershipReader,
     stock: HouseholdStockReader,
     resolver: IngredientResolver,
-    vocabulary: TagVocabulary,
+    lines: IngredientLines,
     consumer: HouseholdInventoryConsumer,
     reassign_recipe_ingredient: ReassignRecipeIngredient,
     source_settings: RecipeSourceSettings,
-    ollama_settings: OllamaSettings,
     transactions: TransactionManager,
 ) -> RecipesModule:
     recipes = DjangoRecipeRepository()
@@ -148,8 +134,7 @@ def build_recipes(
         reassign_recipe_ingredient=reassign_recipe_ingredient,
         stock=stock,
         resolver=resolver,
-        vocabulary=vocabulary,
+        lines=lines,
         memberships=memberships,
         source_settings=source_settings,
-        ollama_settings=ollama_settings,
     )

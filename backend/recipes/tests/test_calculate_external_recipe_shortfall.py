@@ -16,7 +16,7 @@ from recipes.domain.external_line import LineInterpretation
 from recipes.tests.factories import EGGS, GRAM, MILK, make_stock
 from recipes.tests.fakes import (
     FakeHouseholdMembershipReader,
-    FakeIngredientLineRepository,
+    FakeIngredientLines,
     FakeIngredientResolver,
     FakeRecipeSource,
     FakeStockReader,
@@ -58,7 +58,7 @@ def _use_case(
     member_household_ids: set[int],
     interpretations: dict[str, LineInterpretation] | None = None,
 ) -> CalculateExternalRecipeShortfall:
-    lines = FakeIngredientLineRepository({} if interpretations is None else interpretations)
+    lines = FakeIngredientLines({} if interpretations is None else interpretations)
     return CalculateExternalRecipeShortfall(
         FakeRecipeSource(EMPTY_PAGE, {"omlet": _omelette()}),
         FakeStockReader([make_stock(1, "jajka", "10", GRAM, EGGS)]),
@@ -79,7 +79,7 @@ def test_shortfall_lists_what_the_pantry_lacks() -> None:
 def test_a_stored_interpretation_names_the_ingredient_and_amount_of_a_line() -> None:
     salt = LineInterpretation(ingredient_id=MILK, quantity=Decimal("5"), unit_code="g")
 
-    shortfall = _use_case({HOME}, {"sol do smaku": salt}).execute(ALA, HOME, "omlet")
+    shortfall = _use_case({HOME}, {"sól do smaku": salt}).execute(ALA, HOME, "omlet")
 
     missing = [(item.name, item.ingredient_id, item.amount) for item in shortfall.missing_items]
     assert ("sól", MILK, Decimal("5")) in missing

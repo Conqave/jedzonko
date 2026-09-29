@@ -13,6 +13,7 @@ from catalog.domain.product_ingredient import (
     ProductIngredientStatus,
 )
 from catalog.tests.fakes import (
+    FakeIngredientLineRepository,
     FakeIngredientReferences,
     FakeIngredientRepository,
     FakeProductClassificationRepository,
@@ -31,7 +32,11 @@ class Setup:
         self.jaja = self._ingredient("jaja")
         self.jajka = self._ingredient("jajka")
         self.merge = MergeIngredients(
-            self.ingredients, self.classifications, (self.references,), self.transactions
+            self.ingredients,
+            self.classifications,
+            (self.references,),
+            FakeIngredientLineRepository({}),
+            self.transactions,
         )
 
     def _ingredient(self, name: str) -> int:

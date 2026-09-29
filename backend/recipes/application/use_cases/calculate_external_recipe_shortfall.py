@@ -1,7 +1,7 @@
 from decimal import Decimal
 
 from recipes.application.ports.household_stock_reader import HouseholdStockReader
-from recipes.application.ports.ingredient_line_repository import IngredientLineRepository
+from recipes.application.ports.ingredient_lines import IngredientLines
 from recipes.application.ports.ingredient_resolver import IngredientResolver
 from recipes.application.ports.recipe_source import RecipeSource
 from recipes.domain.external import ExternalRecipeIngredient
@@ -12,7 +12,6 @@ from recipes.domain.suggestion import RecipeShortfall
 from shared.household_membership import HouseholdMembershipReader, require_membership
 from shared.measurement import Quantity
 from shared.measurement_units import find_measurement_unit
-from shared.text import normalize_text
 
 
 class CalculateExternalRecipeShortfall:
@@ -21,7 +20,7 @@ class CalculateExternalRecipeShortfall:
         source: RecipeSource,
         stock: HouseholdStockReader,
         resolver: IngredientResolver,
-        lines: IngredientLineRepository,
+        lines: IngredientLines,
         memberships: HouseholdMembershipReader,
     ) -> None:
         self._source = source
@@ -35,7 +34,7 @@ class CalculateExternalRecipeShortfall:
         recipe = self._source.get_recipe(reference)
         names = tuple(line.name for line in recipe.ingredients)
         ingredient_ids = self._resolver.find_ingredient_ids(names)
-        texts = tuple(normalize_text(line.source_text) for line in recipe.ingredients)
+        texts = tuple(line.source_text for line in recipe.ingredients)
         interpretations = self._lines.find_interpretations(texts)
         requirements = [
             _to_requirement(line, ingredient_ids.get(line.name), interpretations.get(text))
