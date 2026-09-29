@@ -36,6 +36,7 @@ from shopping.composition import (
     build_shopping,
 )
 from shopping.infrastructure.catalog_directory import CatalogDirectory
+from shopping.infrastructure.catalog_line_interpreter import CatalogLineInterpreter
 from shopping.infrastructure.inventory_stock_gateway import InventoryStockGateway
 from shopping.infrastructure.inventory_writer_gateway import InventoryWriterGateway
 from shopping.infrastructure.promotions_coverage_reader import PromotionsCoverageReader
@@ -134,6 +135,7 @@ def container() -> Container:
         inventory_writer,
         recipe_requirements,
         promotion_coverage,
+        CatalogLineInterpreter(catalog.open_line_interpretation),
         transactions,
     )
 

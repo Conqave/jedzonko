@@ -147,6 +147,15 @@ class ShoppingListPurchaseView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+class ShoppingListTaggingView(APIView):
+    def post(self, request: Request, list_id: int) -> Response:
+        user_id = current_user_id(request)
+        now = timezone.now()
+        items = container().shopping.tag_shopping_list.execute(user_id, list_id, now)
+        serializer = ShoppingItemSerializer(items, many=True)
+        return Response(serializer.data)
+
+
 class ShoppingItemProductView(APIView):
     def put(self, request: Request, item_id: int) -> Response:
         user_id = current_user_id(request)

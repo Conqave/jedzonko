@@ -11,9 +11,11 @@ from shopping.application.errors import ShoppingListItemNotFoundError, ShoppingL
 from shopping.application.ports.catalog_directory import CatalogDirectory
 from shopping.application.ports.household_inventory_reader import HouseholdInventoryReader
 from shopping.application.ports.inventory_writer import InventoryWriter
+from shopping.application.ports.line_interpreter import LineInterpreter
 from shopping.application.ports.recipe_requirement_reader import RecipeRequirementReader
 from shopping.application.ports.shopping_list_repository import ShoppingListRepository
 from shopping.domain.inventory_stock_level import InventoryStockLevel
+from shopping.domain.line_meaning import LineMeaning
 from shopping.domain.missing_recipe_item import MissingRecipeItem
 from shopping.domain.shopping_item_snapshot import ShoppingItemSnapshot
 from shopping.domain.shopping_item_status import ShoppingItemStatus
@@ -26,6 +28,9 @@ UNITS = {
     ),
     "kg": MeasurementUnit(
         code="kg", dimension=MeasurementDimension.MASS, factor_to_base=Decimal("1000")
+    ),
+    "l": MeasurementUnit(
+        code="l", dimension=MeasurementDimension.VOLUME, factor_to_base=Decimal("1000")
     ),
     "szt": MeasurementUnit(
         code="szt", dimension=MeasurementDimension.COUNT, factor_to_base=Decimal("1")
@@ -171,6 +176,18 @@ class FakeShoppingListRepository(ShoppingListRepository):
         self.items[item_id] = replace(item, subject=ShoppingSubject(product_id=product_id))
         return self.items[item_id]
 
+    def retag_item(
+        self, item_id: int, ingredient_id: int, quantity: Decimal, unit_code: str
+    ) -> ShoppingItemSnapshot:
+        item = self._item(item_id)
+        self.items[item_id] = replace(
+            item,
+            subject=ShoppingSubject(ingredient_id=ingredient_id),
+            quantity=quantity,
+            unit=UNITS[unit_code],
+        )
+        return self.items[item_id]
+
     def set_item_ingredient(self, item_id: int, ingredient_id: int) -> None:
         item = self._item(item_id)
         self.items[item_id] = replace(item, subject=ShoppingSubject(ingredient_id=ingredient_id))
@@ -238,3 +255,13 @@ class FakeRecipeRequirementReader(RecipeRequirementReader):
         self, user_id: int, household_id: int, reference: str
     ) -> list[MissingRecipeItem]:
         return self._missing
+
+
+class FakeLineInterpreter(LineInterpreter):
+    def __init__(self, meanings: dict[str, LineMeaning]) -> None:
+        self._meanings = meanings
+        self.calls: list[tuple[str, ...]] = []
+
+    def interpret(self, texts: tuple[str, ...], now: datetime) -> dict[str, LineMeaning]:
+        self.calls.append(texts)
+        return {text: self._meanings[text] for text in texts if text in self._meanings}

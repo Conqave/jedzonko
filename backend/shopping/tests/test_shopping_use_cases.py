@@ -30,8 +30,10 @@ from shopping.application.use_cases.list_shopping_lists import ListShoppingLists
 from shopping.application.use_cases.reassign_shopping_ingredient import ReassignShoppingIngredient
 from shopping.application.use_cases.restore_shopping_item import RestoreShoppingItem
 from shopping.application.use_cases.synchronize_minimum_stock import SynchronizeMinimumStock
+from shopping.application.use_cases.tag_shopping_list import TagShoppingList
 from shopping.domain.errors import InvalidShoppingSubjectError
 from shopping.domain.inventory_stock_level import InventoryStockLevel
+from shopping.domain.line_meaning import LineMeaning
 from shopping.domain.missing_recipe_item import MissingRecipeItem
 from shopping.domain.shopping_subject import ShoppingSubject
 from shopping.tests.fakes import (
@@ -40,6 +42,7 @@ from shopping.tests.fakes import (
     FakeHouseholdMembershipReader,
     FakeInventoryReader,
     FakeInventoryWriter,
+    FakeLineInterpreter,
     FakeRecipeRequirementReader,
     FakeShoppingListRepository,
     FakeTransactionManager,
@@ -343,3 +346,49 @@ def test_a_missing_ingredient_is_bought_as_the_households_only_product_of_it(
     shopping.add_missing([MissingRecipeItem("Jajka", EGGS, None, Decimal("3"), "szt")])
 
     assert shopping.quantities() == [(ShoppingSubject(product_id=FLOUR), Decimal("3"), "szt")]
+
+
+def tag(shopping: Shopping, meanings: dict[str, LineMeaning]) -> None:
+    use_case = TagShoppingList(
+        shopping.repository,
+        FakeLineInterpreter(meanings),
+        shopping.memberships,
+        shopping.transactions,
+    )
+    use_case.execute(ALA, shopping.primary, NOW)
+
+
+def test_free_text_items_become_tagged_ingredient_items() -> None:
+    shopping = Shopping()
+    shopping.add(ShoppingSubject(free_text="2 litry mleka"), "1", None)
+    shopping.add(ShoppingSubject(free_text="coś na ząb"), "1", None)
+    milk = LineMeaning(ingredient_id=EGGS, quantity=Decimal("2"), unit_code="l")
+
+    tag(shopping, {"2 litry mleka": milk, "coś na ząb": LineMeaning(None, None, None)})
+
+    assert shopping.quantities() == [
+        (ShoppingSubject(ingredient_id=EGGS), Decimal("2"), "l"),
+        (ShoppingSubject(free_text="coś na ząb"), Decimal("1"), None),
+    ]
+
+
+def test_a_tag_without_an_amount_is_counted_in_pieces() -> None:
+    shopping = Shopping()
+    shopping.add(ShoppingSubject(free_text="jajka"), "6", None)
+
+    tag(shopping, {"jajka": LineMeaning(ingredient_id=EGGS, quantity=None, unit_code=None)})
+
+    assert shopping.quantities() == [(ShoppingSubject(ingredient_id=EGGS), Decimal("6"), "szt")]
+
+
+def test_a_tagged_line_adds_up_with_a_pending_item_of_the_same_tag() -> None:
+    shopping = Shopping()
+    shopping.add(ShoppingSubject(ingredient_id=EGGS), "4", "szt")
+    shopping.add(ShoppingSubject(free_text="6 jajek"), "1", None)
+
+    tag(
+        shopping,
+        {"6 jajek": LineMeaning(ingredient_id=EGGS, quantity=Decimal("6"), unit_code="szt")},
+    )
+
+    assert shopping.quantities() == [(ShoppingSubject(ingredient_id=EGGS), Decimal("10"), "szt")]

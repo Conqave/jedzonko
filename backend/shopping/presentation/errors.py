@@ -17,10 +17,16 @@ from shopping.application.errors import (
     ShoppingItemMergeConflictError,
     ShoppingListItemNotFoundError,
     ShoppingListNotFoundError,
+    TaggingUnavailableError,
 )
 from shopping.domain.errors import InvalidShoppingSubjectError
 
 API_ERRORS: ApiErrors = {
+    TaggingUnavailableError: (
+        ServiceUnavailable,
+        "The tagging model is unavailable.",
+        "tagging_unavailable",
+    ),
     ExternalRecipeNotFoundError: (
         NotFound,
         "External recipe not found.",

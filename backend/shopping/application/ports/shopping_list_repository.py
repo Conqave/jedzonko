@@ -83,5 +83,11 @@ class ShoppingListRepository(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def retag_item(
+        self, item_id: int, ingredient_id: int, quantity: Decimal, unit_code: str
+    ) -> ShoppingItemSnapshot:
+        raise NotImplementedError
+
+    @abstractmethod
     def set_item_ingredient(self, item_id: int, ingredient_id: int) -> None:
         raise NotImplementedError

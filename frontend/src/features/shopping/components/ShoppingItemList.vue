@@ -2,7 +2,16 @@
   <q-banner v-if="pendingItems.length === 0 && purchasedItems.length === 0" class="bg-grey-3">
     Lista jest pusta.
   </q-banner>
-  <div v-else-if="pendingItems.length > 0" class="row justify-end q-mb-sm">
+  <div v-else-if="pendingItems.length > 0" class="row justify-end q-gutter-sm q-mb-sm">
+    <q-btn
+      flat
+      no-caps
+      color="primary"
+      icon="auto_awesome"
+      label="Otaguj listę"
+      :loading="isTagging"
+      @click="emit('tag')"
+    />
     <q-btn
       color="positive"
       icon="done_all"
@@ -19,7 +28,19 @@
       </q-item-section>
       <q-item-section>
         <q-item-label>{{ item.name }}</q-item-label>
-        <q-item-label caption>{{ SUBJECT_LABELS[item.subject.kind] }}</q-item-label>
+        <q-item-label caption>
+          <q-chip
+            v-for="tag in findItemTags(item)"
+            :key="tag"
+            dense
+            square
+            color="primary"
+            text-color="white"
+            class="q-ml-none"
+            >{{ tag }}</q-chip
+          >
+          <span v-if="findItemTags(item).length === 0" class="text-grey-7">Bez tagu</span>
+        </q-item-label>
       </q-item-section>
       <q-item-section side>{{ describeQuantity(item) }}</q-item-section>
       <q-item-section side>
@@ -74,24 +95,21 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
 import { formatQuantity } from '@/shared/formatQuantity';
-import type { ShoppingItem, ShoppingSubject } from '../model';
-
-const SUBJECT_LABELS: Readonly<Record<ShoppingSubject['kind'], string>> = {
-  product: 'Produkt',
-  ingredient: 'Dowolny produkt z tym składnikiem',
-  text: 'Tekst własny',
-};
+import type { ShoppingItem } from '../model';
 
 const props = defineProps<{
   pendingItems: ShoppingItem[];
   purchasedItems: ShoppingItem[];
   findUnitName: (code: string) => string;
+  findProductTags: (productId: number) => string[];
+  isTagging: boolean;
 }>();
 
 const emit = defineEmits<{
   buy: [itemIds: number[]];
   restore: [item: ShoppingItem];
   'choose-product': [item: ShoppingItem];
+  tag: [];
   remove: [item: ShoppingItem];
 }>();
 
@@ -107,6 +125,16 @@ watch(
 
 function buySelected(): void {
   emit('buy', [...selectedIds.value]);
+}
+
+function findItemTags(item: ShoppingItem): string[] {
+  if (item.subject.kind === 'product') {
+    return props.findProductTags(item.subject.productId);
+  }
+  if (item.subject.kind === 'ingredient') {
+    return [item.name];
+  }
+  return [];
 }
 
 function describeQuantity(item: ShoppingItem): string {

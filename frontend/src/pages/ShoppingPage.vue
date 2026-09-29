@@ -31,6 +31,9 @@
         :pending-items="pendingItems"
         :purchased-items="purchasedItems"
         :find-unit-name="findUnitName"
+        :find-product-tags="findProductTags"
+        :is-tagging="isTagging"
+        @tag="tagItems"
         @buy="buyItem"
         @restore="restoreItem"
         @choose-product="chooseItemProduct"
@@ -45,6 +48,7 @@ import { useQuasar } from 'quasar';
 import { toRef } from 'vue';
 import { useAccountStore } from '@/features/accounts/store';
 import { useMeasurementUnits } from '@/features/catalog/useMeasurementUnits';
+import { useProductCatalog } from '@/features/catalog/useProductCatalog';
 import { useHouseholdStore } from '@/features/households/store';
 import { useFavouriteShops } from '@/features/promotions/useFavouriteShops';
 import ChooseProductDialog from '@/features/shopping/components/ChooseProductDialog.vue';
@@ -83,6 +87,8 @@ const {
   buy: buyItem,
   restore: restoreItem,
   chooseProduct,
+  tagList,
+  isTagging,
   remove: removeShoppingItem,
 } = useShoppingItems(selectedListId);
 
@@ -91,6 +97,21 @@ const { shops: promotionShops, favouriteShops, load: loadPromotionShops } = useF
 function findSplitShopOptions(): ShopOption[] {
   const preferred = favouriteShops.value.length > 0 ? favouriteShops.value : promotionShops.value;
   return preferred.map((shop) => ({ slug: shop.slug, name: shop.name }));
+}
+
+const { listings: productListings, load: loadProductTags } = useProductCatalog(householdId);
+
+function findProductTags(productId: number): string[] {
+  const listing = productListings.value.find((entry) => entry.product.id === productId);
+  return listing === undefined ? [] : listing.tags.map((tag) => tag.name);
+}
+
+async function tagItems(): Promise<void> {
+  const isTagged = await tagList();
+  if (isTagged) {
+    await loadProductTags();
+    dialogs.notifySuccess('Lista otagowana.');
+  }
 }
 
 function chooseItemProduct(item: ShoppingItem): void {

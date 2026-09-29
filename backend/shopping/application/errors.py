@@ -56,3 +56,7 @@ class ExternalRecipeNotFoundError(Exception):
 
 class RecipesUnavailableError(Exception):
     pass
+
+
+class TaggingUnavailableError(Exception):
+    pass

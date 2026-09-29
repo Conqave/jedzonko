@@ -7,6 +7,7 @@ import {
   deleteShoppingItem,
   fetchShoppingItems,
   restoreShoppingItem,
+  tagShoppingList,
 } from './api';
 import { SHOPPING_ERROR_MESSAGES } from './errors';
 import type { NewShoppingItem, ShoppingItem } from './model';
@@ -60,6 +61,21 @@ export function useShoppingItems(listId: Ref<number | null>) {
     });
   }
 
+  const isTagging = ref(false);
+
+  async function tagList(): Promise<boolean> {
+    const id = listId.value;
+    if (id === null) {
+      return false;
+    }
+    isTagging.value = true;
+    const isTagged = await run(async () => {
+      items.value = await tagShoppingList(id);
+    });
+    isTagging.value = false;
+    return isTagged;
+  }
+
   function chooseProduct(item: ShoppingItem, productId: number): Promise<boolean> {
     return run(async () => {
       await chooseShoppingItemProduct(item.id, productId);
@@ -86,6 +102,8 @@ export function useShoppingItems(listId: Ref<number | null>) {
     buy,
     restore,
     chooseProduct,
+    tagList,
+    isTagging,
     remove,
   };
 }

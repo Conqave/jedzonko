@@ -150,6 +150,11 @@ export async function chooseShoppingItemProduct(
   return itemSchema.parse(response.data);
 }
 
+export async function tagShoppingList(listId: number): Promise<ShoppingItem[]> {
+  const response = await http.post(`/shopping/lists/${listId}/tagging/`);
+  return itemSchema.array().parse(response.data);
+}
+
 export async function restoreShoppingItem(itemId: number): Promise<ShoppingItem> {
   const response = await http.post(`/shopping/items/${itemId}/restore/`);
   return itemSchema.parse(response.data);

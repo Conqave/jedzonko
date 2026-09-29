@@ -5,6 +5,7 @@ from shared.transactions import TransactionManager
 from shopping.application.ports.catalog_directory import CatalogDirectory
 from shopping.application.ports.household_inventory_reader import HouseholdInventoryReader
 from shopping.application.ports.inventory_writer import InventoryWriter
+from shopping.application.ports.line_interpreter import LineInterpreter
 from shopping.application.ports.promotion_coverage_reader import PromotionCoverageReader
 from shopping.application.ports.recipe_requirement_reader import RecipeRequirementReader
 from shopping.application.use_cases.add_missing_external_recipe_items_to_shopping_list import (
@@ -30,6 +31,7 @@ from shopping.application.use_cases.split_shopping_list_by_promotions import (
     SplitShoppingListByPromotions,
 )
 from shopping.application.use_cases.synchronize_minimum_stock import SynchronizeMinimumStock
+from shopping.application.use_cases.tag_shopping_list import TagShoppingList
 from shopping.infrastructure.django_shopping_list_repository import DjangoShoppingListRepository
 
 
@@ -49,6 +51,7 @@ class ShoppingModule:
     restore_shopping_item: RestoreShoppingItem
     delete_shopping_list_item: DeleteShoppingListItem
     choose_shopping_item_product: ChooseShoppingItemProduct
+    tag_shopping_list: TagShoppingList
     split_shopping_list_by_promotions: SplitShoppingListByPromotions
 
 
@@ -67,6 +70,7 @@ def build_shopping(
     inventory_writer: InventoryWriter,
     recipes: RecipeRequirementReader,
     promotions: PromotionCoverageReader,
+    line_interpreter: LineInterpreter,
     transactions: TransactionManager,
 ) -> ShoppingModule:
     lists = DjangoShoppingListRepository()
@@ -97,6 +101,7 @@ def build_shopping(
         choose_shopping_item_product=ChooseShoppingItemProduct(
             lists, catalog, memberships, transactions
         ),
+        tag_shopping_list=TagShoppingList(lists, line_interpreter, memberships, transactions),
         split_shopping_list_by_promotions=SplitShoppingListByPromotions(
             lists, promotions, memberships, transactions
         ),

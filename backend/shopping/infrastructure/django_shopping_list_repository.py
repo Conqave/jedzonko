@@ -139,6 +139,20 @@ class DjangoShoppingListRepository(ShoppingListRepository):
             raise ShoppingListItemNotFoundError
         return self._read(item_id)
 
+    def retag_item(
+        self, item_id: int, ingredient_id: int, quantity: Decimal, unit_code: str
+    ) -> ShoppingItemSnapshot:
+        updated = ShoppingListItem.objects.filter(pk=item_id).update(
+            ingredient_id=ingredient_id,
+            free_text=None,
+            product_id=None,
+            quantity=quantity,
+            unit_code=unit_code,
+        )
+        if updated == 0:
+            raise ShoppingListItemNotFoundError
+        return self._read(item_id)
+
     def set_item_ingredient(self, item_id: int, ingredient_id: int) -> None:
         if ShoppingListItem.objects.filter(pk=item_id).update(ingredient_id=ingredient_id) == 0:
             raise ShoppingListItemNotFoundError
