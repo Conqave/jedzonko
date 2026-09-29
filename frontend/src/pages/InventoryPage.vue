@@ -20,6 +20,7 @@
       <InventoryTable
         :items="items"
         :find-tags="findTags"
+        :find-proposal-count="findProposalCount"
         :busy="busy"
         :saving-item-id="savingItemId"
         :find-unit-name="findUnitName"
@@ -96,10 +97,15 @@ function findListing(productId: number): ProductListing | undefined {
 
 function findTags(productId: number): string[] {
   const listing = findListing(productId);
-  if (listing === undefined || listing.ingredient === null) {
+  if (listing === undefined) {
     return [];
   }
-  return [listing.ingredient.name];
+  return listing.tags.map((tag) => tag.name);
+}
+
+function findProposalCount(productId: number): number {
+  const listing = findListing(productId);
+  return listing === undefined ? 0 : listing.openProposalCount;
 }
 
 function openEditDialog(item: InventoryItem): void {

@@ -123,22 +123,11 @@ class ProductIngredient(models.Model):
     model_name = models.CharField(max_length=80, null=True, blank=True)
     proposed_at = models.DateTimeField(null=True, blank=True)
     decided_at = models.DateTimeField(null=True, blank=True)
-    confirmed_product = models.GeneratedField(
-        expression=Case(
-            When(status=ProductIngredientStatus.CONFIRMED.value, then=F("product")),
-            default=None,
-        ),
-        output_field=models.BigIntegerField(null=True),
-        db_persist=True,
-    )
 
     class Meta:
         constraints = [
             models.UniqueConstraint(
                 fields=["product", "ingredient"], name="one_link_per_product_ingredient"
-            ),
-            models.UniqueConstraint(
-                fields=["confirmed_product"], name="one_confirmed_ingredient_per_product"
             ),
             models.CheckConstraint(
                 condition=Q(status__in=enum_values(ProductIngredientStatus)),

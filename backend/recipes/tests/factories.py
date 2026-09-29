@@ -44,8 +44,8 @@ def make_stock(
     return StockedProduct(
         product_id=product_id,
         product_name=name,
-        ingredient_id=ingredient_id,
-        ingredient_name=None if ingredient_id is None else name.casefold(),
+        ingredient_ids=frozenset() if ingredient_id is None else frozenset({ingredient_id}),
+        tag_names=() if ingredient_id is None else (name.casefold(),),
         quantity=quantity,
         package_content=package,
     )

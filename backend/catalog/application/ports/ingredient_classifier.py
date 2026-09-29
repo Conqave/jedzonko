@@ -8,7 +8,5 @@ class IngredientClassifier(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def find_matching_ingredient(
-        self, product_name: str, ingredient_names: tuple[str, ...]
-    ) -> int | None:
+    def find_matching_tags(self, product_name: str, tag_names: tuple[str, ...]) -> tuple[int, ...]:
         raise NotImplementedError

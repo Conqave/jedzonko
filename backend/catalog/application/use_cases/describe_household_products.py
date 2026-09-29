@@ -3,7 +3,7 @@ from catalog.application.ports.product_classification_repository import (
     ProductClassificationRepository,
 )
 from catalog.application.ports.product_repository import ProductRepository
-from catalog.domain.product import ProductIdentity
+from catalog.domain.product import ProductIdentity, ProductTag
 
 
 class DescribeHouseholdProducts:
@@ -20,16 +20,15 @@ class DescribeHouseholdProducts:
 
     def execute(self, household_id: int) -> dict[int, ProductIdentity]:
         confirmed = self._classifications.list_confirmed(household_id)
-        ingredients = self._ingredients.find_many(set(confirmed.values()))
+        tagged_ids = {ingredient_id for ids in confirmed.values() for ingredient_id in ids}
+        ingredients = self._ingredients.find_many(tagged_ids)
         identities: dict[int, ProductIdentity] = {}
         for product in self._products.list_for_household(household_id):
-            ingredient_id = confirmed.get(product.id)
-            ingredient = None if ingredient_id is None else ingredients[ingredient_id]
+            tags = tuple(
+                ProductTag(ingredient_id=ingredient_id, name=ingredients[ingredient_id].name)
+                for ingredient_id in confirmed.get(product.id, ())
+            )
             identities[product.id] = ProductIdentity(
-                product_id=product.id,
-                name=product.name,
-                ingredient_id=ingredient_id,
-                ingredient_name=None if ingredient is None else ingredient.name,
-                package=product.package,
+                product_id=product.id, name=product.name, tags=tags, package=product.package
             )
         return identities

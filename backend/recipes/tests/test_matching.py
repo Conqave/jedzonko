@@ -17,6 +17,7 @@ from recipes.tests.factories import (
     MILLILITRE,
     PACKAGE,
     PIECE,
+    SUGAR,
     make_requirement,
     make_stock,
 )
@@ -141,3 +142,23 @@ def test_external_recipes_matching_more_of_the_pantry_come_first() -> None:
     )
     assert matched.matches[2].matched_product_names == ()
     assert matched.total_count == 3
+
+
+def test_a_product_with_several_tags_covers_each_of_them() -> None:
+    pesto = StockedProduct(
+        product_id=9,
+        product_name="Pesto pomidorowe",
+        ingredient_ids=frozenset({FLOUR, SUGAR}),
+        tag_names=("mąka", "cukier"),
+        quantity=Quantity(amount=Decimal("500"), unit=GRAM),
+        package_content=None,
+    )
+    requirements = [
+        make_requirement("mąka", "100", GRAM, FLOUR),
+        make_requirement("cukier", "100", GRAM, SUGAR),
+    ]
+
+    shortfall = calculate_shortfall(requirements, [pesto])
+
+    assert shortfall.missing_items == ()
+    assert shortfall.is_ready is True

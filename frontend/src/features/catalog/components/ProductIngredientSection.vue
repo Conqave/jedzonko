@@ -2,8 +2,10 @@
   <div>
     <div class="row items-center q-px-md">
       <div class="col">
-        <div class="text-subtitle1">Składnik</div>
-        <div class="text-caption text-grey-8">Łączy produkt z przepisami i listą zakupów.</div>
+        <div class="text-subtitle1">Tagi</div>
+        <div class="text-caption text-grey-8">
+          Tagi Ania Gotuje łączą produkt z przepisami i listą zakupów.
+        </div>
       </div>
       <q-btn
         flat
@@ -11,13 +13,9 @@
         color="primary"
         icon="auto_awesome"
         label="Przeanalizuj ponownie"
-        :disable="hasConfirmed"
         :loading="isAnalyzing"
         @click="analyzeAgain"
       >
-        <q-tooltip v-if="hasConfirmed"
-          >Odrzuć potwierdzony składnik, aby przeanalizować ponownie.</q-tooltip
-        >
       </q-btn>
     </div>
     <q-list separator>
@@ -59,19 +57,19 @@
         </q-item-section>
       </q-item>
       <q-item v-if="decisions.length === 0">
-        <q-item-section class="text-grey">Brak propozycji składnika.</q-item-section>
+        <q-item-section class="text-grey">Brak tagów i propozycji.</q-item-section>
       </q-item>
     </q-list>
 
     <q-card-section class="row q-col-gutter-sm items-center">
       <div class="col">
-        <IngredientPicker v-model="chosen" label="Wybierz inny składnik" />
+        <IngredientPicker v-model="chosen" label="Dodaj tag" />
       </div>
       <div class="col-auto">
         <q-btn
           color="primary"
           no-caps
-          label="Ustaw"
+          label="Dodaj"
           :disable="chosen === null"
           :loading="busy"
           @click="confirmChosen"
@@ -97,8 +95,9 @@ const STATUS_LABELS: Readonly<Record<ProductIngredientStatus, string>> = {
 const props = defineProps<{ product: Product }>();
 
 const quasar = useQuasar();
-const { decisions, hasConfirmed, busy, isAnalyzing, confirm, reject, analyze } =
-  useProductDecisions(props.product.id);
+const { decisions, busy, isAnalyzing, confirm, reject, analyze } = useProductDecisions(
+  props.product.id,
+);
 const chosen = ref<Ingredient | null>(null);
 
 async function confirmChosen(): Promise<void> {
@@ -113,9 +112,11 @@ async function confirmChosen(): Promise<void> {
 }
 
 async function analyzeAgain(): Promise<void> {
-  const isProposed = await analyze();
-  if (!isProposed) {
-    quasar.notify({ type: 'info', message: 'Model nie znalazł pasującego składnika.' });
-  }
+  const proposedCount = await analyze();
+  const message =
+    proposedCount === 0
+      ? 'Model nie znalazł nowych tagów.'
+      : `Nowe propozycje tagów: ${proposedCount}.`;
+  quasar.notify({ type: 'info', message });
 }
 </script>

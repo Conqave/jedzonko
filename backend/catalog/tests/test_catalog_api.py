@@ -39,7 +39,7 @@ def test_member_creates_and_lists_a_product(
     assert created.data["name"] == "Jaja ściółkowe"
     assert created.data["package"] == {"quantity": "10.000", "unit_code": "szt"}
     assert [entry["product"]["name"] for entry in listed.data] == ["Jaja ściółkowe"]
-    assert listed.data[0]["ingredient_id"] is None
+    assert listed.data[0]["tags"] == []
 
 
 def test_search_ignores_polish_diacritics(
@@ -164,15 +164,17 @@ def test_member_confirms_and_rejects_a_products_ingredient(
     butter = make_ingredient("Masło")
     api_client.force_login(ala)
 
-    wrong = api_client.post(f"/api/products/{product.pk}/ingredients/{butter.pk}/confirmation/")
-    right = api_client.post(f"/api/products/{product.pk}/ingredients/{eggs.pk}/confirmation/")
-    links = api_client.get(f"/api/products/{product.pk}/ingredients/")
+    base = f"/api/products/{product.pk}/ingredients"
+    wrong = api_client.post(f"{base}/{butter.pk}/confirmation/")
+    right = api_client.post(f"{base}/{eggs.pk}/confirmation/")
+    undone = api_client.post(f"{base}/{butter.pk}/rejection/")
+    links = api_client.get(f"{base}/")
     listed = api_client.get(f"/api/products/?household_id={household_a.pk}")
 
-    assert (wrong.status_code, right.status_code) == (204, 204)
+    assert (wrong.status_code, right.status_code, undone.status_code) == (204, 204, 204)
     decisions = {entry["ingredient"]["name"]: entry["status"] for entry in links.data}
     assert decisions == {"Masło": "rejected", "Jajka": "confirmed"}
-    assert listed.data[0]["ingredient_name"] == "Jajka"
+    assert [tag["name"] for tag in listed.data[0]["tags"]] == ["Jajka"]
 
 
 def test_rejecting_twice_is_reported(

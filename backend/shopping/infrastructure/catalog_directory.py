@@ -26,7 +26,7 @@ class CatalogDirectory(CatalogDirectoryPort):
         product_ids = [
             identity.product_id
             for identity in identities.values()
-            if identity.ingredient_id == ingredient_id
+            if any(tag.ingredient_id == ingredient_id for tag in identity.tags)
         ]
         if len(product_ids) != 1:
             return None

@@ -1,4 +1,4 @@
-import { computed, onMounted, ref } from 'vue';
+import { onMounted, ref } from 'vue';
 import { useApiAction } from '@/shared/useApiAction';
 import {
   analyzeProductIngredient,
@@ -13,10 +13,6 @@ export function useProductDecisions(productId: number) {
   const decisions = ref<ProductIngredientDecision[]>([]);
   const isAnalyzing = ref(false);
   const { busy, run } = useApiAction(CATALOG_ERROR_MESSAGES);
-
-  const hasConfirmed = computed(() =>
-    decisions.value.some((decision) => decision.status === 'confirmed'),
-  );
 
   async function reload(): Promise<void> {
     decisions.value = await fetchProductDecisions(productId);
@@ -36,20 +32,20 @@ export function useProductDecisions(productId: number) {
     });
   }
 
-  async function analyze(): Promise<boolean> {
+  async function analyze(): Promise<number> {
     isAnalyzing.value = true;
-    const isProposed = ref(false);
+    const proposedCount = ref(0);
     await run(async () => {
-      isProposed.value = await analyzeProductIngredient(productId);
+      proposedCount.value = await analyzeProductIngredient(productId);
       await reload();
     });
     isAnalyzing.value = false;
-    return isProposed.value;
+    return proposedCount.value;
   }
 
   onMounted(() => {
     void run(reload);
   });
 
-  return { decisions, hasConfirmed, busy, isAnalyzing, confirm, reject, analyze };
+  return { decisions, busy, isAnalyzing, confirm, reject, analyze };
 }

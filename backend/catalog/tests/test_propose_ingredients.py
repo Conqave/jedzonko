@@ -61,7 +61,7 @@ def setup() -> Setup:
 
 def test_the_model_answer_is_stored_as_a_proposal_only(setup: Setup) -> None:
     product_id = setup.product("Jajka wiejskie")
-    classifier = FakeIngredientClassifier({"Jajka wiejskie": "jajka"})
+    classifier = FakeIngredientClassifier({"Jajka wiejskie": ("jajka",)})
 
     proposals = setup.run(classifier)
 
@@ -71,13 +71,14 @@ def test_the_model_answer_is_stored_as_a_proposal_only(setup: Setup) -> None:
     assert setup.classifications.list_confirmed(HOME) == {}
 
 
-def test_only_ingredients_sharing_a_word_are_offered(setup: Setup) -> None:
+def test_the_model_sees_every_tag_and_may_choose_several(setup: Setup) -> None:
     setup.product("Masło extra")
-    classifier = FakeIngredientClassifier({"Masło extra": None})
+    classifier = FakeIngredientClassifier({"Masło extra": ("masło", "mleko")})
 
-    setup.run(classifier)
+    proposals = setup.run(classifier)
 
-    assert classifier.questions == [("Masło extra", ("masło",))]
+    assert classifier.questions == [("Masło extra", ("jajka", "masło", "mleko"))]
+    assert len(proposals) == 2
 
 
 def test_a_rejected_pair_is_not_offered_again(setup: Setup) -> None:
@@ -95,18 +96,18 @@ def test_a_rejected_pair_is_not_offered_again(setup: Setup) -> None:
     )
     with setup.transactions.atomic():
         setup.classifications.save((rejection,))
-    classifier = FakeIngredientClassifier({})
+    classifier = FakeIngredientClassifier({"Mleko 3,2%": ()})
 
     proposals = setup.run(classifier)
 
     assert proposals == ()
-    assert classifier.questions == []
+    assert classifier.questions == [("Mleko 3,2%", ("jajka", "masło"))]
 
 
 def test_the_question_limit_bounds_a_run(setup: Setup) -> None:
     setup.product("Jajka wiejskie")
     setup.product("Masło extra")
-    classifier = FakeIngredientClassifier({"Jajka wiejskie": "jajka", "Masło extra": "masło"})
+    classifier = FakeIngredientClassifier({"Jajka wiejskie": ("jajka",), "Masło extra": ("masło",)})
 
     proposals = setup.run(classifier, question_limit=1)
 
@@ -116,7 +117,7 @@ def test_the_question_limit_bounds_a_run(setup: Setup) -> None:
 
 def test_a_dry_run_stores_nothing(setup: Setup) -> None:
     setup.product("Jajka wiejskie")
-    classifier = FakeIngredientClassifier({"Jajka wiejskie": "jajka"})
+    classifier = FakeIngredientClassifier({"Jajka wiejskie": ("jajka",)})
 
     proposals = setup.run(classifier, dry_run=True)
 
@@ -125,9 +126,7 @@ def test_a_dry_run_stores_nothing(setup: Setup) -> None:
 
 
 class UnavailableClassifier(FakeIngredientClassifier):
-    def find_matching_ingredient(
-        self, product_name: str, ingredient_names: tuple[str, ...]
-    ) -> int | None:
+    def find_matching_tags(self, product_name: str, tag_names: tuple[str, ...]) -> tuple[int, ...]:
         raise IngredientClassifierUnavailableError("Ollama is down.")
 
 

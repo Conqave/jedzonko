@@ -67,8 +67,17 @@
           @click="emit('edit', cell.row)"
           >{{ tag }}</q-chip
         >
+        <q-badge
+          v-if="findProposalCount(cell.row.productId) > 0"
+          color="orange"
+          class="cursor-pointer"
+          :label="`Do decyzji: ${findProposalCount(cell.row.productId)}`"
+          @click="emit('edit', cell.row)"
+        />
         <q-btn
-          v-if="findTags(cell.row.productId).length === 0"
+          v-if="
+            findTags(cell.row.productId).length === 0 && findProposalCount(cell.row.productId) === 0
+          "
           flat
           dense
           no-caps
@@ -128,6 +137,7 @@ const COLUMNS: QTableColumn<InventoryItem>[] = [
 defineProps<{
   items: InventoryItem[];
   findTags: (productId: number) => string[];
+  findProposalCount: (productId: number) => number;
   busy: boolean;
   savingItemId: number | null;
   findUnitName: (code: string) => string;

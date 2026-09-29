@@ -150,8 +150,7 @@ class FakeProductRepository(ProductRepository):
         return [
             ProductListing(
                 product=product,
-                ingredient_id=self.confirmed.get(product.id),
-                ingredient_name=None,
+                tags=(),
                 open_proposal_count=0,
             )
             for product, normalized in self.products.values()
@@ -230,21 +229,21 @@ class FakeProductClassificationRepository(ProductClassificationRepository):
         for change in changes:
             links = self.products[change.product_id].links
             links[change.ingredient_id] = change
-            confirmed = [
-                link for link in links.values() if link.status is ProductIngredientStatus.CONFIRMED
-            ]
-            if len(confirmed) > 1:
-                raise AssertionError("Unique constraint on the confirmed product violated.")
             self.saved.append(change)
 
-    def list_confirmed(self, household_id: int) -> dict[int, int]:
-        return {
-            product_id: link.ingredient_id
-            for product_id, product in self.products.items()
-            if product.household_id == household_id
-            for link in product.links.values()
-            if link.status is ProductIngredientStatus.CONFIRMED
-        }
+    def list_confirmed(self, household_id: int) -> dict[int, tuple[int, ...]]:
+        confirmed: dict[int, tuple[int, ...]] = {}
+        for product_id, product in self.products.items():
+            if product.household_id != household_id:
+                continue
+            ingredient_ids = tuple(
+                link.ingredient_id
+                for link in product.links.values()
+                if link.status is ProductIngredientStatus.CONFIRMED
+            )
+            if ingredient_ids:
+                confirmed[product_id] = ingredient_ids
+        return confirmed
 
     def list_links_to(self, ingredient_id: int) -> list[ProductIngredient]:
         return [
@@ -299,7 +298,7 @@ class FakeIngredientReferences(IngredientReferences):
 
 class FakeIngredientClassifier(IngredientClassifier):
 
-    def __init__(self, answers: dict[str, str | None]) -> None:
+    def __init__(self, answers: dict[str, tuple[str, ...]]) -> None:
         self._answers = answers
         self.questions: list[tuple[str, tuple[str, ...]]] = []
 
@@ -307,14 +306,10 @@ class FakeIngredientClassifier(IngredientClassifier):
     def model_name(self) -> str:
         return "fake-model"
 
-    def find_matching_ingredient(
-        self, product_name: str, ingredient_names: tuple[str, ...]
-    ) -> int | None:
-        self.questions.append((product_name, ingredient_names))
+    def find_matching_tags(self, product_name: str, tag_names: tuple[str, ...]) -> tuple[int, ...]:
+        self.questions.append((product_name, tag_names))
         wanted = self._answers[product_name]
-        if wanted is None:
-            return None
-        return ingredient_names.index(wanted)
+        return tuple(tag_names.index(name) for name in wanted)
 
 
 class FakeHouseholdMembershipReader(HouseholdMembershipReader):

@@ -28,14 +28,12 @@ def _link(product: Product, ingredient: Ingredient, status: str) -> ProductIngre
     )
 
 
-def test_a_product_cannot_have_two_confirmed_ingredients(household_a: Household) -> None:
-    product = make_product(household_a, "Jaja ściółkowe", "opak")
-    eggs = make_ingredient("Jajka")
-    butter = make_ingredient("Masło")
-    _link(product, eggs, "confirmed")
+def test_a_product_may_carry_several_confirmed_tags(household_a: Household) -> None:
+    product = make_product(household_a, "Pesto pomidorowe", "opak")
+    _link(product, make_ingredient("Pesto"), "confirmed")
+    _link(product, make_ingredient("Pomidory suszone"), "confirmed")
 
-    with pytest.raises(IntegrityError), transaction.atomic():
-        _link(product, butter, "confirmed")
+    assert ProductIngredient.objects.filter(product=product, status="confirmed").count() == 2
 
 
 def test_a_product_may_keep_many_proposals_and_rejections(household_a: Household) -> None:
@@ -114,7 +112,7 @@ def test_quarantined_names_never_resolve() -> None:
     assert found is None
 
 
-def test_confirming_another_ingredient_demotes_the_first_in_the_database(
+def test_confirming_another_tag_keeps_the_first_in_the_database(
     ala: User, household_a: Household
 ) -> None:
     product = make_product(household_a, "Jaja", "szt")
@@ -127,4 +125,4 @@ def test_confirming_another_ingredient_demotes_the_first_in_the_database(
     statuses = dict(
         ProductIngredient.objects.filter(product=product).values_list("ingredient__name", "status")
     )
-    assert statuses == {"Masło": "rejected", "Jajka": "confirmed"}
+    assert statuses == {"Masło": "confirmed", "Jajka": "confirmed"}

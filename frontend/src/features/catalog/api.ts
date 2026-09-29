@@ -41,16 +41,12 @@ const ingredientSchema = z.object({ id: z.number().int(), name: z.string() });
 const listingSchema = z
   .object({
     product: productSchema,
-    ingredient_id: z.number().int().nullable(),
-    ingredient_name: z.string().nullable(),
+    tags: z.array(z.object({ ingredient_id: z.number().int(), name: z.string() })),
     open_proposal_count: z.number().int(),
   })
   .transform((value): ProductListing => ({
     product: value.product,
-    ingredient:
-      value.ingredient_id === null || value.ingredient_name === null
-        ? null
-        : { id: value.ingredient_id, name: value.ingredient_name },
+    tags: value.tags.map((tag) => ({ id: tag.ingredient_id, name: tag.name })),
     openProposalCount: value.open_proposal_count,
   }));
 
@@ -140,12 +136,12 @@ export async function rejectProductIngredient(
   await http.post(`/products/${productId}/ingredients/${ingredientId}/rejection/`);
 }
 
-const analysisSchema = z.object({ is_proposed: z.boolean() });
+const analysisSchema = z.object({ proposed_count: z.number().int() });
 
-export async function analyzeProductIngredient(productId: number): Promise<boolean> {
+export async function analyzeProductIngredient(productId: number): Promise<number> {
   const response = await http.post(`/products/${productId}/ingredient-analysis/`);
   const body = analysisSchema.parse(response.data);
-  return body.is_proposed;
+  return body.proposed_count;
 }
 
 export async function searchIngredients(search: string): Promise<Ingredient[]> {

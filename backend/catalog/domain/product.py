@@ -34,10 +34,15 @@ class Product:
 
 
 @dataclass(frozen=True, slots=True)
+class ProductTag:
+    ingredient_id: int
+    name: str
+
+
+@dataclass(frozen=True, slots=True)
 class ProductListing:
     product: Product
-    ingredient_id: int | None
-    ingredient_name: str | None
+    tags: tuple[ProductTag, ...]
     open_proposal_count: int
 
 
@@ -46,6 +51,5 @@ class ProductIdentity:
 
     product_id: int
     name: str
-    ingredient_id: int | None
-    ingredient_name: str | None
+    tags: tuple[ProductTag, ...]
     package: ProductPackage | None

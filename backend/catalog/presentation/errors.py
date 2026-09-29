@@ -12,7 +12,6 @@ from catalog.domain.errors import (
     InvalidNameError,
     InvalidProductIngredientTransitionError,
     InvalidProductPackageError,
-    ProductAlreadyClassifiedError,
     ProductIngredientNotFoundError,
     UnknownMeasurementUnitError,
 )
@@ -28,11 +27,6 @@ API_ERRORS: ApiErrors = {
         BadGateway,
         "The ingredient classification model gave an unusable answer.",
         "ingredient_classifier_contract_invalid",
-    ),
-    ProductAlreadyClassifiedError: (
-        ValidationError,
-        "The product already has a confirmed ingredient.",
-        "product_already_classified",
     ),
     ProductNotFoundError: (NotFound, "Product not found.", "product_not_found"),
     DuplicateProductError: (

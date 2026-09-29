@@ -7,7 +7,6 @@ from catalog.domain.errors import (
     InvalidProductClassificationError,
     InvalidProductIngredientError,
     InvalidProductIngredientTransitionError,
-    ProductAlreadyClassifiedError,
     ProductIngredientAlreadyRecordedError,
     ProductIngredientNotFoundError,
 )
@@ -108,12 +107,13 @@ def test_a_decision_has_a_decision_time(status: ProductIngredientStatus) -> None
         )
 
 
-def test_a_product_cannot_have_two_confirmed_ingredients() -> None:
-    with pytest.raises(InvalidProductClassificationError):
-        classification(
-            decided(EGGS, ProductIngredientStatus.CONFIRMED),
-            decided(BUTTER, ProductIngredientStatus.CONFIRMED),
-        )
+def test_a_product_may_carry_several_confirmed_tags() -> None:
+    tagged = classification(
+        decided(EGGS, ProductIngredientStatus.CONFIRMED),
+        decided(BUTTER, ProductIngredientStatus.CONFIRMED),
+    )
+
+    assert {link.ingredient_id for link in tagged.confirmed()} == {EGGS, BUTTER}
 
 
 def test_an_ingredient_is_recorded_once_per_product() -> None:
@@ -156,11 +156,10 @@ def test_proposing_alongside_other_open_proposals_is_allowed() -> None:
     assert proposal.ingredient_id == EGGS
 
 
-def test_a_confirmed_product_receives_no_proposals() -> None:
-    with pytest.raises(ProductAlreadyClassifiedError):
-        classification(decided(BUTTER, ProductIngredientStatus.CONFIRMED)).propose(
-            EGGS, "gpt-oss:20b", NOW
-        )
+def test_a_tagged_product_may_receive_proposals_for_other_tags() -> None:
+    tagged = classification(decided(BUTTER, ProductIngredientStatus.CONFIRMED))
+
+    assert tagged.propose(EGGS, "gpt-oss:20b", NOW).ingredient_id == EGGS
 
 
 def test_a_rejected_pair_is_never_proposed_again() -> None:
@@ -211,13 +210,12 @@ def test_a_user_may_confirm_a_previously_rejected_pair() -> None:
     ]
 
 
-def test_confirming_another_ingredient_rejects_the_previous_one_first() -> None:
+def test_confirming_another_tag_keeps_the_ones_already_confirmed() -> None:
     changes = classification(
         decided(BUTTER, ProductIngredientStatus.CONFIRMED), proposed(EGGS)
     ).confirm(EGGS, NOW)
 
     assert [(change.ingredient_id, change.status, change.decided_at) for change in changes] == [
-        (BUTTER, ProductIngredientStatus.REJECTED, NOW),
         (EGGS, ProductIngredientStatus.CONFIRMED, NOW),
     ]
 
@@ -233,8 +231,7 @@ def test_confirming_leaves_unrelated_proposals_open() -> None:
 
     assert after.find(BUTTER) == proposed(BUTTER)
     assert after.find(MILK) == proposed(MILK)
-    confirmed = after.confirmed()
-    assert confirmed is not None and confirmed.ingredient_id == EGGS
+    assert [link.ingredient_id for link in after.confirmed()] == [EGGS]
 
 
 def test_rejecting_a_proposal_keeps_it_as_a_remembered_rejection() -> None:
@@ -251,7 +248,7 @@ def test_rejecting_the_confirmed_ingredient_leaves_the_product_unclassified() ->
 
     after = before.apply((before.reject(EGGS, NOW),))
 
-    assert after.confirmed() is None
+    assert after.confirmed() == ()
 
 
 def test_rejecting_twice_is_an_invalid_transition() -> None:

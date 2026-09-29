@@ -38,7 +38,7 @@ class ConfirmProductIngredient:
                 raise IngredientNotFoundError
             changes = classification.confirm(ingredient_id, now)
             self._classifications.save(changes)
-            confirmed = classification.apply(changes).confirmed()
+            confirmed = classification.apply(changes).find(ingredient_id)
             if confirmed is None:
-                raise AssertionError("Confirming left the product without a confirmed ingredient.")
+                raise AssertionError("Confirming left no link to the ingredient.")
             return confirmed

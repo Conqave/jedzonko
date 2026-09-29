@@ -189,16 +189,6 @@ class Migration(migrations.Migration):
                 ("proposed_at", models.DateTimeField(blank=True, null=True)),
                 ("decided_at", models.DateTimeField(blank=True, null=True)),
                 (
-                    "confirmed_product",
-                    models.GeneratedField(
-                        db_persist=True,
-                        expression=models.Case(
-                            models.When(status="confirmed", then=models.F("product")), default=None
-                        ),
-                        output_field=models.BigIntegerField(null=True),
-                    ),
-                ),
-                (
                     "ingredient",
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.DO_NOTHING,
@@ -355,12 +345,6 @@ class Migration(migrations.Migration):
             model_name="productingredient",
             constraint=models.UniqueConstraint(
                 fields=("product", "ingredient"), name="one_link_per_product_ingredient"
-            ),
-        ),
-        migrations.AddConstraint(
-            model_name="productingredient",
-            constraint=models.UniqueConstraint(
-                fields=("confirmed_product",), name="one_confirmed_ingredient_per_product"
             ),
         ),
         migrations.AddConstraint(

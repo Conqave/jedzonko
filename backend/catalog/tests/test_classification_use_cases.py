@@ -7,14 +7,10 @@ from catalog.application.errors import (
     ProductNotFoundError,
 )
 from catalog.application.use_cases.confirm_product_ingredient import ConfirmProductIngredient
-from catalog.application.use_cases.get_confirmed_product_ingredients import (
-    GetConfirmedProductIngredients,
-)
 from catalog.application.use_cases.propose_product_ingredient import ProposeProductIngredient
 from catalog.application.use_cases.reject_product_ingredient import RejectProductIngredient
 from catalog.domain.errors import (
     InvalidProductIngredientTransitionError,
-    ProductAlreadyClassifiedError,
     ProductIngredientAlreadyRecordedError,
 )
 from catalog.domain.ingredient import IngredientNameSource
@@ -64,8 +60,8 @@ class Catalog:
     def reject(self) -> RejectProductIngredient:
         return RejectProductIngredient(self.classifications, self.memberships, self.transactions)
 
-    def confirmed(self, household_id: int) -> dict[int, int]:
-        return GetConfirmedProductIngredients(self.classifications).execute(household_id)
+    def confirmed(self, household_id: int) -> dict[int, tuple[int, ...]]:
+        return self.classifications.list_confirmed(household_id)
 
 
 @pytest.fixture
@@ -88,12 +84,12 @@ def test_proposing_for_a_missing_product_or_ingredient_fails(catalog: Catalog) -
         catalog.propose().execute(EGG_BOX, 404, "gpt-oss:20b", NOW)
 
 
-def test_the_model_cannot_override_a_user_decision(catalog: Catalog) -> None:
+def test_a_model_proposal_never_changes_a_confirmed_tag(catalog: Catalog) -> None:
     catalog.confirm().execute(ALA, EGG_BOX, catalog.eggs, NOW)
 
-    with pytest.raises(ProductAlreadyClassifiedError):
-        catalog.propose().execute(EGG_BOX, catalog.butter, "gpt-oss:20b", LATER)
-    assert catalog.confirmed(HOME) == {EGG_BOX: catalog.eggs}
+    catalog.propose().execute(EGG_BOX, catalog.butter, "gpt-oss:20b", LATER)
+
+    assert catalog.confirmed(HOME) == {EGG_BOX: (catalog.eggs,)}
 
 
 def test_a_rejection_is_remembered_and_blocks_the_same_proposal(catalog: Catalog) -> None:
@@ -112,23 +108,15 @@ def test_confirming_a_proposal_classifies_the_product(catalog: Catalog) -> None:
     assert confirmed.status is ProductIngredientStatus.CONFIRMED
     assert confirmed.source is ProductIngredientSource.MODEL
     assert confirmed.decided_at == LATER
-    assert catalog.confirmed(HOME) == {EGG_BOX: catalog.eggs}
+    assert catalog.confirmed(HOME) == {EGG_BOX: (catalog.eggs,)}
 
 
-def test_confirming_another_ingredient_replaces_the_previous_one_atomically(
-    catalog: Catalog,
-) -> None:
+def test_confirming_another_tag_adds_it(catalog: Catalog) -> None:
     catalog.confirm().execute(ALA, EGG_BOX, catalog.butter, NOW)
-    opened_before = catalog.transactions.opened
 
     catalog.confirm().execute(ALA, EGG_BOX, catalog.eggs, LATER)
 
-    assert catalog.transactions.opened == opened_before + 1
-    assert catalog.confirmed(HOME) == {EGG_BOX: catalog.eggs}
-    classification = catalog.classifications.find(EGG_BOX)
-    assert classification is not None
-    previous = classification.find(catalog.butter)
-    assert previous is not None and previous.status is ProductIngredientStatus.REJECTED
+    assert set(catalog.confirmed(HOME)[EGG_BOX]) == {catalog.butter, catalog.eggs}
 
 
 def test_confirming_the_same_ingredient_again_stores_nothing(catalog: Catalog) -> None:
@@ -148,7 +136,7 @@ def test_a_user_can_reconfirm_what_they_rejected(catalog: Catalog) -> None:
 
     catalog.confirm().execute(ALA, EGG_BOX, catalog.eggs, LATER)
 
-    assert catalog.confirmed(HOME) == {EGG_BOX: catalog.eggs}
+    assert catalog.confirmed(HOME) == {EGG_BOX: (catalog.eggs,)}
 
 
 def test_rejecting_twice_fails(catalog: Catalog) -> None:
@@ -182,5 +170,5 @@ def test_confirmed_ingredients_are_listed_per_household(catalog: Catalog) -> Non
     catalog.confirm().execute(ALA, EGG_BOX, catalog.eggs, NOW)
     catalog.propose().execute(FOREIGN_PRODUCT, catalog.butter, "gpt-oss:20b", NOW)
 
-    assert catalog.confirmed(HOME) == {EGG_BOX: catalog.eggs}
+    assert catalog.confirmed(HOME) == {EGG_BOX: (catalog.eggs,)}
     assert catalog.confirmed(OTHER_HOME) == {}

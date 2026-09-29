@@ -83,9 +83,8 @@ class ProductIngredientAnalysisView(APIView):
         user_id = current_user_id(request)
         now = timezone.now()
         with container().catalog.open_product_analysis() as analysis:
-            proposal = analysis.execute(user_id, product_id, now)
-        is_proposed = proposal is not None
-        return Response({"is_proposed": is_proposed})
+            proposals = analysis.execute(user_id, product_id, now)
+        return Response({"proposed_count": len(proposals)})
 
 
 class ProductIngredientConfirmationView(APIView):

@@ -29,7 +29,7 @@ export interface Ingredient {
 
 export interface ProductListing {
   product: Product;
-  ingredient: Ingredient | null;
+  tags: Ingredient[];
   openProposalCount: number;
 }
 

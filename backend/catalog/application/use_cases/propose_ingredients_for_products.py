@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from datetime import datetime
 
-from catalog.application.classification_candidates import find_undecided_candidate_ids
+from catalog.application.classification_candidates import find_undecided_tags
 from catalog.application.errors import (
     IngredientClassifierContractError,
     IngredientClassifierError,
@@ -52,31 +52,29 @@ class ProposeIngredientsForProducts:
             if asked >= self._question_limit:
                 break
             classification = self._classifications.find(product.id)
-            if classification is None or classification.confirmed() is not None:
+            if classification is None or classification.confirmed():
                 continue
-            candidate_ids = find_undecided_candidate_ids(product.name, names, classification)
-            if not candidate_ids:
+            tags = find_undecided_tags(names, classification)
+            if not tags:
                 continue
-            candidates = self._ingredients.find_many(set(candidate_ids))
             asked += 1
+            tag_names = tuple(tag.name for tag in tags)
             try:
-                choice = self._classifier.find_matching_ingredient(
-                    product.name, tuple(candidates[each].name for each in candidate_ids)
-                )
+                choices = self._classifier.find_matching_tags(product.name, tag_names)
             except IngredientClassifierError as error:
                 return ClassificationRun(asked, self._question_limit, tuple(proposals), str(error))
-            if choice is None:
-                continue
-            if not 0 <= choice < len(candidate_ids):
-                failure = IngredientClassifierContractError(f"Choice {choice} is not a candidate.")
+            if any(not 0 <= choice < len(tags) for choice in choices):
+                failure = IngredientClassifierContractError(f"Choices {choices} are not all tags.")
                 return ClassificationRun(
                     asked, self._question_limit, tuple(proposals), str(failure)
                 )
-            proposal = classification.propose(
-                candidate_ids[choice], self._classifier.model_name, now
+            chosen_ids = sorted({tags[choice].id for choice in choices})
+            product_proposals = tuple(
+                classification.propose(ingredient_id, self._classifier.model_name, now)
+                for ingredient_id in chosen_ids
             )
             if not dry_run:
                 with self._transactions.atomic():
-                    self._classifications.save((proposal,))
-            proposals.append(proposal)
+                    self._classifications.save(product_proposals)
+            proposals.extend(product_proposals)
         return ClassificationRun(asked, self._question_limit, tuple(proposals), None)

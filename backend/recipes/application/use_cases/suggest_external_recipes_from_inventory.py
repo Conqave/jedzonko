@@ -39,9 +39,9 @@ class SuggestExternalRecipesFromInventory:
         inventory = self._stock.get_stock(user_id, household_id)
         selected_names: list[str] = []
         for product in sorted(inventory, key=lambda product: product.product_name):
-            name = product.ingredient_name
-            if name is not None and name not in selected_names:
-                selected_names.append(name)
+            for name in product.tag_names:
+                if name not in selected_names:
+                    selected_names.append(name)
         selected = tuple(selected_names[: self._ingredient_limit])
         if not selected:
             return ExternalRecipeSuggestions(

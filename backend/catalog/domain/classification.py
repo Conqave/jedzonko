@@ -4,7 +4,6 @@ from datetime import datetime
 from catalog.domain.errors import (
     InvalidProductClassificationError,
     InvalidProductIngredientTransitionError,
-    ProductAlreadyClassifiedError,
     ProductIngredientAlreadyRecordedError,
     ProductIngredientNotFoundError,
 )
@@ -28,17 +27,11 @@ class ProductClassification:
         ingredient_ids = [link.ingredient_id for link in self.links]
         if len(ingredient_ids) != len(set(ingredient_ids)):
             raise InvalidProductClassificationError("An ingredient is recorded twice.")
-        confirmed = [
-            link for link in self.links if link.status is ProductIngredientStatus.CONFIRMED
-        ]
-        if len(confirmed) > 1:
-            raise InvalidProductClassificationError("More than one ingredient is confirmed.")
 
-    def confirmed(self) -> ProductIngredient | None:
-        for link in self.links:
-            if link.status is ProductIngredientStatus.CONFIRMED:
-                return link
-        return None
+    def confirmed(self) -> tuple[ProductIngredient, ...]:
+        return tuple(
+            link for link in self.links if link.status is ProductIngredientStatus.CONFIRMED
+        )
 
     def find(self, ingredient_id: int) -> ProductIngredient | None:
         for link in self.links:
@@ -47,8 +40,6 @@ class ProductClassification:
         return None
 
     def propose(self, ingredient_id: int, model_name: str, now: datetime) -> ProductIngredient:
-        if self.confirmed() is not None:
-            raise ProductAlreadyClassifiedError
         if self.find(ingredient_id) is not None:
             raise ProductIngredientAlreadyRecordedError
         return ProductIngredient(
@@ -62,15 +53,10 @@ class ProductClassification:
         )
 
     def confirm(self, ingredient_id: int, now: datetime) -> tuple[ProductIngredient, ...]:
-        current = self.confirmed()
-        if current is not None and current.ingredient_id == ingredient_id:
+        existing = self.find(ingredient_id)
+        if existing is not None and existing.status is ProductIngredientStatus.CONFIRMED:
             return ()
         changes: list[ProductIngredient] = []
-        if current is not None:
-            changes.append(
-                replace(current, status=ProductIngredientStatus.REJECTED, decided_at=now)
-            )
-        existing = self.find(ingredient_id)
         if existing is None:
             changes.append(
                 ProductIngredient(

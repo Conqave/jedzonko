@@ -20,7 +20,7 @@ def find_stock(
 ) -> StockMatch | None:
     if ingredient_id is None:
         return None
-    candidates = [product for product in stock if product.ingredient_id == ingredient_id]
+    candidates = [product for product in stock if ingredient_id in product.ingredient_ids]
     if not candidates:
         return None
     ordered = sorted(candidates, key=lambda product: (product.product_name, product.product_id))
@@ -39,7 +39,7 @@ def find_stock(
 def has_stock(ingredient_id: int | None, stock: list[StockedProduct]) -> bool:
     if ingredient_id is None:
         return False
-    return any(product.ingredient_id == ingredient_id for product in stock)
+    return any(ingredient_id in product.ingredient_ids for product in stock)
 
 
 def available_quantity(product: StockedProduct, target: MeasurementUnit) -> Quantity | None:
@@ -70,7 +70,7 @@ def match_external_recipes(
     for summary in page.recipes:
         wanted = {ingredient_ids[name] for name in summary.tag_names if name in ingredient_ids}
         matched = sorted(
-            {product.product_name for product in stock if product.ingredient_id in wanted}
+            {product.product_name for product in stock if product.ingredient_ids & wanted}
         )
         matches.append(ExternalRecipeMatch(summary=summary, matched_product_names=tuple(matched)))
     matches.sort(

@@ -6,7 +6,7 @@ from django.db.models import Count, Q
 from catalog.application.errors import DuplicateProductError, ProductNotFoundError
 from catalog.application.ports.product_repository import ProductRepository
 from catalog.domain.names import CatalogName
-from catalog.domain.product import Product, ProductListing, ProductPackage
+from catalog.domain.product import Product, ProductListing, ProductPackage, ProductTag
 from catalog.domain.product_ingredient import ProductIngredientStatus
 from catalog.models import Product as ProductRow
 from catalog.models import ProductIngredient as ProductIngredientRow
@@ -34,22 +34,20 @@ class DjangoProductRepository(ProductRepository):
         )
         if normalized_search is not None:
             rows = rows.filter(normalized_name__contains=normalized_search)
-        confirmed = {
-            link.product_id: link
-            for link in ProductIngredientRow.objects.filter(
-                product__household_id=household_id, status=CONFIRMED
-            ).select_related("ingredient")
-        }
+        links = ProductIngredientRow.objects.filter(
+            product__household_id=household_id, status=CONFIRMED
+        ).select_related("ingredient")
+        tags: dict[int, list[ProductTag]] = {}
+        for link in links:
+            tag = ProductTag(ingredient_id=link.ingredient_id, name=link.ingredient.name)
+            tags.setdefault(link.product_id, []).append(tag)
         listings = []
         for row in rows:
-            link = confirmed.get(row.pk)
             product = _to_product(row)
+            product_tags = tuple(sorted(tags.get(row.pk, []), key=lambda tag: tag.name))
             listings.append(
                 ProductListing(
-                    product=product,
-                    ingredient_id=None if link is None else link.ingredient_id,
-                    ingredient_name=None if link is None else link.ingredient.name,
-                    open_proposal_count=row.open_proposals,
+                    product=product, tags=product_tags, open_proposal_count=row.open_proposals
                 )
             )
         return listings

@@ -14,7 +14,7 @@ class ProductClassificationRepository(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def list_confirmed(self, household_id: int) -> dict[int, int]:
+    def list_confirmed(self, household_id: int) -> dict[int, tuple[int, ...]]:
         raise NotImplementedError
 
     @abstractmethod

@@ -3,7 +3,6 @@ from datetime import UTC, datetime
 import pytest
 
 from catalog.application.use_cases.analyze_product_ingredient import AnalyzeProductIngredient
-from catalog.domain.errors import ProductAlreadyClassifiedError
 from catalog.domain.ingredient import IngredientNameSource
 from catalog.domain.names import CatalogName
 from catalog.domain.product_ingredient import ProductIngredientStatus
@@ -43,7 +42,7 @@ class Analysis:
             FakeHouseholdMembershipReader({(ALA, HOME)}),
             self.transactions,
         )
-        return use_case.execute(user_id, self.product_id, NOW) is not None
+        return use_case.execute(user_id, self.product_id, NOW) != ()
 
     def statuses(self) -> dict[str, ProductIngredientStatus]:
         classification = self.classifications.find(self.product_id)
@@ -58,36 +57,38 @@ def analysis() -> Analysis:
 
 
 def test_the_model_proposes_an_ingredient_for_one_product(analysis: Analysis) -> None:
-    classifier = FakeIngredientClassifier({"Mleko 3,2%": "mleko"})
+    classifier = FakeIngredientClassifier({"Mleko 3,2%": ("mleko",)})
 
     assert analysis.analyze(classifier) is True
     assert analysis.statuses() == {"mleko": ProductIngredientStatus.PROPOSED}
 
 
 def test_analysing_again_offers_only_ingredients_not_decided_yet(analysis: Analysis) -> None:
-    analysis.analyze(FakeIngredientClassifier({"Mleko 3,2%": "mleko"}))
-    classifier = FakeIngredientClassifier({"Mleko 3,2%": "mleko zsiadłe"})
+    analysis.analyze(FakeIngredientClassifier({"Mleko 3,2%": ("mleko",)}))
+    classifier = FakeIngredientClassifier({"Mleko 3,2%": ("mleko zsiadłe",)})
 
     analysis.analyze(classifier)
 
-    assert classifier.questions == [("Mleko 3,2%", ("mleko zsiadłe",))]
+    assert classifier.questions == [("Mleko 3,2%", ("masło", "mleko zsiadłe"))]
 
 
 def test_no_fitting_ingredient_leaves_the_product_as_it_was(analysis: Analysis) -> None:
-    assert analysis.analyze(FakeIngredientClassifier({"Mleko 3,2%": None})) is False
+    assert analysis.analyze(FakeIngredientClassifier({"Mleko 3,2%": ()})) is False
     assert analysis.statuses() == {}
 
 
-def test_a_confirmed_product_is_not_analysed(analysis: Analysis) -> None:
+def test_a_tagged_product_is_offered_only_the_other_tags(analysis: Analysis) -> None:
     milk = analysis.ingredients.find_by_normalized_name("mleko")
     assert milk is not None
     classification = analysis.classifications.find(analysis.product_id)
     assert classification is not None
     with analysis.transactions.atomic():
         analysis.classifications.save(classification.confirm(milk.id, NOW))
+    classifier = FakeIngredientClassifier({"Mleko 3,2%": ()})
 
-    with pytest.raises(ProductAlreadyClassifiedError):
-        analysis.analyze(FakeIngredientClassifier({}))
+    analysis.analyze(classifier)
+
+    assert classifier.questions == [("Mleko 3,2%", ("masło", "mleko zsiadłe"))]
 
 
 def test_a_non_member_cannot_analyse(analysis: Analysis) -> None:

@@ -20,11 +20,13 @@ beforeEach(() => {
 });
 
 describe('catalog api', () => {
-  it('maps a listing with its confirmed ingredient', async () => {
+  it('maps a listing with all its tags', async () => {
     const listing = {
       product: PRODUCT_DTO,
-      ingredient_id: 3,
-      ingredient_name: 'mleko',
+      tags: [
+        { ingredient_id: 3, name: 'mleko' },
+        { ingredient_id: 8, name: 'mleko zsiadłe' },
+      ],
       open_proposal_count: 1,
     };
     get.mockResolvedValue({ data: [listing] });
@@ -32,7 +34,10 @@ describe('catalog api', () => {
     const [found] = await searchProducts(1, 'mle');
 
     expect(get).toHaveBeenCalledWith('/products/', { params: { household_id: 1, search: 'mle' } });
-    expect(found?.ingredient).toEqual({ id: 3, name: 'mleko' });
+    expect(found?.tags).toEqual([
+      { id: 3, name: 'mleko' },
+      { id: 8, name: 'mleko zsiadłe' },
+    ]);
     expect(found?.product.package).toEqual({ quantity: '1.000', unitCode: 'l' });
   });
 

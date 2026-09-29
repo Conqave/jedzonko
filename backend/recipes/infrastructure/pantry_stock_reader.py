@@ -28,8 +28,8 @@ class PantryStockReader(HouseholdStockReader):
                 StockedProduct(
                     product_id=item.product_id,
                     product_name=item.product_name,
-                    ingredient_id=identity.ingredient_id,
-                    ingredient_name=identity.ingredient_name,
+                    ingredient_ids=frozenset(tag.ingredient_id for tag in identity.tags),
+                    tag_names=tuple(tag.name for tag in identity.tags),
                     quantity=quantity,
                     package_content=package_content,
                 )

@@ -25,16 +25,16 @@ def _answer(content: str) -> httpx.Response:
     return httpx.Response(200, json={"message": {"role": "assistant", "content": content}})
 
 
-def test_a_numbered_answer_selects_the_ingredient() -> None:
-    classifier = _classifier(lambda request: _answer("2"))
+def test_numbered_answers_select_every_matching_tag() -> None:
+    classifier = _classifier(lambda request: _answer('{"tags": [3, 2, 3]}'))
 
-    assert classifier.find_matching_ingredient("Jaja ściółkowe", INGREDIENTS) == 1
+    assert classifier.find_matching_tags("Jaja ściółkowe", INGREDIENTS) == (1, 2)
 
 
-def test_zero_means_no_ingredient_fits() -> None:
-    classifier = _classifier(lambda request: _answer("0"))
+def test_an_empty_list_means_no_tag_fits() -> None:
+    classifier = _classifier(lambda request: _answer('{"tags": []}'))
 
-    assert classifier.find_matching_ingredient("Folia aluminiowa", INGREDIENTS) is None
+    assert classifier.find_matching_tags("Folia aluminiowa", INGREDIENTS) == ()
 
 
 def test_the_request_numbers_every_ingredient_and_names_the_model() -> None:
@@ -43,10 +43,10 @@ def test_the_request_numbers_every_ingredient_and_names_the_model() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         body = json.loads(request.content)
         seen.append(body)
-        return _answer("0")
+        return _answer('{"tags": []}')
 
     classifier = _classifier(handler)
-    classifier.find_matching_ingredient("Jaja", INGREDIENTS)
+    classifier.find_matching_tags("Jaja", INGREDIENTS)
 
     body = seen[0]
     assert body["model"] == "gpt-oss:20b"
@@ -56,6 +56,8 @@ def test_the_request_numbers_every_ingredient_and_names_the_model() -> None:
     prompt = messages[0]["content"]
     assert "Produkt: Jaja" in prompt
     assert "1. maślanka\n2. jajka\n3. skyr" in prompt
+    assert isinstance(body["format"], dict)
+    assert body["options"] == {"num_predict": 256}
 
 
 @pytest.mark.parametrize(
@@ -69,7 +71,7 @@ def test_an_http_failure_means_the_model_is_unavailable(response: httpx.Response
     classifier = _classifier(lambda request: response)
 
     with pytest.raises(IngredientClassifierUnavailableError):
-        classifier.find_matching_ingredient("Jaja", INGREDIENTS)
+        classifier.find_matching_tags("Jaja", INGREDIENTS)
 
 
 def test_a_connection_failure_means_the_model_is_unavailable() -> None:
@@ -79,7 +81,7 @@ def test_a_connection_failure_means_the_model_is_unavailable() -> None:
     classifier = _classifier(handler)
 
     with pytest.raises(IngredientClassifierUnavailableError):
-        classifier.find_matching_ingredient("Jaja", INGREDIENTS)
+        classifier.find_matching_tags("Jaja", INGREDIENTS)
 
 
 @pytest.mark.parametrize(
@@ -89,11 +91,12 @@ def test_a_connection_failure_means_the_model_is_unavailable() -> None:
         httpx.Response(200, json={"message": {}}),
         httpx.Response(200, json=[]),
         _answer("maybe the second one"),
-        _answer("7"),
+        _answer('{"tags": [7]}'),
+        _answer('{"tags": "2"}'),
     ],
 )
 def test_an_answer_breaking_the_contract_is_rejected(response: httpx.Response) -> None:
     classifier = _classifier(lambda request: response)
 
     with pytest.raises(IngredientClassifierContractError):
-        classifier.find_matching_ingredient("Jaja", INGREDIENTS)
+        classifier.find_matching_tags("Jaja", INGREDIENTS)

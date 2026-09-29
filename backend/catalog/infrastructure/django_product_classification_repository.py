@@ -41,11 +41,14 @@ class DjangoProductClassificationRepository(ProductClassificationRepository):
                 },
             )
 
-    def list_confirmed(self, household_id: int) -> dict[int, int]:
+    def list_confirmed(self, household_id: int) -> dict[int, tuple[int, ...]]:
         rows = ProductIngredientRow.objects.filter(
             product__household_id=household_id, status=CONFIRMED
         ).values_list("product_id", "ingredient_id")
-        return dict(rows)
+        confirmed: dict[int, list[int]] = {}
+        for product_id, ingredient_id in rows:
+            confirmed.setdefault(product_id, []).append(ingredient_id)
+        return {product_id: tuple(ids) for product_id, ids in confirmed.items()}
 
     def list_links_to(self, ingredient_id: int) -> list[ProductIngredient]:
         rows = ProductIngredientRow.objects.filter(ingredient_id=ingredient_id)

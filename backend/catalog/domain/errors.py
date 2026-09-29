@@ -10,10 +10,6 @@ class InvalidProductClassificationError(Exception):
     pass
 
 
-class ProductAlreadyClassifiedError(Exception):
-    pass
-
-
 class ProductIngredientAlreadyRecordedError(Exception):
     pass
 

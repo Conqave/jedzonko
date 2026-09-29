@@ -42,10 +42,14 @@ class IngredientSerializer(serializers.Serializer[object]):
     name = serializers.CharField(read_only=True)
 
 
+class ProductTagSerializer(serializers.Serializer[object]):
+    ingredient_id = serializers.IntegerField(read_only=True)
+    name = serializers.CharField(read_only=True)
+
+
 class ProductListingSerializer(serializers.Serializer[object]):
     product = ProductSerializer(read_only=True)
-    ingredient_id = serializers.IntegerField(read_only=True, allow_null=True)
-    ingredient_name = serializers.CharField(read_only=True, allow_null=True)
+    tags = ProductTagSerializer(many=True, read_only=True)
     open_proposal_count = serializers.IntegerField(read_only=True)
 
 
