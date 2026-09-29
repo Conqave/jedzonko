@@ -28,6 +28,7 @@ from recipes.composition import (
 from recipes.infrastructure.catalog_ingredient_resolver import CatalogIngredientResolver
 from recipes.infrastructure.inventory_consumer import InventoryConsumer
 from recipes.infrastructure.pantry_stock_reader import PantryStockReader
+from shared.infrastructure.ollama_chat import OllamaSettings
 from shopping.composition import (
     ShoppingModule,
     build_create_primary_shopping_list,
@@ -67,11 +68,14 @@ def container() -> Container:
         RecipeIngredientReferences(reassign_recipe_ingredient),
         ShoppingIngredientReferences(reassign_shopping_ingredient),
     )
+    ollama_settings = OllamaSettings(
+        base_url=settings.OLLAMA_BASE_URL,
+        model=settings.OLLAMA_MODEL,
+        think=settings.OLLAMA_REASONING_EFFORT,
+        timeout_seconds=settings.OLLAMA_HTTP_TIMEOUT_SECONDS,
+    )
     classifier_settings = ClassifierSettings(
-        base_url=settings.INGREDIENT_CLASSIFIER_BASE_URL,
-        model=settings.INGREDIENT_CLASSIFIER_MODEL,
-        think=settings.INGREDIENT_CLASSIFIER_REASONING_EFFORT,
-        timeout_seconds=settings.INGREDIENT_CLASSIFIER_HTTP_TIMEOUT_SECONDS,
+        ollama=ollama_settings,
         question_limit=settings.INGREDIENT_CLASSIFIER_QUESTION_LIMIT,
     )
     catalog = build_catalog(memberships, ingredient_references, classifier_settings, transactions)

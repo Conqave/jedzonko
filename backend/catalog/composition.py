@@ -2,9 +2,6 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
 
-import httpx
-from django.core.exceptions import ImproperlyConfigured
-
 from catalog.application.ports.ingredient_references import IngredientReferences
 from catalog.application.use_cases.add_ingredient_alias import AddIngredientAlias
 from catalog.application.use_cases.confirm_product_ingredient import ConfirmProductIngredient
@@ -44,15 +41,13 @@ from catalog.infrastructure.django_product_classification_repository import (
 from catalog.infrastructure.django_product_repository import DjangoProductRepository
 from catalog.infrastructure.providers.ollama.classifier import OllamaIngredientClassifier
 from shared.household_membership import HouseholdMembershipReader
+from shared.infrastructure.ollama_chat import OllamaSettings, open_ollama_chat
 from shared.transactions import TransactionManager
 
 
 @dataclass(frozen=True, slots=True)
 class ClassifierSettings:
-    base_url: str
-    model: str
-    think: str | bool
-    timeout_seconds: float
+    ollama: OllamaSettings
     question_limit: int
 
 
@@ -87,16 +82,12 @@ class CatalogModule:
     @contextmanager
     def open_classification(self) -> Iterator[ProposeIngredientsForProducts]:
         settings = self.classifier_settings
-        if not settings.base_url:
-            raise ImproperlyConfigured("INGREDIENT_CLASSIFIER_BASE_URL is not set.")
-        with httpx.Client(timeout=httpx.Timeout(settings.timeout_seconds)) as client:
+        with open_ollama_chat(settings.ollama) as chat:
             yield ProposeIngredientsForProducts(
                 DjangoProductRepository(),
                 DjangoIngredientRepository(),
                 DjangoProductClassificationRepository(),
-                OllamaIngredientClassifier(
-                    client, settings.base_url, settings.model, settings.think
-                ),
+                OllamaIngredientClassifier(chat),
                 self.transactions,
                 settings.question_limit,
             )

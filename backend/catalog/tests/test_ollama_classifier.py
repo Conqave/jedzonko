@@ -9,6 +9,7 @@ from catalog.application.errors import (
     IngredientClassifierUnavailableError,
 )
 from catalog.infrastructure.providers.ollama.classifier import OllamaIngredientClassifier
+from shared.infrastructure.ollama_chat import OllamaChat, OllamaSettings
 
 INGREDIENTS = ("maślanka", "jajka", "skyr")
 
@@ -16,7 +17,8 @@ INGREDIENTS = ("maślanka", "jajka", "skyr")
 def _classifier(handler: Callable[[httpx.Request], httpx.Response]) -> OllamaIngredientClassifier:
     transport = httpx.MockTransport(handler)
     client = httpx.Client(transport=transport)
-    return OllamaIngredientClassifier(client, "http://192.0.2.1:11434/", "gpt-oss:20b", "high")
+    settings = OllamaSettings("http://192.0.2.1:11434/", "gpt-oss:20b", "high", 10)
+    return OllamaIngredientClassifier(OllamaChat(client, settings))
 
 
 def _answer(content: str) -> httpx.Response:
