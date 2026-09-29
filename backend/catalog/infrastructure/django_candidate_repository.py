@@ -27,6 +27,10 @@ class DjangoCandidateRepository(CandidateRepository):
         )
         return _to_candidate(row)
 
+    def list_pending(self) -> list[IngredientNameCandidate]:
+        rows = CandidateRow.objects.filter(status=CandidateStatus.PENDING.value).order_by("pk")
+        return [_to_candidate(row) for row in rows]
+
     def decide(self, candidate_id: int, status: CandidateStatus, decided_at: datetime) -> None:
         updated = CandidateRow.objects.filter(pk=candidate_id).update(
             status=status.value, decided_at=decided_at

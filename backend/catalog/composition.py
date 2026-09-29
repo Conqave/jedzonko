@@ -8,6 +8,7 @@ from catalog.application.use_cases.analyze_product_ingredient import AnalyzeProd
 from catalog.application.use_cases.confirm_product_ingredient import ConfirmProductIngredient
 from catalog.application.use_cases.create_ingredient import CreateIngredient
 from catalog.application.use_cases.create_product import CreateProduct
+from catalog.application.use_cases.curate_candidates import CurateCandidates
 from catalog.application.use_cases.decide_candidate import (
     AcceptCandidateAsAlias,
     AcceptCandidateAsIngredient,
@@ -44,6 +45,7 @@ from catalog.infrastructure.django_product_classification_repository import (
     DjangoProductClassificationRepository,
 )
 from catalog.infrastructure.django_product_repository import DjangoProductRepository
+from catalog.infrastructure.providers.ollama.candidate_curator import OllamaCandidateCurator
 from catalog.infrastructure.providers.ollama.classifier import OllamaIngredientClassifier
 from catalog.infrastructure.providers.ollama.line_interpreter import (
     OllamaIngredientLineInterpreter,
@@ -109,6 +111,19 @@ class CatalogModule:
                 DjangoIngredientLineRepository(),
                 OllamaIngredientLineInterpreter(chat),
                 self.list_tags,
+            )
+
+    @contextmanager
+    def open_candidate_curation(self, batch_size: int) -> Iterator[CurateCandidates]:
+        with open_ollama_chat(self.classifier_settings.ollama) as chat:
+            yield CurateCandidates(
+                DjangoCandidateRepository(),
+                self.list_tags,
+                OllamaCandidateCurator(chat),
+                self.accept_candidate_as_ingredient,
+                self.accept_candidate_as_alias,
+                self.dismiss_candidate,
+                batch_size,
             )
 
     @contextmanager

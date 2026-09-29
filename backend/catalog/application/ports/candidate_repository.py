@@ -22,3 +22,7 @@ class CandidateRepository(ABC):
     @abstractmethod
     def decide(self, candidate_id: int, status: CandidateStatus, decided_at: datetime) -> None:
         raise NotImplementedError
+
+    @abstractmethod
+    def list_pending(self) -> list[IngredientNameCandidate]:
+        raise NotImplementedError

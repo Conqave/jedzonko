@@ -285,6 +285,13 @@ class FakeCandidateRepository(CandidateRepository):
         self.candidates[candidate.id] = candidate
         return candidate
 
+    def list_pending(self) -> list[IngredientNameCandidate]:
+        return [
+            candidate
+            for candidate in self.candidates.values()
+            if candidate.status is CandidateStatus.PENDING
+        ]
+
     def decide(self, candidate_id: int, status: CandidateStatus, decided_at: datetime) -> None:
         candidate = self.candidates[candidate_id]
         self.candidates[candidate_id] = replace(candidate, status=status, decided_at=decided_at)
