@@ -31,6 +31,9 @@ class TagShoppingList:
         if shopping_list is None:
             raise ShoppingListNotFoundError
         require_membership(self._memberships, user_id, shopping_list.household_id)
+        return self.tag(list_id, now)
+
+    def tag(self, list_id: int, now: datetime) -> list[ShoppingItemSnapshot]:
         texts = [
             item
             for item in self._repository.list_pending_items(list_id)
@@ -66,3 +69,15 @@ def _amount(item: ShoppingItemSnapshot, meaning: LineMeaning) -> tuple[Decimal, 
     if item.unit is not None:
         return item.quantity, item.unit.code
     return item.quantity, COUNT_UNIT
+
+
+class TagAllShoppingLists:
+    def __init__(self, repository: ShoppingListRepository, tag_list: TagShoppingList) -> None:
+        self._repository = repository
+        self._tag_list = tag_list
+
+    def execute(self, now: datetime) -> int:
+        list_ids = self._repository.list_ids_with_free_text()
+        for list_id in list_ids:
+            self._tag_list.tag(list_id, now)
+        return len(list_ids)

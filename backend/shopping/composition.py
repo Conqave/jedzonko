@@ -31,7 +31,10 @@ from shopping.application.use_cases.split_shopping_list_by_promotions import (
     SplitShoppingListByPromotions,
 )
 from shopping.application.use_cases.synchronize_minimum_stock import SynchronizeMinimumStock
-from shopping.application.use_cases.tag_shopping_list import TagShoppingList
+from shopping.application.use_cases.tag_shopping_list import (
+    TagAllShoppingLists,
+    TagShoppingList,
+)
 from shopping.infrastructure.django_shopping_list_repository import DjangoShoppingListRepository
 
 
@@ -52,6 +55,7 @@ class ShoppingModule:
     delete_shopping_list_item: DeleteShoppingListItem
     choose_shopping_item_product: ChooseShoppingItemProduct
     tag_shopping_list: TagShoppingList
+    tag_all_shopping_lists: TagAllShoppingLists
     split_shopping_list_by_promotions: SplitShoppingListByPromotions
 
 
@@ -74,6 +78,7 @@ def build_shopping(
     transactions: TransactionManager,
 ) -> ShoppingModule:
     lists = DjangoShoppingListRepository()
+    tag_list = TagShoppingList(lists, line_interpreter, memberships, transactions)
     buy_item = BuyShoppingItem(lists, inventory_writer, memberships, transactions)
     add_missing = AddMissingRecipeItemsToShoppingList(
         lists, recipes, catalog, memberships, transactions
@@ -101,7 +106,8 @@ def build_shopping(
         choose_shopping_item_product=ChooseShoppingItemProduct(
             lists, catalog, memberships, transactions
         ),
-        tag_shopping_list=TagShoppingList(lists, line_interpreter, memberships, transactions),
+        tag_shopping_list=tag_list,
+        tag_all_shopping_lists=TagAllShoppingLists(lists, tag_list),
         split_shopping_list_by_promotions=SplitShoppingListByPromotions(
             lists, promotions, memberships, transactions
         ),

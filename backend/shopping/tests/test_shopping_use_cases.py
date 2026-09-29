@@ -30,7 +30,7 @@ from shopping.application.use_cases.list_shopping_lists import ListShoppingLists
 from shopping.application.use_cases.reassign_shopping_ingredient import ReassignShoppingIngredient
 from shopping.application.use_cases.restore_shopping_item import RestoreShoppingItem
 from shopping.application.use_cases.synchronize_minimum_stock import SynchronizeMinimumStock
-from shopping.application.use_cases.tag_shopping_list import TagShoppingList
+from shopping.application.use_cases.tag_shopping_list import TagAllShoppingLists, TagShoppingList
 from shopping.domain.errors import InvalidShoppingSubjectError
 from shopping.domain.inventory_stock_level import InventoryStockLevel
 from shopping.domain.line_meaning import LineMeaning
@@ -392,3 +392,21 @@ def test_a_tagged_line_adds_up_with_a_pending_item_of_the_same_tag() -> None:
     )
 
     assert shopping.quantities() == [(ShoppingSubject(ingredient_id=EGGS), Decimal("10"), "szt")]
+
+
+def test_every_list_with_free_text_is_tagged_in_one_run() -> None:
+    shopping = Shopping()
+    shopping.add(ShoppingSubject(free_text="jajka"), "6", None)
+    tag_list = TagShoppingList(
+        shopping.repository,
+        FakeLineInterpreter(
+            {"jajka": LineMeaning(ingredient_id=EGGS, quantity=None, unit_code=None)}
+        ),
+        shopping.memberships,
+        shopping.transactions,
+    )
+
+    count = TagAllShoppingLists(shopping.repository, tag_list).execute(NOW)
+
+    assert count == 1
+    assert shopping.quantities() == [(ShoppingSubject(ingredient_id=EGGS), Decimal("6"), "szt")]

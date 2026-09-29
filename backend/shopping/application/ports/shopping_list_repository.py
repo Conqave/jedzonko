@@ -91,3 +91,7 @@ class ShoppingListRepository(ABC):
     @abstractmethod
     def set_item_ingredient(self, item_id: int, ingredient_id: int) -> None:
         raise NotImplementedError
+
+    @abstractmethod
+    def list_ids_with_free_text(self) -> tuple[int, ...]:
+        raise NotImplementedError

@@ -153,6 +153,11 @@ class DjangoShoppingListRepository(ShoppingListRepository):
             raise ShoppingListItemNotFoundError
         return self._read(item_id)
 
+    def list_ids_with_free_text(self) -> tuple[int, ...]:
+        rows = ShoppingListItem.objects.filter(status=PENDING, free_text__isnull=False)
+        list_ids = rows.values_list("shopping_list_id", flat=True).distinct()
+        return tuple(sorted(list_ids))
+
     def set_item_ingredient(self, item_id: int, ingredient_id: int) -> None:
         if ShoppingListItem.objects.filter(pk=item_id).update(ingredient_id=ingredient_id) == 0:
             raise ShoppingListItemNotFoundError

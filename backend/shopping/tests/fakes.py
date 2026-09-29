@@ -188,6 +188,14 @@ class FakeShoppingListRepository(ShoppingListRepository):
         )
         return self.items[item_id]
 
+    def list_ids_with_free_text(self) -> tuple[int, ...]:
+        list_ids = {
+            item.list_id
+            for item in self.items.values()
+            if not item.is_purchased and item.subject.free_text is not None
+        }
+        return tuple(sorted(list_ids))
+
     def set_item_ingredient(self, item_id: int, ingredient_id: int) -> None:
         item = self._item(item_id)
         self.items[item_id] = replace(item, subject=ShoppingSubject(ingredient_id=ingredient_id))
