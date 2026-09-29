@@ -7,6 +7,7 @@ import httpx
 from recipes.application.ports.household_stock_reader import HouseholdStockReader
 from recipes.application.ports.ingredient_resolver import IngredientResolver
 from recipes.application.ports.inventory_consumer import HouseholdInventoryConsumer
+from recipes.application.ports.tag_vocabulary import TagVocabulary
 from recipes.application.use_cases.calculate_external_recipe_shortfall import (
     CalculateExternalRecipeShortfall,
 )
@@ -67,6 +68,7 @@ class RecipesModule:
     reassign_recipe_ingredient: ReassignRecipeIngredient
     stock: HouseholdStockReader
     resolver: IngredientResolver
+    vocabulary: TagVocabulary
     memberships: HouseholdMembershipReader
     source_settings: RecipeSourceSettings
     ollama_settings: OllamaSettings
@@ -76,7 +78,7 @@ class RecipesModule:
         with self._open_source() as source, open_ollama_chat(self.ollama_settings) as chat:
             yield MatchExternalRecipeIngredients(
                 source,
-                self.resolver,
+                self.vocabulary,
                 DjangoIngredientLineRepository(),
                 OllamaIngredientLineInterpreter(chat),
             )
@@ -123,6 +125,7 @@ def build_recipes(
     memberships: HouseholdMembershipReader,
     stock: HouseholdStockReader,
     resolver: IngredientResolver,
+    vocabulary: TagVocabulary,
     consumer: HouseholdInventoryConsumer,
     reassign_recipe_ingredient: ReassignRecipeIngredient,
     source_settings: RecipeSourceSettings,
@@ -145,6 +148,7 @@ def build_recipes(
         reassign_recipe_ingredient=reassign_recipe_ingredient,
         stock=stock,
         resolver=resolver,
+        vocabulary=vocabulary,
         memberships=memberships,
         source_settings=source_settings,
         ollama_settings=ollama_settings,

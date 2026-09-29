@@ -15,8 +15,8 @@ from recipes.tests.factories import EGGS, MILK
 from recipes.tests.fakes import (
     FakeIngredientLineInterpreter,
     FakeIngredientLineRepository,
-    FakeIngredientResolver,
     FakeRecipeSource,
+    FakeTagVocabulary,
 )
 
 NOW = datetime(2026, 9, 29, 8, 0, tzinfo=UTC)
@@ -52,21 +52,25 @@ def _recipe(tags: tuple[str, ...]) -> ExternalRecipeDetail:
 
 
 def _matching(
-    tags: tuple[str, ...], lines: FakeIngredientLineRepository
+    tags: tuple[IngredientChoice, ...], lines: FakeIngredientLineRepository
 ) -> tuple[MatchExternalRecipeIngredients, FakeIngredientLineInterpreter]:
     interpreter = FakeIngredientLineInterpreter({EGGS_LINE: EGGS_MEANING, MILK_LINE: MILK_MEANING})
     use_case = MatchExternalRecipeIngredients(
-        FakeRecipeSource(EMPTY_PAGE, {"omlet": _recipe(tags)}),
-        FakeIngredientResolver({"jajko": EGGS, "mleko": MILK}),
+        FakeRecipeSource(EMPTY_PAGE, {"omlet": _recipe(("jajko",))}),
+        FakeTagVocabulary(tags),
         lines,
         interpreter,
     )
     return use_case, interpreter
 
 
-def test_lines_are_interpreted_against_the_recipe_tags_and_stored() -> None:
+EGGS_TAG = IngredientChoice(id=EGGS, name="jajka")
+MILK_TAG = IngredientChoice(id=MILK, name="mleko")
+
+
+def test_lines_are_interpreted_against_the_whole_tag_catalog_and_stored() -> None:
     lines = FakeIngredientLineRepository({})
-    use_case, interpreter = _matching(("jajko", "mleko", "patelnia"), lines)
+    use_case, interpreter = _matching((EGGS_TAG, MILK_TAG), lines)
 
     count = use_case.execute("omlet", NOW)
 
@@ -74,7 +78,7 @@ def test_lines_are_interpreted_against_the_recipe_tags_and_stored() -> None:
     assert interpreter.calls == [
         (
             (EGGS_LINE, MILK_LINE),
-            (IngredientChoice(id=EGGS, name="jajko"), IngredientChoice(id=MILK, name="mleko")),
+            (EGGS_TAG, MILK_TAG),
         )
     ]
     assert lines.interpretations["3 srednie jajka"] == EGGS_MEANING
@@ -83,7 +87,7 @@ def test_lines_are_interpreted_against_the_recipe_tags_and_stored() -> None:
 
 def test_only_lines_never_seen_are_sent_to_the_model() -> None:
     lines = FakeIngredientLineRepository({"3 srednie jajka": EGGS_MEANING})
-    use_case, interpreter = _matching(("jajko", "mleko"), lines)
+    use_case, interpreter = _matching((EGGS_TAG, MILK_TAG), lines)
 
     use_case.execute("omlet", NOW)
 
@@ -92,14 +96,14 @@ def test_only_lines_never_seen_are_sent_to_the_model() -> None:
 
 def test_a_recipe_matched_before_needs_no_model() -> None:
     known = {"3 srednie jajka": EGGS_MEANING, "szklanka mleka": MILK_MEANING}
-    use_case, interpreter = _matching(("jajko", "mleko"), FakeIngredientLineRepository(known))
+    use_case, interpreter = _matching((EGGS_TAG, MILK_TAG), FakeIngredientLineRepository(known))
 
     assert use_case.execute("omlet", NOW) == 0
     assert interpreter.calls == []
 
 
-def test_a_recipe_without_known_tags_has_nothing_to_choose_from() -> None:
-    use_case, interpreter = _matching(("patelnia",), FakeIngredientLineRepository({}))
+def test_an_empty_tag_catalog_has_nothing_to_choose_from() -> None:
+    use_case, interpreter = _matching((), FakeIngredientLineRepository({}))
 
     assert use_case.execute("omlet", NOW) == 0
     assert interpreter.calls == []

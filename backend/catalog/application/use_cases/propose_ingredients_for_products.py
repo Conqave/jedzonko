@@ -21,6 +21,7 @@ class ClassificationRun:
     question_count: int
     question_limit: int
     proposals: tuple[ProductIngredient, ...]
+    skipped: tuple[str, ...]
     failure: str | None
 
 
@@ -47,6 +48,7 @@ class ProposeIngredientsForProducts:
     def execute(self, now: datetime, dry_run: bool) -> ClassificationRun:
         names = self._ingredients.list_names()
         proposals: list[ProductIngredient] = []
+        skipped: list[str] = []
         asked = 0
         for product in self._products.list_unclassified():
             if asked >= self._question_limit:
@@ -61,13 +63,16 @@ class ProposeIngredientsForProducts:
             tag_names = tuple(tag.name for tag in tags)
             try:
                 choices = self._classifier.find_matching_tags(product.name, tag_names)
+            except IngredientClassifierContractError as error:
+                skipped.append(f"{product.name}: {error}")
+                continue
             except IngredientClassifierError as error:
-                return ClassificationRun(asked, self._question_limit, tuple(proposals), str(error))
-            if any(not 0 <= choice < len(tags) for choice in choices):
-                failure = IngredientClassifierContractError(f"Choices {choices} are not all tags.")
                 return ClassificationRun(
-                    asked, self._question_limit, tuple(proposals), str(failure)
+                    asked, self._question_limit, tuple(proposals), tuple(skipped), str(error)
                 )
+            if any(not 0 <= choice < len(tags) for choice in choices):
+                skipped.append(f"{product.name}: choices {choices} are not all tags")
+                continue
             chosen_ids = sorted({tags[choice].id for choice in choices})
             product_proposals = tuple(
                 classification.assign_from_model(ingredient_id, self._classifier.model_name, now)
@@ -77,4 +82,6 @@ class ProposeIngredientsForProducts:
                 with self._transactions.atomic():
                     self._classifications.save(product_proposals)
             proposals.extend(product_proposals)
-        return ClassificationRun(asked, self._question_limit, tuple(proposals), None)
+        return ClassificationRun(
+            asked, self._question_limit, tuple(proposals), tuple(skipped), None
+        )

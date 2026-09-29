@@ -31,5 +31,7 @@ class Command(BaseCommand):
             self.stdout.write(
                 f"  product {proposal.product_id} -> ingredient {proposal.ingredient_id}"
             )
+        for skipped in run.skipped:
+            self.stdout.write(f"  skipped {skipped}")
         if run.failure is not None:
             raise CommandError(f"The classifier failed: {run.failure}")

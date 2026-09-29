@@ -23,6 +23,7 @@ from catalog.application.use_cases.get_product_classification import GetProductC
 from catalog.application.use_cases.import_ingredient_names import ImportIngredientNames
 from catalog.application.use_cases.list_household_products import ListHouseholdProducts
 from catalog.application.use_cases.list_measurement_units import ListMeasurementUnits
+from catalog.application.use_cases.list_tags import ListTags
 from catalog.application.use_cases.merge_ingredients import MergeIngredients
 from catalog.application.use_cases.propose_ingredients_for_products import (
     ProposeIngredientsForProducts,
@@ -64,6 +65,7 @@ class CatalogModule:
     find_ingredients_by_names: FindIngredientsByNames
     get_ingredients: GetIngredients
     search_ingredients: SearchIngredients
+    list_tags: ListTags
     merge_ingredients: MergeIngredients
     get_product_classification: GetProductClassification
     propose_product_ingredient: ProposeProductIngredient
@@ -129,6 +131,7 @@ def build_catalog(
         find_ingredients_by_names=FindIngredientsByNames(ingredients),
         get_ingredients=GetIngredients(ingredients),
         search_ingredients=SearchIngredients(ingredients),
+        list_tags=ListTags(ingredients),
         merge_ingredients=MergeIngredients(ingredients, classifications, references, transactions),
         get_product_classification=GetProductClassification(
             classifications, ingredients, memberships

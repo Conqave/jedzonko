@@ -2,7 +2,10 @@ from datetime import UTC, datetime
 
 import pytest
 
-from catalog.application.errors import IngredientClassifierUnavailableError
+from catalog.application.errors import (
+    IngredientClassifierContractError,
+    IngredientClassifierUnavailableError,
+)
 from catalog.application.ports.ingredient_classifier import IngredientClassifier
 from catalog.application.use_cases.propose_ingredients_for_products import (
     ProposeIngredientsForProducts,
@@ -145,3 +148,30 @@ def test_an_unavailable_model_ends_the_run_with_a_reported_failure(setup: Setup)
 
     assert run.failure == "Ollama is down."
     assert run.proposals == ()
+
+
+class GarbledClassifier(FakeIngredientClassifier):
+    def find_matching_tags(self, product_name: str, tag_names: tuple[str, ...]) -> tuple[int, ...]:
+        self.questions.append((product_name, tag_names))
+        if product_name == "Jajka wiejskie":
+            raise IngredientClassifierContractError("The model answer is not JSON.")
+        return super().find_matching_tags(product_name, tag_names)
+
+
+def test_a_garbled_answer_skips_one_product_and_the_run_goes_on(setup: Setup) -> None:
+    setup.product("Jajka wiejskie")
+    butter_id = setup.product("Masło extra")
+    use_case = ProposeIngredientsForProducts(
+        setup.products,
+        setup.ingredients,
+        setup.classifications,
+        GarbledClassifier({"Masło extra": ("masło",)}),
+        setup.transactions,
+        10,
+    )
+
+    run = use_case.execute(NOW, False)
+
+    assert run.failure is None
+    assert run.skipped == ("Jajka wiejskie: The model answer is not JSON.",)
+    assert [proposal.product_id for proposal in run.proposals] == [butter_id]

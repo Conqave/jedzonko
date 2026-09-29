@@ -11,6 +11,7 @@ from recipes.application.ports.ingredient_resolver import IngredientResolver
 from recipes.application.ports.inventory_consumer import HouseholdInventoryConsumer
 from recipes.application.ports.recipe_repository import RecipeRepository
 from recipes.application.ports.recipe_source import RecipeSource
+from recipes.application.ports.tag_vocabulary import TagVocabulary
 from recipes.domain.external import ExternalRecipeDetail, ExternalRecipePage
 from recipes.domain.external_line import IngredientChoice, LineInterpretation
 from recipes.domain.models import RecipeCategory, RecipeDetail, RecipeRequirement, RecipeSummary
@@ -178,3 +179,11 @@ class FakeIngredientLineInterpreter(IngredientLineInterpreter):
     ) -> tuple[LineInterpretation, ...]:
         self.calls.append((lines, choices))
         return tuple(self._answers[line] for line in lines)
+
+
+class FakeTagVocabulary(TagVocabulary):
+    def __init__(self, tags: tuple[IngredientChoice, ...]) -> None:
+        self._tags = tags
+
+    def list_tags(self) -> tuple[IngredientChoice, ...]:
+        return self._tags

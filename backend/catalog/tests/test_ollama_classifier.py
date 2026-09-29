@@ -100,3 +100,11 @@ def test_an_answer_breaking_the_contract_is_rejected(response: httpx.Response) -
 
     with pytest.raises(IngredientClassifierContractError):
         classifier.find_matching_tags("Jaja", INGREDIENTS)
+
+
+def test_an_answer_cut_off_at_the_token_limit_is_rejected() -> None:
+    body = {"message": {"role": "assistant", "content": '{"tags": ['}, "done_reason": "length"}
+    classifier = _classifier(lambda request: httpx.Response(200, json=body))
+
+    with pytest.raises(IngredientClassifierContractError, match="token limit"):
+        classifier.find_matching_tags("Jaja", INGREDIENTS)

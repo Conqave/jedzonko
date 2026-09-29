@@ -72,6 +72,8 @@ class OllamaChat:
         content = message.get("content") if isinstance(message, dict) else None
         if not isinstance(content, str):
             raise OllamaContractError("Ollama response has no message content.")
+        if body.get("done_reason") == "length":
+            raise OllamaContractError("Ollama stopped at the output token limit.")
         return content
 
 
