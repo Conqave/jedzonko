@@ -31,6 +31,7 @@ from catalog.application.use_cases.propose_ingredients_for_products import (
 from catalog.application.use_cases.propose_product_ingredient import ProposeProductIngredient
 from catalog.application.use_cases.reject_product_ingredient import RejectProductIngredient
 from catalog.application.use_cases.search_ingredients import SearchIngredients
+from catalog.application.use_cases.unify_tags import UnifyTags
 from catalog.application.use_cases.update_product import UpdateProduct
 from catalog.infrastructure.django_candidate_repository import DjangoCandidateRepository
 from catalog.infrastructure.django_ingredient_repository import DjangoIngredientRepository
@@ -39,6 +40,7 @@ from catalog.infrastructure.django_product_classification_repository import (
 )
 from catalog.infrastructure.django_product_repository import DjangoProductRepository
 from catalog.infrastructure.providers.ollama.classifier import OllamaIngredientClassifier
+from catalog.infrastructure.providers.ollama.tag_unifier import OllamaTagUnifier
 from shared.household_membership import HouseholdMembershipReader
 from shared.infrastructure.ollama_chat import OllamaSettings, open_ollama_chat
 from shared.transactions import TransactionManager
@@ -90,6 +92,11 @@ class CatalogModule:
                 self.memberships,
                 self.transactions,
             )
+
+    @contextmanager
+    def open_tag_unification(self) -> Iterator[UnifyTags]:
+        with open_ollama_chat(self.classifier_settings.ollama) as chat:
+            yield UnifyTags(self.list_tags, OllamaTagUnifier(chat), self.merge_ingredients)
 
     @contextmanager
     def open_classification(self, question_limit: int) -> Iterator[ProposeIngredientsForProducts]:

@@ -40,20 +40,25 @@ class OllamaChat:
         return self._model
 
     def ask(self, prompt: str) -> str:
-        payload = self._build_payload(prompt)
+        payload = self._build_payload(prompt, self._max_output_tokens)
         return self._send(payload)
 
     def ask_structured(self, prompt: str, response_schema: dict[str, object]) -> str:
-        payload = self._build_payload(prompt)
+        return self.ask_structured_at_length(prompt, response_schema, self._max_output_tokens)
+
+    def ask_structured_at_length(
+        self, prompt: str, response_schema: dict[str, object], max_output_tokens: int
+    ) -> str:
+        payload = self._build_payload(prompt, max_output_tokens)
         payload["format"] = response_schema
         return self._send(payload)
 
-    def _build_payload(self, prompt: str) -> dict[str, object]:
+    def _build_payload(self, prompt: str, max_output_tokens: int) -> dict[str, object]:
         return {
             "model": self._model,
             "stream": False,
             "think": self._think,
-            "options": {"num_predict": self._max_output_tokens},
+            "options": {"num_predict": max_output_tokens},
             "messages": [{"role": "user", "content": prompt}],
         }
 
