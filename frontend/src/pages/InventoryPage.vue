@@ -12,8 +12,11 @@
       />
     </div>
 
-    <q-banner v-if="households.selectedId === null" class="bg-grey-3">
-      Wybierz gospodarstwo domowe, aby zobaczyć zapasy.
+    <q-banner v-if="households.selectedId === null" class="bg-grey-3 q-mb-md">
+      Nie masz jeszcze gospodarstwa domowego albo żadne nie jest wybrane. Utwórz dom, aby zacząć.
+      <template #action>
+        <q-btn flat no-caps color="primary" label="Utwórz dom" :to="{ name: 'households' }" />
+      </template>
     </q-banner>
     <template v-else>
       <LowStockBanner :items="belowMinimumItems" />

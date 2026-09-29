@@ -1,8 +1,11 @@
 <template>
   <q-page padding>
     <div class="text-h5 q-mb-md">Zakupy</div>
-    <q-banner v-if="households.selectedId === null" class="bg-grey-3">
-      Wybierz gospodarstwo domowe, aby zobaczyć listy zakupów.
+    <q-banner v-if="households.selectedId === null" class="bg-grey-3 q-mb-md">
+      Nie masz jeszcze gospodarstwa domowego albo żadne nie jest wybrane. Utwórz dom, aby zacząć.
+      <template #action>
+        <q-btn flat no-caps color="primary" label="Utwórz dom" :to="{ name: 'households' }" />
+      </template>
     </q-banner>
 
     <template v-else>

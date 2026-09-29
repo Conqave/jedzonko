@@ -116,7 +116,7 @@ async function analyzeAgain(): Promise<void> {
   const message =
     proposedCount === 0
       ? 'Model nie znalazł nowych tagów.'
-      : `Nowe propozycje tagów: ${proposedCount}.`;
+      : `Model przypisał tagi: ${proposedCount}.`;
   quasar.notify({ type: 'info', message });
 }
 </script>

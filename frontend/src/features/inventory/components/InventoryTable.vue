@@ -7,8 +7,100 @@
     flat
     bordered
     :rows-per-page-options="[0]"
+    :grid="quasar.screen.lt.sm"
     no-data-label="Brak produktów w zapasach."
   >
+    <template #item="card">
+      <div class="col-12 q-pa-xs">
+        <q-card flat bordered>
+          <q-item>
+            <q-item-section avatar>
+              <q-avatar rounded size="44px" color="grey-3" text-color="grey-7">
+                <img v-if="card.row.photoUrl !== null" :src="card.row.photoUrl" alt="Zdjęcie" />
+                <span v-else>{{ productEmoji(card.row.productName) }}</span>
+              </q-avatar>
+            </q-item-section>
+            <q-item-section>
+              <q-item-label>
+                {{ card.row.productName }}
+                <q-badge v-if="card.row.isBelowMinimum" color="negative" class="q-ml-xs">
+                  poniżej minimum
+                </q-badge>
+              </q-item-label>
+              <q-item-label caption>
+                <q-chip
+                  v-for="tag in findTags(card.row.productId)"
+                  :key="tag"
+                  dense
+                  square
+                  color="primary"
+                  text-color="white"
+                  class="q-ml-none"
+                  >{{ tag }}</q-chip
+                >
+                <span v-if="findTags(card.row.productId).length === 0">Bez tagu</span>
+              </q-item-label>
+            </q-item-section>
+            <q-item-section side>
+              <q-btn
+                flat
+                dense
+                round
+                icon="edit"
+                aria-label="Edytuj"
+                @click="emit('edit', card.row)"
+              />
+            </q-item-section>
+          </q-item>
+          <q-card-actions align="between" class="q-pt-none">
+            <div class="row items-center no-wrap">
+              <q-btn
+                round
+                dense
+                flat
+                icon="remove"
+                color="primary"
+                aria-label="Odejmij ilość"
+                :disable="savingItemId === card.row.id || isEmpty(card.row.quantity)"
+                @click="emit('step', card.row, -1)"
+              />
+              <span class="q-px-sm">
+                {{ formatQuantity(card.row.quantity) }} {{ findUnitName(card.row.unitCode) }}
+              </span>
+              <q-btn
+                round
+                dense
+                flat
+                icon="add"
+                color="primary"
+                aria-label="Dodaj ilość"
+                :disable="savingItemId === card.row.id"
+                @click="emit('step', card.row, 1)"
+              />
+            </div>
+            <div>
+              <q-btn
+                flat
+                dense
+                round
+                icon="photo_camera"
+                aria-label="Zdjęcie"
+                @click="emit('photo', card.row)"
+              />
+              <q-btn
+                flat
+                dense
+                round
+                color="negative"
+                icon="delete"
+                aria-label="Usuń z zapasów"
+                @click="emit('remove', card.row)"
+              />
+            </div>
+          </q-card-actions>
+        </q-card>
+      </div>
+    </template>
     <template #body-cell-photo="cell">
       <q-td :props="cell">
         <q-avatar rounded size="40px" color="grey-3" text-color="grey-7">
@@ -115,7 +207,7 @@
 </template>
 
 <script setup lang="ts">
-import type { QTableColumn } from 'quasar';
+import { useQuasar, type QTableColumn } from 'quasar';
 import { formatQuantity } from '@/shared/formatQuantity';
 import { productEmoji } from '@/shared/productEmoji';
 import { isEmpty, type InventoryItem, type QuantityDirection } from '../model';
@@ -142,6 +234,8 @@ defineProps<{
   savingItemId: number | null;
   findUnitName: (code: string) => string;
 }>();
+
+const quasar = useQuasar();
 
 const emit = defineEmits<{
   step: [item: InventoryItem, direction: QuantityDirection];
