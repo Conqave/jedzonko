@@ -9,7 +9,7 @@ from recipes.application.ports.inventory_consumer import HouseholdInventoryConsu
 from recipes.application.ports.recipe_repository import RecipeRepository
 from recipes.application.ports.recipe_source import RecipeSource
 from recipes.domain.external import ExternalRecipeDetail, ExternalRecipePage
-from recipes.domain.models import RecipeDetail, RecipeRequirement, RecipeSummary
+from recipes.domain.models import RecipeCategory, RecipeDetail, RecipeRequirement, RecipeSummary
 from recipes.domain.stock import StockedProduct
 from shared.household_membership import HouseholdMembershipReader
 from shared.measurement import Quantity
@@ -52,6 +52,9 @@ class FakeRecipeRepository(RecipeRepository):
 
     def list_recipes(self) -> list[RecipeSummary]:
         return [recipe.summary for recipe in self._recipes]
+
+    def list_categories(self) -> list[RecipeCategory]:
+        return []
 
     def find_recipe(self, recipe_id: int) -> RecipeDetail | None:
         for recipe in self._recipes:

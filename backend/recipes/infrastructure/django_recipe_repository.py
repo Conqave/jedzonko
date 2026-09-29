@@ -9,13 +9,16 @@ from recipes.application.errors import (
 from recipes.application.ports.recipe_repository import RecipeRepository
 from recipes.domain.difficulty import RecipeDifficulty
 from recipes.domain.models import (
+    RecipeCategory,
     RecipeDetail,
     RecipeIngredientDetail,
     RecipeRequirement,
     RecipeStepDetail,
     RecipeSummary,
 )
-from recipes.models import Recipe, RecipeCategory, RecipeIngredient, RecipeStep, RecipeTag
+from recipes.models import Recipe
+from recipes.models import RecipeCategory as RecipeCategoryRow
+from recipes.models import RecipeIngredient, RecipeStep, RecipeTag
 from shared.measurement import MeasurementUnit, Quantity
 from shared.measurement_units import find_measurement_unit
 
@@ -24,6 +27,10 @@ class DjangoRecipeRepository(RecipeRepository):
     def list_recipes(self) -> list[RecipeSummary]:
         rows = Recipe.objects.select_related("category", "created_by").prefetch_related("tags")
         return [self._to_summary(row) for row in rows]
+
+    def list_categories(self) -> list[RecipeCategory]:
+        rows = RecipeCategoryRow.objects.order_by("name")
+        return [_to_category(row) for row in rows]
 
     def find_recipe(self, recipe_id: int) -> RecipeDetail | None:
         row = self._detail_queryset().filter(pk=recipe_id).first()
@@ -102,10 +109,10 @@ class DjangoRecipeRepository(RecipeRepository):
         )
 
     @staticmethod
-    def _resolve_category(category_id: int | None) -> RecipeCategory | None:
+    def _resolve_category(category_id: int | None) -> RecipeCategoryRow | None:
         if category_id is None:
             return None
-        category = RecipeCategory.objects.filter(pk=category_id).first()
+        category = RecipeCategoryRow.objects.filter(pk=category_id).first()
         if category is None:
             raise RecipeCategoryNotFoundError
         return category
@@ -159,7 +166,7 @@ class DjangoRecipeRepository(RecipeRepository):
             preparation_time_minutes=row.preparation_time_minutes,
             cooking_time_minutes=row.cooking_time_minutes,
             difficulty=RecipeDifficulty(row.difficulty),
-            category_name=None if row.category is None else row.category.name,
+            category=None if row.category is None else _to_category(row.category),
             tag_names=tuple(tag.name for tag in row.tags.all()),
             image_url=row.image.url if row.image else None,
             author_username=row.created_by.get_username(),
@@ -183,3 +190,7 @@ class DjangoRecipeRepository(RecipeRepository):
                 for item in row.ingredients.all()
             ),
         )
+
+
+def _to_category(row: RecipeCategoryRow) -> RecipeCategory:
+    return RecipeCategory(id=row.pk, name=row.name)

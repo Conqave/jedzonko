@@ -17,7 +17,7 @@ const PANCAKES: RecipeDetail = {
   preparationTimeMinutes: 10,
   cookingTimeMinutes: 20,
   difficulty: 'easy',
-  categoryName: null,
+  category: { id: 2, name: 'obiady' },
   tags: ['obiad'],
   imageUrl: null,
   authorUsername: 'ala',
@@ -33,6 +33,7 @@ describe('recipe model', () => {
     const draft = toDraft(PANCAKES);
 
     expect(draft.steps).toEqual(['Wymieszaj.', 'Usmaż.']);
+    expect(draft.categoryId).toBe(2);
     expect(draft.ingredients).toEqual([{ name: 'Mąka', quantity: '300.000', unitCode: 'g' }]);
   });
 

@@ -28,7 +28,7 @@
         autor: {{ recipe.authorUsername }} · porcje: {{ recipe.servings }} · przygotowanie
         {{ recipe.preparationTimeMinutes }} min · gotowanie {{ recipe.cookingTimeMinutes }} min ·
         {{ DIFFICULTY_LABELS[recipe.difficulty] }}
-        <span v-if="recipe.categoryName !== null"> · {{ recipe.categoryName }}</span>
+        <span v-if="recipe.category !== null"> · {{ recipe.category.name }}</span>
       </div>
       <div class="q-gutter-xs q-mb-md">
         <q-badge v-for="tag in recipe.tags" :key="tag" color="primary" outline>{{ tag }}</q-badge>

@@ -22,7 +22,7 @@ def _recipe(recipe_id: int, name: str) -> RecipeDetail:
         preparation_time_minutes=10,
         cooking_time_minutes=20,
         difficulty=RecipeDifficulty.EASY,
-        category_name=None,
+        category=None,
         tag_names=(),
         image_url=None,
         author_username="ala",

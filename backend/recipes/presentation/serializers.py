@@ -23,7 +23,9 @@ class RecipeWriteSerializer(serializers.Serializer[dict[str, object]]):
     preparation_time_minutes = serializers.IntegerField(min_value=0)
     cooking_time_minutes = serializers.IntegerField(min_value=0)
     difficulty = serializers.ChoiceField(choices=[item.value for item in RecipeDifficulty])
-    category_id = serializers.IntegerField(min_value=1, required=False, allow_null=True)
+    category_id = serializers.IntegerField(
+        min_value=1, required=False, allow_null=True, default=None
+    )
     tag_names = serializers.ListField(
         child=serializers.CharField(max_length=60, trim_whitespace=True), default=list
     )
@@ -45,6 +47,11 @@ class ConfirmPreparationSerializer(serializers.Serializer[dict[str, object]]):
     servings = serializers.IntegerField()
 
 
+class RecipeCategorySerializer(serializers.Serializer[object]):
+    id = serializers.IntegerField(read_only=True)
+    name = serializers.CharField(read_only=True)
+
+
 class RecipeSummarySerializer(serializers.Serializer[object]):
     id = serializers.IntegerField(read_only=True)
     name = serializers.CharField(read_only=True)
@@ -53,7 +60,7 @@ class RecipeSummarySerializer(serializers.Serializer[object]):
     preparation_time_minutes = serializers.IntegerField(read_only=True)
     cooking_time_minutes = serializers.IntegerField(read_only=True)
     difficulty = serializers.CharField(read_only=True)
-    category_name = serializers.CharField(read_only=True, allow_null=True)
+    category = RecipeCategorySerializer(read_only=True, allow_null=True)
     tags = serializers.ListField(source="tag_names", child=serializers.CharField(), read_only=True)
     image_url = serializers.CharField(read_only=True, allow_null=True)
     author_username = serializers.CharField(read_only=True)
@@ -83,9 +90,7 @@ class RecipeDetailSerializer(serializers.Serializer[object]):
         source="summary.cooking_time_minutes", read_only=True
     )
     difficulty = serializers.CharField(source="summary.difficulty", read_only=True)
-    category_name = serializers.CharField(
-        source="summary.category_name", read_only=True, allow_null=True
-    )
+    category = RecipeCategorySerializer(source="summary.category", read_only=True, allow_null=True)
     tags = serializers.ListField(
         source="summary.tag_names", child=serializers.CharField(), read_only=True
     )

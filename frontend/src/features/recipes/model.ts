@@ -8,6 +8,11 @@ export const DIFFICULTY_LABELS: Readonly<Record<RecipeDifficulty, string>> = {
   hard: 'Trudny',
 };
 
+export interface RecipeCategory {
+  id: number;
+  name: string;
+}
+
 export interface RecipeSummary {
   id: number;
   name: string;
@@ -16,7 +21,7 @@ export interface RecipeSummary {
   preparationTimeMinutes: number;
   cookingTimeMinutes: number;
   difficulty: RecipeDifficulty;
-  categoryName: string | null;
+  category: RecipeCategory | null;
   tags: string[];
   imageUrl: string | null;
   authorUsername: string;
@@ -72,6 +77,7 @@ export interface RecipeDraft {
   preparationTimeMinutes: number;
   cookingTimeMinutes: number;
   difficulty: RecipeDifficulty;
+  categoryId: number | null;
   tagNames: string[];
   steps: string[];
   ingredients: RecipeDraftIngredient[];
@@ -128,6 +134,7 @@ export function createEmptyDraft(): RecipeDraft {
     preparationTimeMinutes: 0,
     cookingTimeMinutes: 0,
     difficulty: 'easy',
+    categoryId: null,
     tagNames: [],
     steps: [''],
     ingredients: [{ name: '', quantity: '', unitCode: '' }],
@@ -143,6 +150,7 @@ export function toDraft(recipe: RecipeDetail): RecipeDraft {
     preparationTimeMinutes: recipe.preparationTimeMinutes,
     cookingTimeMinutes: recipe.cookingTimeMinutes,
     difficulty: recipe.difficulty,
+    categoryId: recipe.category === null ? null : recipe.category.id,
     tagNames: [...recipe.tags],
     steps: orderedSteps.map((step) => step.text),
     ingredients: recipe.ingredients.map((line) => ({

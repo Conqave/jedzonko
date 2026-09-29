@@ -19,6 +19,7 @@ from recipes.application.use_cases.delete_recipe import DeleteRecipe
 from recipes.application.use_cases.external_recipes import ExternalRecipes
 from recipes.application.use_cases.get_external_recipe import GetExternalRecipe
 from recipes.application.use_cases.get_recipe import GetRecipe
+from recipes.application.use_cases.list_recipe_categories import ListRecipeCategories
 from recipes.application.use_cases.list_recipes import ListRecipes
 from recipes.application.use_cases.reassign_recipe_ingredient import ReassignRecipeIngredient
 from recipes.application.use_cases.search_external_recipes import SearchExternalRecipes
@@ -45,6 +46,7 @@ class RecipeSourceSettings:
 @dataclass(frozen=True, slots=True)
 class RecipesModule:
     list_recipes: ListRecipes
+    list_recipe_categories: ListRecipeCategories
     get_recipe: GetRecipe
     create_recipe: CreateRecipe
     update_recipe: UpdateRecipe
@@ -99,6 +101,7 @@ def build_recipes(
     recipes = DjangoRecipeRepository()
     return RecipesModule(
         list_recipes=ListRecipes(recipes),
+        list_recipe_categories=ListRecipeCategories(recipes),
         get_recipe=GetRecipe(recipes),
         create_recipe=CreateRecipe(recipes, resolver, transactions),
         update_recipe=UpdateRecipe(recipes, resolver, transactions),

@@ -52,6 +52,19 @@
           label="Trudność"
         />
       </div>
+      <div class="col-12 col-sm-6">
+        <q-select
+          v-model="draft.categoryId"
+          outlined
+          clearable
+          emit-value
+          map-options
+          option-value="id"
+          option-label="name"
+          :options="categories"
+          label="Kategoria"
+        />
+      </div>
       <div class="col-12">
         <q-select
           v-model="draft.tagNames"
@@ -180,14 +193,20 @@
 <script setup lang="ts">
 import type { MeasurementUnit } from '@/features/catalog/model';
 import { isPositiveDecimal } from '@/shared/decimal';
-import { DIFFICULTY_LABELS, moveItem, RECIPE_DIFFICULTIES, type RecipeDraft } from '../model';
+import {
+  DIFFICULTY_LABELS,
+  moveItem,
+  RECIPE_DIFFICULTIES,
+  type RecipeCategory,
+  type RecipeDraft,
+} from '../model';
 
 const DIFFICULTY_OPTIONS = RECIPE_DIFFICULTIES.map((value) => ({
   value,
   label: DIFFICULTY_LABELS[value],
 }));
 
-defineProps<{ units: MeasurementUnit[]; busy: boolean }>();
+defineProps<{ units: MeasurementUnit[]; categories: RecipeCategory[]; busy: boolean }>();
 
 const emit = defineEmits<{ submit: []; cancel: [] }>();
 

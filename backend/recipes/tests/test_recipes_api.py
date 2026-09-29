@@ -7,6 +7,7 @@ from rest_framework.test import APIClient
 from catalog.models import Ingredient, Product
 from config.composition import container
 from households.models import Household
+from recipes.models import RecipeCategory
 from tests.factories import confirm_ingredient, make_household, make_ingredient, make_product
 
 pytestmark = [pytest.mark.django_db, pytest.mark.urls("recipes.tests.urls")]
@@ -86,12 +87,39 @@ def test_create_and_get_recipe(api_client: APIClient, member: User) -> None:
     assert response.status_code == 200
     assert response.data["name"] == "omlet"
     assert response.data["tags"] == ["szybkie"]
-    assert response.data["category_name"] is None
+    assert response.data["category"] is None
     assert response.data["image_url"] is None
     assert response.data["steps"] == [{"position": 1, "text": "wbij jajka"}]
     assert response.data["ingredients"] == [
         {"name": "jajko", "ingredient_id": None, "quantity": "100.000", "unit_code": "g"}
     ]
+
+
+def test_categories_are_listed_and_assigned_to_a_recipe(
+    api_client: APIClient, member: User
+) -> None:
+    soups = RecipeCategory.objects.create(name="zupy")
+    RecipeCategory.objects.create(name="desery")
+    api_client.force_authenticate(member)
+
+    listed = api_client.get("/api/recipes/categories/")
+    created = api_client.post(
+        "/api/recipes/", {**_recipe_body(), "category_id": soups.pk}, format="json"
+    )
+
+    assert [each["name"] for each in listed.data] == ["desery", "zupy"]
+    assert created.data["category"] == {"id": soups.pk, "name": "zupy"}
+
+
+def test_an_unknown_category_is_rejected(api_client: APIClient, member: User) -> None:
+    api_client.force_authenticate(member)
+
+    response = api_client.post(
+        "/api/recipes/", {**_recipe_body(), "category_id": 999}, format="json"
+    )
+
+    assert response.status_code == 400
+    assert response.data["code"] == "recipe_category_not_found"
 
 
 def test_list_recipes(api_client: APIClient, member: User) -> None:

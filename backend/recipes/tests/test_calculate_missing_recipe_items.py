@@ -25,7 +25,7 @@ def _recipe(servings: int) -> RecipeDetail:
         preparation_time_minutes=5,
         cooking_time_minutes=5,
         difficulty=RecipeDifficulty.EASY,
-        category_name=None,
+        category=None,
         tag_names=(),
         image_url=None,
         author_username="ala",

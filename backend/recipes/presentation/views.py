@@ -10,6 +10,7 @@ from recipes.domain.difficulty import RecipeDifficulty
 from recipes.presentation.serializers import (
     ConfirmPreparationSerializer,
     MissingItemsQuerySerializer,
+    RecipeCategorySerializer,
     RecipeDetailSerializer,
     RecipeShortfallSerializer,
     RecipeSuggestionSerializer,
@@ -40,7 +41,7 @@ def _read_recipe_input(request: Request) -> RecipeInput:
         preparation_time_minutes=data["preparation_time_minutes"],
         cooking_time_minutes=data["cooking_time_minutes"],
         difficulty=difficulty,
-        category_id=data.get("category_id"),
+        category_id=data["category_id"],
         tag_names=tuple(data["tag_names"]),
         steps=steps,
         ingredients=ingredients,
@@ -61,6 +62,14 @@ class RecipeListView(APIView):
         recipe = use_case.execute(user_id, command)
         serializer = RecipeDetailSerializer(recipe)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class RecipeCategoryListView(APIView):
+    def get(self, request: Request) -> Response:
+        use_case = container().recipes.list_recipe_categories
+        categories = use_case.execute()
+        serializer = RecipeCategorySerializer(categories, many=True)
+        return Response(serializer.data)
 
 
 class RecipeDetailView(APIView):

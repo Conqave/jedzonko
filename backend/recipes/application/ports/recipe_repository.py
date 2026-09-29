@@ -1,12 +1,21 @@
 from abc import ABC, abstractmethod
 
 from recipes.application.commands import RecipeInput, ResolvedIngredient
-from recipes.domain.models import RecipeDetail, RecipeRequirement, RecipeSummary
+from recipes.domain.models import (
+    RecipeCategory,
+    RecipeDetail,
+    RecipeRequirement,
+    RecipeSummary,
+)
 
 
 class RecipeRepository(ABC):
     @abstractmethod
     def list_recipes(self) -> list[RecipeSummary]:
+        raise NotImplementedError
+
+    @abstractmethod
+    def list_categories(self) -> list[RecipeCategory]:
         raise NotImplementedError
 
     @abstractmethod

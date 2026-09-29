@@ -1,11 +1,18 @@
 import { onMounted, ref } from 'vue';
 import { useApiAction } from '@/shared/useApiAction';
-import { createRecipe, fetchRecipe, updateRecipe } from './api';
+import { createRecipe, fetchRecipe, fetchRecipeCategories, updateRecipe } from './api';
 import { RECIPE_ERROR_MESSAGES } from './errors';
-import { createEmptyDraft, toDraft, type RecipeDetail, type RecipeDraft } from './model';
+import {
+  createEmptyDraft,
+  toDraft,
+  type RecipeCategory,
+  type RecipeDetail,
+  type RecipeDraft,
+} from './model';
 
 export function useRecipeDraft(recipeId: number | null) {
   const draft = ref<RecipeDraft>(createEmptyDraft());
+  const categories = ref<RecipeCategory[]>([]);
   const isLoaded = ref(recipeId === null);
   const { busy, run } = useApiAction(RECIPE_ERROR_MESSAGES);
 
@@ -21,6 +28,9 @@ export function useRecipeDraft(recipeId: number | null) {
   }
 
   onMounted(() => {
+    void run(async () => {
+      categories.value = await fetchRecipeCategories();
+    });
     if (recipeId === null) {
       return;
     }
@@ -31,5 +41,5 @@ export function useRecipeDraft(recipeId: number | null) {
     });
   });
 
-  return { draft, isLoaded, busy, save };
+  return { draft, categories, isLoaded, busy, save };
 }

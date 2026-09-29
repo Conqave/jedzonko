@@ -7,6 +7,7 @@ from recipes.presentation.external_views import (
     ExternalRecipeSuggestionListView,
 )
 from recipes.presentation.views import (
+    RecipeCategoryListView,
     RecipeDetailView,
     RecipeListView,
     RecipeMissingItemListView,
@@ -16,6 +17,7 @@ from recipes.presentation.views import (
 
 urlpatterns: list[URLPattern] = [
     path("", RecipeListView.as_view()),
+    path("categories/", RecipeCategoryListView.as_view()),
     path("suggestions/", RecipeSuggestionListView.as_view()),
     path("external/", ExternalRecipeListView.as_view()),
     path("external/suggestions/", ExternalRecipeSuggestionListView.as_view()),

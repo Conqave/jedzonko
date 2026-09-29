@@ -7,6 +7,7 @@ import {
   type ExternalRecipePage,
   type ExternalRecipeSuggestions,
   type ExternalRecipeSummary,
+  type RecipeCategory,
   type RecipeDetail,
   type RecipeDraft,
   type RecipeShortfall,
@@ -16,6 +17,8 @@ import {
 
 const difficultySchema = z.enum(RECIPE_DIFFICULTIES);
 
+const categorySchema = z.object({ id: z.number().int(), name: z.string() });
+
 const summaryFields = {
   id: z.number().int(),
   name: z.string(),
@@ -24,7 +27,7 @@ const summaryFields = {
   preparation_time_minutes: z.number().int(),
   cooking_time_minutes: z.number().int(),
   difficulty: difficultySchema,
-  category_name: z.string().nullable(),
+  category: categorySchema.nullable(),
   tags: z.array(z.string()),
   image_url: z.string().nullable(),
   author_username: z.string(),
@@ -41,7 +44,7 @@ function toSummary(value: SummaryDto): RecipeSummary {
     preparationTimeMinutes: value.preparation_time_minutes,
     cookingTimeMinutes: value.cooking_time_minutes,
     difficulty: value.difficulty,
-    categoryName: value.category_name,
+    category: value.category,
     tags: value.tags,
     imageUrl: value.image_url,
     authorUsername: value.author_username,
@@ -206,6 +209,7 @@ function toDraftPayload(draft: RecipeDraft) {
     preparation_time_minutes: draft.preparationTimeMinutes,
     cooking_time_minutes: draft.cookingTimeMinutes,
     difficulty: draft.difficulty,
+    category_id: draft.categoryId,
     tag_names: draft.tagNames,
     steps: draft.steps.map((text, index) => ({ position: index + 1, text })),
     ingredients: draft.ingredients.map((line) => ({
@@ -219,6 +223,11 @@ function toDraftPayload(draft: RecipeDraft) {
 export async function fetchRecipes(): Promise<RecipeSummary[]> {
   const response = await http.get('/recipes/');
   return summarySchema.array().parse(response.data);
+}
+
+export async function fetchRecipeCategories(): Promise<RecipeCategory[]> {
+  const response = await http.get('/recipes/categories/');
+  return categorySchema.array().parse(response.data);
 }
 
 export async function fetchRecipe(recipeId: number): Promise<RecipeDetail> {

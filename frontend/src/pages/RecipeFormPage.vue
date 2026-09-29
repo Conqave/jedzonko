@@ -8,6 +8,7 @@
       v-if="isLoaded"
       v-model="draft"
       :units="units"
+      :categories="categories"
       :busy="busy"
       @submit="submit"
       @cancel="leave"
@@ -27,7 +28,7 @@ const route = useRoute();
 const router = useRouter();
 const dialogs = useDialogs();
 const recipeId = route.params.id === undefined ? null : Number(route.params.id);
-const { draft, isLoaded, busy, save } = useRecipeDraft(recipeId);
+const { draft, categories, isLoaded, busy, save } = useRecipeDraft(recipeId);
 const { units } = useMeasurementUnits();
 
 async function submit(): Promise<void> {

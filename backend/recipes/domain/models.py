@@ -27,6 +27,12 @@ class RecipeIngredientDetail:
 
 
 @dataclass(frozen=True, slots=True)
+class RecipeCategory:
+    id: int
+    name: str
+
+
+@dataclass(frozen=True, slots=True)
 class RecipeSummary:
     id: int
     name: str
@@ -35,7 +41,7 @@ class RecipeSummary:
     preparation_time_minutes: int
     cooking_time_minutes: int
     difficulty: RecipeDifficulty
-    category_name: str | None
+    category: RecipeCategory | None
     tag_names: tuple[str, ...]
     image_url: str | None
     author_username: str
