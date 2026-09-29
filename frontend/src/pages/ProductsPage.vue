@@ -17,7 +17,12 @@
         <template #prepend><q-icon name="search" /></template>
       </q-input>
       <q-linear-progress v-if="busy" indeterminate class="q-mb-sm" />
-      <ProductListingList :listings="listings" :find-unit-name="findUnitName" @edit="edit" />
+      <ProductListingList
+        :listings="listings"
+        :find-unit-name="findUnitName"
+        @edit="edit"
+        @remove="confirmRemove"
+      />
     </template>
   </q-page>
 </template>
@@ -31,11 +36,13 @@ import type { Product, ProductChanges } from '@/features/catalog/model';
 import { useMeasurementUnits } from '@/features/catalog/useMeasurementUnits';
 import { useProductCatalog } from '@/features/catalog/useProductCatalog';
 import { useHouseholdStore } from '@/features/households/store';
+import { useDialogs } from '@/shared/useDialogs';
 
 const quasar = useQuasar();
+const dialogs = useDialogs();
 const households = useHouseholdStore();
 const selectedId = toRef(households, 'selectedId');
-const { listings, search, busy, load, update } = useProductCatalog(selectedId);
+const { listings, search, busy, load, update, remove } = useProductCatalog(selectedId);
 const { units, findUnitName } = useMeasurementUnits();
 
 function edit(product: Product): void {
@@ -53,5 +60,13 @@ function edit(product: Product): void {
 async function saveAndReload(productId: number, changes: ProductChanges): Promise<void> {
   await update(productId, changes);
   await load();
+}
+
+async function confirmRemove(product: Product): Promise<void> {
+  const message = `„${product.name}” zniknie z produktów, zapasów i list zakupów.`;
+  const isConfirmed = await dialogs.confirm('Usunąć produkt?', message);
+  if (isConfirmed) {
+    await remove(product.id);
+  }
 }
 </script>

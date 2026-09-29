@@ -41,3 +41,7 @@ class ProductRepository(ABC):
     @abstractmethod
     def update(self, product_id: int, name: CatalogName, package: ProductPackage | None) -> Product:
         raise NotImplementedError
+
+    @abstractmethod
+    def delete(self, product_id: int) -> None:
+        raise NotImplementedError

@@ -6,6 +6,7 @@ from rest_framework.test import APIClient
 
 from catalog.models import Product
 from households.models import Household
+from inventory.models import InventoryItem
 from tests.factories import confirm_ingredient, make_ingredient, make_product
 
 pytestmark = pytest.mark.django_db
@@ -220,3 +221,29 @@ def test_units_come_from_code_constants(api_client: APIClient, ala: User) -> Non
     by_code = {unit["code"]: unit for unit in response.data}
     assert set(by_code) == {"g", "kg", "ml", "l", "szt", "opak"}
     assert by_code["kg"] == {"code": "kg", "name": "kilogram", "dimension": "mass"}
+
+
+def test_deleting_a_product_takes_it_out_of_pantry_and_lists(
+    api_client: APIClient, ala: User, household_a: Household
+) -> None:
+    exotic = make_product(household_a, "Lovely exotic", "szt")
+    InventoryItem.objects.create(product=exotic, unit_code="szt", quantity=Decimal("1"))
+    api_client.force_login(ala)
+
+    response = api_client.delete(f"/api/products/{exotic.pk}/")
+
+    assert response.status_code == 204
+    assert not Product.objects.filter(pk=exotic.pk).exists()
+    assert not InventoryItem.objects.filter(product_id=exotic.pk).exists()
+
+
+def test_another_household_cannot_delete_a_product(
+    api_client: APIClient, ola: User, household_a: Household, household_b: Household
+) -> None:
+    exotic = make_product(household_a, "Lovely exotic", "szt")
+    api_client.force_login(ola)
+
+    response = api_client.delete(f"/api/products/{exotic.pk}/")
+
+    assert response.status_code == 403
+    assert Product.objects.filter(pk=exotic.pk).exists()

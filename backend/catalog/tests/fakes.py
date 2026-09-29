@@ -131,6 +131,9 @@ class FakeProductRepository(ProductRepository):
         text = CatalogName.parse(name)
         return self.create(household_id, text, "szt", is_food, None)
 
+    def delete(self, product_id: int) -> None:
+        del self.products[product_id]
+
     def find(self, product_id: int) -> Product | None:
         entry = self.products.get(product_id)
         return None if entry is None else entry[0]

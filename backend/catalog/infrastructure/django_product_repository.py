@@ -87,6 +87,9 @@ class DjangoProductRepository(ProductRepository):
             raise DuplicateProductError from error
         return _to_product(row)
 
+    def delete(self, product_id: int) -> None:
+        ProductRow.objects.filter(pk=product_id).delete()
+
     def update(self, product_id: int, name: CatalogName, package: ProductPackage | None) -> Product:
         row = ProductRow.objects.filter(pk=product_id).first()
         if row is None:

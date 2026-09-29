@@ -62,6 +62,12 @@ class ProductDetailView(APIView):
         serializer = ProductSerializer(product)
         return Response(serializer.data)
 
+    def delete(self, request: Request, product_id: int) -> Response:
+        user_id = current_user_id(request)
+        use_case = container().catalog.delete_product
+        use_case.execute(user_id, product_id)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
 
 class ProductIngredientListView(APIView):
     def get(self, request: Request, product_id: int) -> Response:

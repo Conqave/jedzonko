@@ -1,6 +1,6 @@
 import { ref, watch, type Ref } from 'vue';
 import { useApiAction } from '@/shared/useApiAction';
-import { searchProducts, updateProduct } from './api';
+import { deleteProduct, searchProducts, updateProduct } from './api';
 import { CATALOG_ERROR_MESSAGES } from './errors';
 import type { ProductChanges, ProductListing } from './model';
 
@@ -29,7 +29,14 @@ export function useProductCatalog(householdId: Ref<number | null>) {
     });
   }
 
+  function remove(productId: number): Promise<boolean> {
+    return run(async () => {
+      await deleteProduct(productId);
+      listings.value = listings.value.filter((listing) => listing.product.id !== productId);
+    });
+  }
+
   watch([householdId, search], load, { immediate: true });
 
-  return { listings, search, busy, load, update };
+  return { listings, search, busy, load, update, remove };
 }

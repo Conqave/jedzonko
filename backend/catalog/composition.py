@@ -13,6 +13,7 @@ from catalog.application.use_cases.decide_candidate import (
     AcceptCandidateAsIngredient,
     DismissCandidate,
 )
+from catalog.application.use_cases.delete_product import DeleteProduct
 from catalog.application.use_cases.describe_household_products import DescribeHouseholdProducts
 from catalog.application.use_cases.find_household_product import FindHouseholdProduct
 from catalog.application.use_cases.find_ingredient_by_name import FindIngredientByName
@@ -57,6 +58,7 @@ class CatalogModule:
     list_household_products: ListHouseholdProducts
     create_product: CreateProduct
     update_product: UpdateProduct
+    delete_product: DeleteProduct
     rename_product: RenameProduct
     find_household_product: FindHouseholdProduct
     describe_household_products: DescribeHouseholdProducts
@@ -121,6 +123,7 @@ def build_catalog(
         list_household_products=ListHouseholdProducts(products, memberships),
         create_product=CreateProduct(products, memberships, transactions),
         update_product=UpdateProduct(products, memberships, transactions),
+        delete_product=DeleteProduct(products, memberships),
         rename_product=RenameProduct(products, memberships, transactions),
         find_household_product=FindHouseholdProduct(products),
         describe_household_products=DescribeHouseholdProducts(

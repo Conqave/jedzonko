@@ -32,6 +32,15 @@
             aria-label="Edytuj"
             @click="emit('edit', listing.product)"
           />
+          <q-btn
+            flat
+            dense
+            round
+            color="negative"
+            icon="delete"
+            :aria-label="`Usuń ${listing.product.name}`"
+            @click="emit('remove', listing.product)"
+          />
         </div>
       </q-item-section>
     </q-item>
@@ -48,5 +57,5 @@ import type { Product, ProductListing } from '../model';
 
 defineProps<{ listings: ProductListing[]; findUnitName: (code: string) => string }>();
 
-const emit = defineEmits<{ edit: [product: Product] }>();
+const emit = defineEmits<{ edit: [product: Product]; remove: [product: Product] }>();
 </script>

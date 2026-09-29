@@ -115,6 +115,10 @@ export async function updateProduct(productId: number, changes: ProductChanges):
   return productSchema.parse(response.data);
 }
 
+export async function deleteProduct(productId: number): Promise<void> {
+  await http.delete(`/products/${productId}/`);
+}
+
 export async function fetchProductDecisions(
   productId: number,
 ): Promise<ProductIngredientDecision[]> {
