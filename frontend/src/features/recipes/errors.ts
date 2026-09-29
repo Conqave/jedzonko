@@ -8,5 +8,7 @@ export const RECIPE_ERROR_MESSAGES: ErrorMessages = {
   recipe_category_not_found: 'Nie znaleziono kategorii przepisu.',
   external_recipe_not_found: 'Nie znaleziono przepisu w zewnętrznym źródle.',
   recipe_source_unavailable: 'Zewnętrzne źródło przepisów jest niedostępne.',
+  ingredient_matching_unavailable: 'Model dopasowujący składniki jest chwilowo niedostępny.',
+  ingredient_matching_contract_invalid: 'Model zwrócił nieczytelne dopasowanie składników.',
   recipe_source_contract_invalid: 'Zewnętrzne źródło przepisów zwróciło nieoczekiwane dane.',
 };

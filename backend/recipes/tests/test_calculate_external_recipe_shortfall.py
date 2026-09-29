@@ -12,9 +12,11 @@ from recipes.domain.external import (
     ExternalRecipePage,
     ExternalRecipeSummary,
 )
+from recipes.domain.external_line import LineInterpretation
 from recipes.tests.factories import EGGS, GRAM, MILK, make_stock
 from recipes.tests.fakes import (
     FakeHouseholdMembershipReader,
+    FakeIngredientLineRepository,
     FakeIngredientResolver,
     FakeRecipeSource,
     FakeStockReader,
@@ -52,11 +54,16 @@ def _omelette() -> ExternalRecipeDetail:
     )
 
 
-def _use_case(member_household_ids: set[int]) -> CalculateExternalRecipeShortfall:
+def _use_case(
+    member_household_ids: set[int],
+    interpretations: dict[str, LineInterpretation] | None = None,
+) -> CalculateExternalRecipeShortfall:
+    lines = FakeIngredientLineRepository({} if interpretations is None else interpretations)
     return CalculateExternalRecipeShortfall(
         FakeRecipeSource(EMPTY_PAGE, {"omlet": _omelette()}),
         FakeStockReader([make_stock(1, "jajka", "10", GRAM, EGGS)]),
         FakeIngredientResolver({"jajko": EGGS, "mleko": MILK}),
+        lines,
         FakeHouseholdMembershipReader(member_household_ids),
     )
 
@@ -67,6 +74,24 @@ def test_shortfall_lists_what_the_pantry_lacks() -> None:
     missing = [(item.name, item.amount, item.unit_code) for item in shortfall.missing_items]
     assert missing == [("mleko", Decimal("200"), "g"), ("sól", None, None)]
     assert shortfall.is_ready is False
+
+
+def test_a_stored_interpretation_names_the_ingredient_and_amount_of_a_line() -> None:
+    salt = LineInterpretation(ingredient_id=MILK, quantity=Decimal("5"), unit_code="g")
+
+    shortfall = _use_case({HOME}, {"sol do smaku": salt}).execute(ALA, HOME, "omlet")
+
+    missing = [(item.name, item.ingredient_id, item.amount) for item in shortfall.missing_items]
+    assert ("sól", MILK, Decimal("5")) in missing
+
+
+def test_an_amount_parsed_from_the_line_wins_over_the_interpretation() -> None:
+    milk = LineInterpretation(ingredient_id=MILK, quantity=Decimal("999"), unit_code="g")
+
+    shortfall = _use_case({HOME}, {"200 g mleka": milk}).execute(ALA, HOME, "omlet")
+
+    milk_item = next(item for item in shortfall.missing_items if item.name == "mleko")
+    assert milk_item.amount == Decimal("200")
 
 
 def test_an_unknown_recipe_is_reported_by_the_source() -> None:

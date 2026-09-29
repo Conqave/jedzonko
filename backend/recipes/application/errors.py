@@ -32,3 +32,15 @@ class RecipeSourceContractError(RecipeSourceError):
 
 class RecipeNotFoundAtSourceError(RecipeSourceError):
     pass
+
+
+class IngredientLineInterpreterError(Exception):
+    pass
+
+
+class IngredientLineInterpreterUnavailableError(IngredientLineInterpreterError):
+    pass
+
+
+class IngredientLineInterpreterContractError(IngredientLineInterpreterError):
+    pass

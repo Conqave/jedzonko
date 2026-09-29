@@ -1,3 +1,4 @@
+from django.utils import timezone
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -74,3 +75,11 @@ class ExternalRecipeMissingItemListView(APIView):
             shortfall = external.calculate_shortfall.execute(user_id, household_id, reference)
         serializer = RecipeShortfallSerializer(shortfall)
         return Response(serializer.data)
+
+
+class ExternalRecipeIngredientMatchingView(APIView):
+    def post(self, request: Request, reference: str) -> Response:
+        now = timezone.now()
+        with container().recipes.open_line_matching() as match:
+            interpreted_count = match.execute(reference, now)
+        return Response({"interpreted_line_count": interpreted_count})

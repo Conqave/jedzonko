@@ -3,6 +3,7 @@ from django.db import models
 from django.db.models import Q
 
 from recipes.domain.difficulty import RecipeDifficulty
+from recipes.domain.external_line import MAX_LINE_TEXT_LENGTH
 from shared.enums import enum_choices, enum_values
 from shared.measurement_units import MEASUREMENT_UNIT_CHOICES, MEASUREMENT_UNIT_CODES
 
@@ -137,3 +138,43 @@ class RecipeIngredient(models.Model):
 
     def __str__(self) -> str:
         return self.name
+
+
+class ExternalIngredientLine(models.Model):
+    normalized_text = models.CharField(max_length=MAX_LINE_TEXT_LENGTH, unique=True)
+    ingredient = models.ForeignKey(
+        "catalog.Ingredient",
+        null=True,
+        blank=True,
+        on_delete=models.DO_NOTHING,
+        related_name="external_lines",
+    )
+    quantity = models.DecimalField(max_digits=12, decimal_places=3, null=True, blank=True)
+    unit_code = models.CharField(
+        max_length=16, choices=MEASUREMENT_UNIT_CHOICES, null=True, blank=True
+    )
+    model_name = models.CharField(max_length=120)
+    interpreted_at = models.DateTimeField()
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=~Q(normalized_text=""), name="external_line_text_not_empty"
+            ),
+            models.CheckConstraint(
+                condition=~Q(model_name=""), name="external_line_model_not_empty"
+            ),
+            models.CheckConstraint(
+                condition=Q(quantity__isnull=True, unit_code__isnull=True)
+                | Q(
+                    quantity__isnull=False,
+                    quantity__gt=0,
+                    unit_code__isnull=False,
+                    unit_code__in=MEASUREMENT_UNIT_CODES,
+                ),
+                name="external_line_amount_complete",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return self.normalized_text

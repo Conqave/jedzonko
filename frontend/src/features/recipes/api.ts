@@ -309,3 +309,11 @@ export async function fetchExternalShortfall(
   const response = await http.get(`/recipes/external/${reference}/missing-items/`, { params });
   return shortfallSchema.parse(response.data);
 }
+
+const matchingSchema = z.object({ interpreted_line_count: z.number().int() });
+
+export async function matchExternalRecipeIngredients(reference: string): Promise<number> {
+  const response = await http.post(`/recipes/external/${reference}/ingredient-matching/`);
+  const body = matchingSchema.parse(response.data);
+  return body.interpreted_line_count;
+}

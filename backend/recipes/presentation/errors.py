@@ -3,6 +3,8 @@ from rest_framework.exceptions import NotFound, ValidationError
 from config.api_errors import ApiErrors, BadGateway, ServiceUnavailable
 from recipes.application.errors import (
     DuplicateRecipeIngredientError,
+    IngredientLineInterpreterContractError,
+    IngredientLineInterpreterUnavailableError,
     InvalidServingsError,
     MeasurementUnitNotFoundError,
     RecipeCategoryNotFoundError,
@@ -13,6 +15,16 @@ from recipes.application.errors import (
 )
 
 API_ERRORS: ApiErrors = {
+    IngredientLineInterpreterUnavailableError: (
+        ServiceUnavailable,
+        "The ingredient matching model is unavailable.",
+        "ingredient_matching_unavailable",
+    ),
+    IngredientLineInterpreterContractError: (
+        BadGateway,
+        "The ingredient matching model gave an unusable answer.",
+        "ingredient_matching_contract_invalid",
+    ),
     RecipeNotFoundError: (NotFound, "Recipe not found.", "recipe_not_found"),
     DuplicateRecipeIngredientError: (
         ValidationError,

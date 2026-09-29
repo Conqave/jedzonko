@@ -21,6 +21,9 @@ from recipes.application.use_cases.get_external_recipe import GetExternalRecipe
 from recipes.application.use_cases.get_recipe import GetRecipe
 from recipes.application.use_cases.list_recipe_categories import ListRecipeCategories
 from recipes.application.use_cases.list_recipes import ListRecipes
+from recipes.application.use_cases.match_external_recipe_ingredients import (
+    MatchExternalRecipeIngredients,
+)
 from recipes.application.use_cases.reassign_recipe_ingredient import ReassignRecipeIngredient
 from recipes.application.use_cases.search_external_recipes import SearchExternalRecipes
 from recipes.application.use_cases.suggest_external_recipes_from_inventory import (
@@ -30,9 +33,16 @@ from recipes.application.use_cases.suggest_recipes_from_inventory import (
     SuggestRecipesFromInventory,
 )
 from recipes.application.use_cases.update_recipe import UpdateRecipe
+from recipes.infrastructure.django_ingredient_line_repository import (
+    DjangoIngredientLineRepository,
+)
 from recipes.infrastructure.django_recipe_repository import DjangoRecipeRepository
 from recipes.infrastructure.providers.ania_gotuje.provider import AniaGotujeProvider
+from recipes.infrastructure.providers.ollama.line_interpreter import (
+    OllamaIngredientLineInterpreter,
+)
 from shared.household_membership import HouseholdMembershipReader
+from shared.infrastructure.ollama_chat import OllamaSettings, open_ollama_chat
 from shared.transactions import TransactionManager
 
 
@@ -59,16 +69,32 @@ class RecipesModule:
     resolver: IngredientResolver
     memberships: HouseholdMembershipReader
     source_settings: RecipeSourceSettings
+    ollama_settings: OllamaSettings
 
     @contextmanager
-    def open_external(self) -> Iterator[ExternalRecipes]:
+    def open_line_matching(self) -> Iterator[MatchExternalRecipeIngredients]:
+        with self._open_source() as source, open_ollama_chat(self.ollama_settings) as chat:
+            yield MatchExternalRecipeIngredients(
+                source,
+                self.resolver,
+                DjangoIngredientLineRepository(),
+                OllamaIngredientLineInterpreter(chat),
+            )
+
+    @contextmanager
+    def _open_source(self) -> Iterator[AniaGotujeProvider]:
         settings = self.source_settings
         with httpx.Client(
             timeout=httpx.Timeout(settings.timeout_seconds),
             headers={"User-Agent": settings.user_agent},
             follow_redirects=True,
         ) as client:
-            source = AniaGotujeProvider(client)
+            yield AniaGotujeProvider(client)
+
+    @contextmanager
+    def open_external(self) -> Iterator[ExternalRecipes]:
+        settings = self.source_settings
+        with self._open_source() as source:
             yield ExternalRecipes(
                 search=SearchExternalRecipes(source, self.stock, self.resolver, self.memberships),
                 suggest_from_inventory=SuggestExternalRecipesFromInventory(
@@ -80,7 +106,11 @@ class RecipesModule:
                 ),
                 get=GetExternalRecipe(source),
                 calculate_shortfall=CalculateExternalRecipeShortfall(
-                    source, self.stock, self.resolver, self.memberships
+                    source,
+                    self.stock,
+                    self.resolver,
+                    DjangoIngredientLineRepository(),
+                    self.memberships,
                 ),
             )
 
@@ -96,6 +126,7 @@ def build_recipes(
     consumer: HouseholdInventoryConsumer,
     reassign_recipe_ingredient: ReassignRecipeIngredient,
     source_settings: RecipeSourceSettings,
+    ollama_settings: OllamaSettings,
     transactions: TransactionManager,
 ) -> RecipesModule:
     recipes = DjangoRecipeRepository()
@@ -116,4 +147,5 @@ def build_recipes(
         resolver=resolver,
         memberships=memberships,
         source_settings=source_settings,
+        ollama_settings=ollama_settings,
     )

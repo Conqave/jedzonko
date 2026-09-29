@@ -24,6 +24,7 @@ class OllamaSettings:
     model: str
     think: str
     timeout_seconds: float
+    max_output_tokens: int
 
 
 class OllamaChat:
@@ -32,6 +33,7 @@ class OllamaChat:
         self._url = settings.base_url.rstrip("/") + "/api/chat"
         self._model = settings.model
         self._think = settings.think
+        self._max_output_tokens = settings.max_output_tokens
 
     @property
     def model_name(self) -> str:
@@ -51,6 +53,7 @@ class OllamaChat:
             "model": self._model,
             "stream": False,
             "think": self._think,
+            "options": {"num_predict": self._max_output_tokens},
             "messages": [{"role": "user", "content": prompt}],
         }
 

@@ -17,7 +17,7 @@ INGREDIENTS = ("maślanka", "jajka", "skyr")
 def _classifier(handler: Callable[[httpx.Request], httpx.Response]) -> OllamaIngredientClassifier:
     transport = httpx.MockTransport(handler)
     client = httpx.Client(transport=transport)
-    settings = OllamaSettings("http://192.0.2.1:11434/", "gpt-oss:20b", "high", 10)
+    settings = OllamaSettings("http://192.0.2.1:11434/", "gpt-oss:20b", "high", 10, 256)
     return OllamaIngredientClassifier(OllamaChat(client, settings))
 
 

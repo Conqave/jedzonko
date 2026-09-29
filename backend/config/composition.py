@@ -73,6 +73,7 @@ def container() -> Container:
         model=settings.OLLAMA_MODEL,
         think=settings.OLLAMA_REASONING_EFFORT,
         timeout_seconds=settings.OLLAMA_HTTP_TIMEOUT_SECONDS,
+        max_output_tokens=settings.OLLAMA_MAX_OUTPUT_TOKENS,
     )
     classifier_settings = ClassifierSettings(
         ollama=ollama_settings,
@@ -101,6 +102,7 @@ def container() -> Container:
         consumer,
         reassign_recipe_ingredient,
         recipe_source_settings,
+        ollama_settings,
         transactions,
     )
 

@@ -45,6 +45,10 @@
         </q-item>
       </q-list>
 
+      <q-banner v-if="isMatching" class="bg-blue-1 q-mb-md">
+        <template #avatar><q-spinner color="primary" size="24px" /></template>
+        Dopasowuję składniki przepisu do Twoich zapasów…
+      </q-banner>
       <template v-if="households.selectedId !== null && shortfall !== null">
         <div class="row items-center q-mb-sm">
           <div class="text-h6 col">Czego brakuje</div>
@@ -87,6 +91,6 @@ const route = useRoute();
 const households = useHouseholdStore();
 const reference = String(route.params.reference);
 const selectedId = toRef(households, 'selectedId');
-const { recipe, shortfall, busy } = useExternalRecipe(reference, selectedId);
+const { recipe, shortfall, busy, isMatching } = useExternalRecipe(reference, selectedId);
 const { findUnitName } = useMeasurementUnits();
 </script>
