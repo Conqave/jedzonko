@@ -1,5 +1,6 @@
 <template>
   <q-page padding>
+    <div class="text-h5 q-mb-md">Promocje i sklepy</div>
     <q-tabs v-model="tab" align="left" class="q-mb-md" dense outside-arrows mobile-arrows>
       <q-tab name="favourites" label="Ulubione" no-caps />
       <q-tab name="search" label="Szukaj" no-caps />
