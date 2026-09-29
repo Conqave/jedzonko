@@ -191,6 +191,25 @@ def test_buying_a_product_adds_it_to_the_pantry_and_keeps_it_visible(
     assert [(each["id"], each["status"]) for each in items.data] == [(item["id"], "purchased")]
 
 
+def test_ticked_items_are_bought_together(
+    member_client: APIClient, home: Household, flour: Product
+) -> None:
+    list_id = _primary_list_id(member_client, home)
+    flour_item = _add(
+        member_client, list_id, {"product_id": flour.pk, "quantity": "500", "unit_code": "g"}
+    )
+    bread = _add(member_client, list_id, {"free_text": "chleb", "quantity": "1"})
+    url = f"/api/shopping/lists/{list_id}/purchase/"
+
+    bought = member_client.post(url, {"item_ids": [flour_item["id"], bread["id"]]}, format="json")
+    again = member_client.post(url, {"item_ids": [bread["id"]]}, format="json")
+    items = member_client.get(f"/api/shopping/lists/{list_id}/items/")
+
+    assert (bought.status_code, again.status_code) == (204, 404)
+    assert InventoryItem.objects.get(product=flour).quantity == Decimal("500.000")
+    assert {each["status"] for each in items.data} == {"purchased"}
+
+
 def test_a_bought_item_is_restored_with_the_same_id(
     member_client: APIClient, home: Household, flour: Product
 ) -> None:

@@ -15,6 +15,7 @@ from shopping.application.use_cases.add_missing_recipe_items_to_shopping_list im
 )
 from shopping.application.use_cases.add_shopping_list_item import AddShoppingListItem
 from shopping.application.use_cases.buy_shopping_item import BuyShoppingItem
+from shopping.application.use_cases.buy_shopping_items import BuyShoppingItems
 from shopping.application.use_cases.choose_shopping_item_product import ChooseShoppingItemProduct
 from shopping.application.use_cases.create_primary_shopping_list import CreatePrimaryShoppingList
 from shopping.application.use_cases.create_shopping_list import CreateShoppingList
@@ -44,6 +45,7 @@ class ShoppingModule:
     add_missing_external_recipe_items_to_shopping_list: AddMissingExternalRecipeItemsToShoppingList
     synchronize_minimum_stock: SynchronizeMinimumStock
     buy_shopping_item: BuyShoppingItem
+    buy_shopping_items: BuyShoppingItems
     restore_shopping_item: RestoreShoppingItem
     delete_shopping_list_item: DeleteShoppingListItem
     choose_shopping_item_product: ChooseShoppingItemProduct
@@ -68,6 +70,7 @@ def build_shopping(
     transactions: TransactionManager,
 ) -> ShoppingModule:
     lists = DjangoShoppingListRepository()
+    buy_item = BuyShoppingItem(lists, inventory_writer, memberships, transactions)
     add_missing = AddMissingRecipeItemsToShoppingList(
         lists, recipes, catalog, memberships, transactions
     )
@@ -87,7 +90,8 @@ def build_shopping(
         synchronize_minimum_stock=SynchronizeMinimumStock(
             lists, inventory_reader, memberships, transactions
         ),
-        buy_shopping_item=BuyShoppingItem(lists, inventory_writer, memberships, transactions),
+        buy_shopping_item=buy_item,
+        buy_shopping_items=BuyShoppingItems(lists, buy_item, transactions),
         restore_shopping_item=RestoreShoppingItem(lists, memberships, transactions),
         delete_shopping_list_item=DeleteShoppingListItem(lists, memberships),
         choose_shopping_item_product=ChooseShoppingItemProduct(

@@ -2,14 +2,20 @@
   <q-banner v-if="pendingItems.length === 0 && purchasedItems.length === 0" class="bg-grey-3">
     Lista jest pusta.
   </q-banner>
-  <q-list v-else bordered separator>
+  <div v-else-if="pendingItems.length > 0" class="row justify-end q-mb-sm">
+    <q-btn
+      color="positive"
+      icon="done_all"
+      no-caps
+      :label="`Kupiono (${selectedIds.length})`"
+      :disable="selectedIds.length === 0"
+      @click="buySelected"
+    />
+  </div>
+  <q-list v-if="pendingItems.length > 0 || purchasedItems.length > 0" bordered separator>
     <q-item v-for="item in pendingItems" :key="item.id">
       <q-item-section side>
-        <q-checkbox
-          :model-value="false"
-          :aria-label="`Kupione: ${item.name}`"
-          @update:model-value="emit('buy', item)"
-        />
+        <q-checkbox v-model="selectedIds" :val="item.id" :aria-label="`Zaznacz: ${item.name}`" />
       </q-item-section>
       <q-item-section>
         <q-item-label>{{ item.name }}</q-item-label>
@@ -66,6 +72,7 @@
 </template>
 
 <script setup lang="ts">
+import { ref, watch } from 'vue';
 import { formatQuantity } from '@/shared/formatQuantity';
 import type { ShoppingItem, ShoppingSubject } from '../model';
 
@@ -82,11 +89,25 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  buy: [item: ShoppingItem];
+  buy: [itemIds: number[]];
   restore: [item: ShoppingItem];
   'choose-product': [item: ShoppingItem];
   remove: [item: ShoppingItem];
 }>();
+
+const selectedIds = ref<number[]>([]);
+
+watch(
+  () => props.pendingItems,
+  (pending) => {
+    const pendingIds = new Set(pending.map((item) => item.id));
+    selectedIds.value = selectedIds.value.filter((id) => pendingIds.has(id));
+  },
+);
+
+function buySelected(): void {
+  emit('buy', [...selectedIds.value]);
+}
 
 function describeQuantity(item: ShoppingItem): string {
   const amount = formatQuantity(item.quantity);

@@ -11,6 +11,7 @@ from shopping.presentation.views import (
     ShoppingListItemListView,
     ShoppingListListView,
     ShoppingListPromotionSplitView,
+    ShoppingListPurchaseView,
     ShoppingListRecipeItemsView,
 )
 
@@ -19,6 +20,7 @@ urlpatterns: list[URLPattern] = [
     path("lists/<int:list_id>/", ShoppingListDetailView.as_view()),
     path("lists/<int:list_id>/items/", ShoppingListItemListView.as_view()),
     path("lists/<int:list_id>/recipe-items/", ShoppingListRecipeItemsView.as_view()),
+    path("lists/<int:list_id>/purchase/", ShoppingListPurchaseView.as_view()),
     path("lists/<int:list_id>/promotion-split/", ShoppingListPromotionSplitView.as_view()),
     path(
         "lists/<int:list_id>/external-recipe-items/",

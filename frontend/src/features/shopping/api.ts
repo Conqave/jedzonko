@@ -137,8 +137,8 @@ export async function splitByPromotions(
   return listSchema.array().parse(response.data);
 }
 
-export async function buyShoppingItem(itemId: number): Promise<void> {
-  await http.post(`/shopping/items/${itemId}/purchase/`);
+export async function buyShoppingItems(listId: number, itemIds: number[]): Promise<void> {
+  await http.post(`/shopping/lists/${listId}/purchase/`, { item_ids: itemIds });
 }
 
 export async function chooseShoppingItemProduct(

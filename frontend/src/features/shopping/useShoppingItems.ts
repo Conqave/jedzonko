@@ -2,7 +2,7 @@ import { computed, ref, watch, type Ref } from 'vue';
 import { useApiAction } from '@/shared/useApiAction';
 import {
   addShoppingItem,
-  buyShoppingItem,
+  buyShoppingItems,
   chooseShoppingItemProduct,
   deleteShoppingItem,
   fetchShoppingItems,
@@ -42,10 +42,14 @@ export function useShoppingItems(listId: Ref<number | null>) {
     });
   }
 
-  function buy(item: ShoppingItem): Promise<boolean> {
+  function buy(itemIds: number[]): Promise<boolean> {
+    const id = listId.value;
+    if (id === null || itemIds.length === 0) {
+      return Promise.resolve(false);
+    }
     return run(async () => {
-      await buyShoppingItem(item.id);
-      await reload(item.listId);
+      await buyShoppingItems(id, itemIds);
+      await reload(id);
     });
   }
 

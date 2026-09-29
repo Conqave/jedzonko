@@ -68,3 +68,9 @@ class AddExternalRecipeItemsSerializer(serializers.Serializer[dict[str, str]]):
 
 class ChooseItemProductSerializer(serializers.Serializer[dict[str, int]]):
     product_id = serializers.IntegerField(min_value=1)
+
+
+class BuyItemsSerializer(serializers.Serializer[dict[str, list[int]]]):
+    item_ids = serializers.ListField(
+        child=serializers.IntegerField(min_value=1), min_length=1, max_length=200
+    )
