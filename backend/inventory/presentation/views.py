@@ -10,12 +10,8 @@ from config.composition import container
 from inventory.presentation.photo_upload import InventoryPhotoUpload
 from inventory.presentation.serializers import (
     AddInventoryItemSerializer,
-    CreateInventoryCategorySerializer,
     HouseholdQuerySerializer,
-    InventoryCategorySerializer,
     InventoryItemSerializer,
-    RenameInventoryCategorySerializer,
-    SetInventoryItemCategorySerializer,
     SetInventoryItemMinimumSerializer,
     UpdateInventoryItemSerializer,
 )
@@ -43,8 +39,7 @@ class InventoryListView(APIView):
             data["product_id"],
             data["quantity"],
             data["unit_code"],
-            data.get("minimum_quantity"),
-            data.get("category_id"),
+            data["minimum_quantity"],
         )
         serializer = InventoryItemSerializer(item)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -60,7 +55,6 @@ class InventoryItemView(APIView):
         item = use_case.execute(
             user_id,
             item_id,
-            data.get("product_name"),
             data.get("quantity"),
             data.get("unit_code"),
         )
@@ -74,45 +68,6 @@ class InventoryItemView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class InventoryCategoryListView(APIView):
-    def get(self, request: Request) -> Response:
-        user_id = current_user_id(request)
-        query = HouseholdQuerySerializer(data=request.query_params)
-        query.is_valid(raise_exception=True)
-        use_case = container().inventory.list_inventory_categories
-        categories = use_case.execute(user_id, query.validated_data["household_id"])
-        serializer = InventoryCategorySerializer(categories, many=True)
-        return Response(serializer.data)
-
-    def post(self, request: Request) -> Response:
-        user_id = current_user_id(request)
-        payload = CreateInventoryCategorySerializer(data=request.data)
-        payload.is_valid(raise_exception=True)
-        use_case = container().inventory.create_inventory_category
-        category = use_case.execute(
-            user_id, payload.validated_data["household_id"], payload.validated_data["name"]
-        )
-        serializer = InventoryCategorySerializer(category)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-
-class InventoryCategoryDetailView(APIView):
-    def patch(self, request: Request, category_id: int) -> Response:
-        user_id = current_user_id(request)
-        payload = RenameInventoryCategorySerializer(data=request.data)
-        payload.is_valid(raise_exception=True)
-        use_case = container().inventory.rename_inventory_category
-        category = use_case.execute(user_id, category_id, payload.validated_data["name"])
-        serializer = InventoryCategorySerializer(category)
-        return Response(serializer.data)
-
-    def delete(self, request: Request, category_id: int) -> Response:
-        user_id = current_user_id(request)
-        use_case = container().inventory.delete_inventory_category
-        use_case.execute(user_id, category_id)
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
-
 class InventoryItemMinimumView(APIView):
     def put(self, request: Request, item_id: int) -> Response:
         user_id = current_user_id(request)
@@ -120,17 +75,6 @@ class InventoryItemMinimumView(APIView):
         payload.is_valid(raise_exception=True)
         use_case = container().inventory.set_inventory_item_minimum
         item = use_case.execute(user_id, item_id, payload.validated_data["minimum_quantity"])
-        serializer = InventoryItemSerializer(item)
-        return Response(serializer.data)
-
-
-class InventoryItemCategoryView(APIView):
-    def put(self, request: Request, item_id: int) -> Response:
-        user_id = current_user_id(request)
-        payload = SetInventoryItemCategorySerializer(data=request.data)
-        payload.is_valid(raise_exception=True)
-        use_case = container().inventory.set_inventory_item_category
-        item = use_case.execute(user_id, item_id, payload.validated_data["category_id"])
         serializer = InventoryItemSerializer(item)
         return Response(serializer.data)
 

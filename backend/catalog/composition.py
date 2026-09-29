@@ -32,7 +32,6 @@ from catalog.application.use_cases.propose_ingredients_for_products import (
 )
 from catalog.application.use_cases.propose_product_ingredient import ProposeProductIngredient
 from catalog.application.use_cases.reject_product_ingredient import RejectProductIngredient
-from catalog.application.use_cases.rename_product import RenameProduct
 from catalog.application.use_cases.search_ingredients import SearchIngredients
 from catalog.application.use_cases.update_product import UpdateProduct
 from catalog.infrastructure.django_candidate_repository import DjangoCandidateRepository
@@ -59,7 +58,6 @@ class CatalogModule:
     create_product: CreateProduct
     update_product: UpdateProduct
     delete_product: DeleteProduct
-    rename_product: RenameProduct
     find_household_product: FindHouseholdProduct
     describe_household_products: DescribeHouseholdProducts
     list_measurement_units: ListMeasurementUnits
@@ -124,7 +122,6 @@ def build_catalog(
         create_product=CreateProduct(products, memberships, transactions),
         update_product=UpdateProduct(products, memberships, transactions),
         delete_product=DeleteProduct(products, memberships),
-        rename_product=RenameProduct(products, memberships, transactions),
         find_household_product=FindHouseholdProduct(products),
         describe_household_products=DescribeHouseholdProducts(
             products, classifications, ingredients

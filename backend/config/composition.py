@@ -16,7 +16,6 @@ from households.infrastructure.shopping_household_provisioner import ShoppingHou
 from inventory.composition import InventoryModule, build_inventory
 from inventory.infrastructure.catalog_products import (
     CatalogProductDirectory,
-    CatalogProductRenamer,
 )
 from promotions.composition import PromotionsModule, PromotionSourceSettings, build_promotions
 from recipes.composition import (
@@ -82,8 +81,7 @@ def container() -> Container:
     catalog = build_catalog(memberships, ingredient_references, classifier_settings, transactions)
 
     product_directory = CatalogProductDirectory(catalog.find_household_product)
-    product_renamer = CatalogProductRenamer(catalog.rename_product)
-    inventory = build_inventory(memberships, product_directory, product_renamer, transactions)
+    inventory = build_inventory(memberships, product_directory, transactions)
 
     stock = PantryStockReader(
         inventory.get_household_inventory, catalog.describe_household_products

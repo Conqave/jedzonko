@@ -31,6 +31,6 @@ class AddQuantityToInventory:
         with self._transaction_manager.atomic():
             existing = self._repository.lock_item_by_product(product_id)
             if existing is None:
-                return self._repository.create_item(product_id, amount, unit.code, None, None)
+                return self._repository.create_item(product_id, amount, unit.code, None)
             increased = existing.as_quantity().add(Quantity(amount=amount, unit=unit))
             return self._repository.set_quantity(existing.id, increased.amount)

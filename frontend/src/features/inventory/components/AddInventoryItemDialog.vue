@@ -31,22 +31,6 @@
             :options="units"
             :rules="[(value: string) => value !== '' || 'Wybierz jednostkę']"
           />
-          <q-select
-            v-model="categoryId"
-            dense
-            outlined
-            clearable
-            emit-value
-            map-options
-            use-input
-            new-value-mode="add-unique"
-            option-value="id"
-            option-label="name"
-            :options="categoryOptions"
-            label="Kategoria (opcjonalnie)"
-            hint="Wpisz nazwę i naciśnij Enter, aby dodać nową kategorię."
-            @new-value="addCategory"
-          />
           <q-input
             v-model="minimumQuantity"
             dense
@@ -79,13 +63,11 @@ import { ref } from 'vue';
 import ProductPicker from '@/features/catalog/components/ProductPicker.vue';
 import type { MeasurementUnit, Product } from '@/features/catalog/model';
 import { isPositiveDecimal, toDecimalText } from '@/shared/decimal';
-import type { InventoryCategory, NewInventoryEntry } from '../model';
+import type { NewInventoryEntry } from '../model';
 
 const props = defineProps<{
   householdId: number;
   units: MeasurementUnit[];
-  categories: InventoryCategory[];
-  createCategory: (name: string) => Promise<InventoryCategory | null>;
 }>();
 
 defineEmits([...useDialogPluginComponent.emits]);
@@ -94,10 +76,8 @@ const { dialogRef, onDialogHide, onDialogOK, onDialogCancel } = useDialogPluginC
 const product = ref<Product | null>(null);
 const quantity = ref('');
 const unitCode = ref('');
-const categoryId = ref<number | null>(null);
 const minimumQuantity = ref('');
 const photo = ref<File | null>(null);
-const categoryOptions = ref<InventoryCategory[]>([...props.categories]);
 
 function isQuantity(value: string): boolean {
   return value.trim() === '0' || isPositiveDecimal(value);
@@ -107,16 +87,6 @@ function applyDefaultUnit(chosen: Product | null): void {
   if (chosen !== null) {
     unitCode.value = chosen.defaultUnitCode;
   }
-}
-
-async function addCategory(name: string, done: () => void): Promise<void> {
-  const created = await props.createCategory(name.trim());
-  done();
-  if (created === null) {
-    return;
-  }
-  categoryOptions.value = [...categoryOptions.value, created];
-  categoryId.value = created.id;
 }
 
 function submit(): void {
@@ -132,7 +102,6 @@ function submit(): void {
       quantity: toDecimalText(quantity.value),
       unitCode: unitCode.value,
       minimumQuantity: minimum === '' ? null : toDecimalText(minimum),
-      categoryId: categoryId.value,
     },
     photo: photo.value,
   };

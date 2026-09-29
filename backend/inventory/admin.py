@@ -1,11 +1,6 @@
 from django.contrib import admin
 
-from inventory.models import InventoryCategory, InventoryItem
-
-
-@admin.register(InventoryCategory)
-class InventoryCategoryAdmin(admin.ModelAdmin[InventoryCategory]):
-    list_display = ["name", "household"]
+from inventory.models import InventoryItem
 
 
 @admin.register(InventoryItem)

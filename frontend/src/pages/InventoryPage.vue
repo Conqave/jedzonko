@@ -19,23 +19,15 @@
       <LowStockBanner :items="belowMinimumItems" />
       <InventoryTable
         :items="items"
-        :categories="categories"
+        :find-tags="findTags"
         :busy="busy"
         :saving-item-id="savingItemId"
         :find-unit-name="findUnitName"
         @step="stepItem"
-        @set-category="(item, categoryId) => setCategory(item.id, categoryId)"
         @edit="openEditDialog"
         @photo="openPhotoDialog"
         @remove="confirmRemove"
       />
-      <q-expansion-item class="q-mt-lg" icon="label" label="Kategorie zapasów">
-        <InventoryCategoryList
-          :categories="categories"
-          @rename="renameCategoryNamed"
-          @remove="confirmRemoveCategory"
-        />
-      </q-expansion-item>
     </template>
   </q-page>
 </template>
@@ -43,19 +35,19 @@
 <script setup lang="ts">
 import { useQuasar } from 'quasar';
 import { toRef } from 'vue';
+import type { ProductListing } from '@/features/catalog/model';
 import { useMeasurementUnits } from '@/features/catalog/useMeasurementUnits';
+import { useProductCatalog } from '@/features/catalog/useProductCatalog';
 import { useHouseholdStore } from '@/features/households/store';
 import AddInventoryItemDialog from '@/features/inventory/components/AddInventoryItemDialog.vue';
 import EditInventoryItemDialog from '@/features/inventory/components/EditInventoryItemDialog.vue';
-import InventoryCategoryList from '@/features/inventory/components/InventoryCategoryList.vue';
 import InventoryPhotoDialog from '@/features/inventory/components/InventoryPhotoDialog.vue';
 import InventoryTable from '@/features/inventory/components/InventoryTable.vue';
 import LowStockBanner from '@/features/inventory/components/LowStockBanner.vue';
 import {
   stepQuantity,
-  type InventoryCategory,
   type InventoryItem,
-  type InventoryItemEdit,
+  type PantryItemEdit,
   type NewInventoryEntry,
   type QuantityDirection,
 } from '@/features/inventory/model';
@@ -69,7 +61,6 @@ const dialogs = useDialogs();
 const { units, findUnitName } = useMeasurementUnits();
 const {
   items,
-  categories,
   belowMinimumItems,
   busy,
   savingItemId,
@@ -77,13 +68,11 @@ const {
   update,
   edit,
   remove,
-  renameCategory,
-  removeCategory,
-  setCategory,
-  createCategory,
   setPhoto,
   removePhoto,
+  load: reloadItems,
 } = useInventory(selectedId);
+const { listings, load: loadProducts, update: updateProduct } = useProductCatalog(selectedId);
 
 function openAddDialog(): void {
   const householdId = households.selectedId;
@@ -93,8 +82,6 @@ function openAddDialog(): void {
   const componentProps = {
     householdId,
     units: units.value,
-    categories: categories.value,
-    createCategory,
   };
   quasar
     .dialog({ component: AddInventoryItemDialog, componentProps })
@@ -103,13 +90,41 @@ function openAddDialog(): void {
     });
 }
 
+function findListing(productId: number): ProductListing | undefined {
+  return listings.value.find((listing) => listing.product.id === productId);
+}
+
+function findTags(productId: number): string[] {
+  const listing = findListing(productId);
+  if (listing === undefined || listing.ingredient === null) {
+    return [];
+  }
+  return [listing.ingredient.name];
+}
+
 function openEditDialog(item: InventoryItem): void {
-  const componentProps = { item, units: units.value };
+  const listing = findListing(item.productId);
+  if (listing === undefined) {
+    return;
+  }
+  const componentProps = { item, product: listing.product, units: units.value };
   quasar
     .dialog({ component: EditInventoryItemDialog, componentProps })
-    .onOk((itemEdit: InventoryItemEdit) => {
-      void edit(item, itemEdit);
+    .onOk((pantryEdit: PantryItemEdit) => {
+      void savePantryItem(item, pantryEdit);
+    })
+    .onCancel(() => {
+      void loadProducts();
     });
+}
+
+async function savePantryItem(item: InventoryItem, pantryEdit: PantryItemEdit): Promise<void> {
+  const isProductSaved = await updateProduct(item.productId, pantryEdit.product);
+  if (isProductSaved) {
+    await edit(item, pantryEdit.item);
+  }
+  await loadProducts();
+  await reloadItems();
 }
 
 function openPhotoDialog(item: InventoryItem): void {
@@ -127,22 +142,6 @@ async function stepItem(item: InventoryItem, direction: QuantityDirection): Prom
   }
   const quantity = stepQuantity(item.quantity, unit.dimension, direction);
   await update(item.id, { quantity });
-}
-
-async function renameCategoryNamed(category: InventoryCategory): Promise<void> {
-  const prompt = { title: 'Zmień nazwę kategorii', label: 'Nazwa', initial: category.name };
-  const name = await dialogs.promptText(prompt);
-  if (name !== null) {
-    await renameCategory(category.id, name);
-  }
-}
-
-async function confirmRemoveCategory(category: InventoryCategory): Promise<void> {
-  const message = `Pozycje z kategorii „${category.name}” zostaną bez kategorii.`;
-  const isConfirmed = await dialogs.confirm('Usunąć kategorię?', message);
-  if (isConfirmed) {
-    await removeCategory(category.id);
-  }
 }
 
 async function confirmRemove(item: InventoryItem): Promise<void> {

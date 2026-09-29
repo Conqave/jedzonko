@@ -33,7 +33,6 @@ class InventoryRepository(ABC):
         quantity: Decimal,
         unit_code: str,
         minimum_quantity: Decimal | None,
-        category_id: int | None,
     ) -> InventoryItemSnapshot:
         raise NotImplementedError
 
@@ -51,10 +50,6 @@ class InventoryRepository(ABC):
     def set_minimum_quantity(
         self, item_id: int, minimum_quantity: Decimal | None
     ) -> InventoryItemSnapshot:
-        raise NotImplementedError
-
-    @abstractmethod
-    def set_category(self, item_id: int, category_id: int | None) -> InventoryItemSnapshot:
         raise NotImplementedError
 
     @abstractmethod

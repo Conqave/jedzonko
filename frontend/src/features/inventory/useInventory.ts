@@ -2,21 +2,15 @@ import { computed, ref, watch, type Ref } from 'vue';
 import { useApiAction } from '@/shared/useApiAction';
 import {
   addInventoryItem,
-  createInventoryCategory,
-  deleteInventoryCategory,
   deleteInventoryItem,
   deleteInventoryItemPhoto,
   fetchInventory,
-  fetchInventoryCategories,
-  renameInventoryCategory,
-  setInventoryItemCategory,
   setInventoryItemMinimum,
   updateInventoryItem,
   uploadInventoryItemPhoto,
 } from './api';
 import { INVENTORY_ERROR_MESSAGES } from './errors';
 import type {
-  InventoryCategory,
   InventoryItem,
   InventoryItemChanges,
   InventoryItemEdit,
@@ -25,7 +19,6 @@ import type {
 
 export function useInventory(householdId: Ref<number | null>) {
   const items = ref<InventoryItem[]>([]);
-  const categories = ref<InventoryCategory[]>([]);
   const savingItemId = ref<number | null>(null);
   const { busy, run } = useApiAction(INVENTORY_ERROR_MESSAGES);
 
@@ -38,7 +31,6 @@ export function useInventory(householdId: Ref<number | null>) {
   async function load(): Promise<void> {
     const id = householdId.value;
     items.value = [];
-    categories.value = [];
     if (id === null) {
       return;
     }
@@ -51,7 +43,6 @@ export function useInventory(householdId: Ref<number | null>) {
       return;
     }
     items.value = await fetchInventory(id);
-    categories.value = await fetchInventoryCategories(id);
   }
 
   function add(entry: NewInventoryEntry): Promise<boolean> {
@@ -89,45 +80,11 @@ export function useInventory(householdId: Ref<number | null>) {
     return isEdited;
   }
 
-  function renameCategory(categoryId: number, name: string): Promise<boolean> {
-    return run(async () => {
-      await renameInventoryCategory(categoryId, name);
-      await reload();
-    });
-  }
-
-  function removeCategory(categoryId: number): Promise<boolean> {
-    return run(async () => {
-      await deleteInventoryCategory(categoryId);
-      await reload();
-    });
-  }
-
   function remove(itemId: number): Promise<boolean> {
     return run(async () => {
       await deleteInventoryItem(itemId);
       items.value = items.value.filter((item) => item.id !== itemId);
     });
-  }
-
-  function setCategory(itemId: number, categoryId: number | null): Promise<boolean> {
-    return run(async () => {
-      const updated = await setInventoryItemCategory(itemId, categoryId);
-      replaceItem(updated);
-    });
-  }
-
-  async function createCategory(name: string): Promise<InventoryCategory | null> {
-    const id = householdId.value;
-    if (id === null) {
-      return null;
-    }
-    const created = ref<InventoryCategory | null>(null);
-    await run(async () => {
-      created.value = await createInventoryCategory(id, name);
-      categories.value = [...categories.value, created.value];
-    });
-    return created.value;
   }
 
   function setPhoto(itemId: number, photo: File): Promise<boolean> {
@@ -147,8 +104,8 @@ export function useInventory(householdId: Ref<number | null>) {
   watch(householdId, load, { immediate: true });
 
   return {
+    load,
     items,
-    categories,
     belowMinimumItems,
     busy,
     savingItemId,
@@ -156,10 +113,6 @@ export function useInventory(householdId: Ref<number | null>) {
     update,
     edit,
     remove,
-    renameCategory,
-    removeCategory,
-    setCategory,
-    createCategory,
     setPhoto,
     removePhoto,
   };

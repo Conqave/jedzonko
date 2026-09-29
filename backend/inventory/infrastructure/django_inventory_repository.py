@@ -18,12 +18,12 @@ from shared.measurement_units import find_measurement_unit
 class DjangoInventoryRepository(InventoryRepository):
     def list_items(self, household_id: int) -> list[InventoryItemSnapshot]:
         rows = InventoryItem.objects.filter(product__household_id=household_id).select_related(
-            "product", "category"
+            "product"
         )
         return [self._to_snapshot(row) for row in rows]
 
     def find_item(self, item_id: int) -> InventoryItemSnapshot | None:
-        row = InventoryItem.objects.filter(pk=item_id).select_related("product", "category").first()
+        row = InventoryItem.objects.filter(pk=item_id).select_related("product").first()
         return None if row is None else self._to_snapshot(row)
 
     def find_household_id_for_item(self, item_id: int) -> int | None:
@@ -35,20 +35,14 @@ class DjangoInventoryRepository(InventoryRepository):
         return None if row is None else int(row)
 
     def find_item_by_product(self, product_id: int) -> InventoryItemSnapshot | None:
-        row = (
-            InventoryItem.objects.filter(product_id=product_id)
-            .select_related("product", "category")
-            .first()
-        )
+        row = InventoryItem.objects.filter(product_id=product_id).select_related("product").first()
         return None if row is None else self._to_snapshot(row)
 
     def lock_item_by_product(self, product_id: int) -> InventoryItemSnapshot | None:
         row = InventoryItem.objects.select_for_update().filter(product_id=product_id).first()
         if row is None:
             return None
-        return self._to_snapshot(
-            InventoryItem.objects.select_related("product", "category").get(pk=row.pk)
-        )
+        return self._to_snapshot(InventoryItem.objects.select_related("product").get(pk=row.pk))
 
     def create_item(
         self,
@@ -56,7 +50,6 @@ class DjangoInventoryRepository(InventoryRepository):
         quantity: Decimal,
         unit_code: str,
         minimum_quantity: Decimal | None,
-        category_id: int | None,
     ) -> InventoryItemSnapshot:
         if find_measurement_unit(unit_code) is None:
             raise MeasurementUnitNotFoundError
@@ -65,17 +58,14 @@ class DjangoInventoryRepository(InventoryRepository):
             unit_code=unit_code,
             quantity=quantity,
             minimum_quantity=minimum_quantity,
-            category_id=category_id,
         )
-        return self._to_snapshot(
-            InventoryItem.objects.select_related("product", "category").get(pk=item.pk)
-        )
+        return self._to_snapshot(InventoryItem.objects.select_related("product").get(pk=item.pk))
 
     def set_quantity(self, item_id: int, quantity: Decimal) -> InventoryItemSnapshot:
         updated = InventoryItem.objects.filter(pk=item_id).update(quantity=quantity)
         if updated == 0:
             raise InventoryItemNotFoundError
-        row = InventoryItem.objects.select_related("product", "category").get(pk=item_id)
+        row = InventoryItem.objects.select_related("product").get(pk=item_id)
         return self._to_snapshot(row)
 
     def update_item(
@@ -92,7 +82,7 @@ class DjangoInventoryRepository(InventoryRepository):
             updated = InventoryItem.objects.filter(pk=item_id).update(**changes)
             if updated == 0:
                 raise InventoryItemNotFoundError
-        row = InventoryItem.objects.select_related("product", "category").filter(pk=item_id).first()
+        row = InventoryItem.objects.select_related("product").filter(pk=item_id).first()
         if row is None:
             raise InventoryItemNotFoundError
         return self._to_snapshot(row)
@@ -103,18 +93,11 @@ class DjangoInventoryRepository(InventoryRepository):
         updated = InventoryItem.objects.filter(pk=item_id).update(minimum_quantity=minimum_quantity)
         if updated == 0:
             raise InventoryItemNotFoundError
-        row = InventoryItem.objects.select_related("product", "category").get(pk=item_id)
-        return self._to_snapshot(row)
-
-    def set_category(self, item_id: int, category_id: int | None) -> InventoryItemSnapshot:
-        updated = InventoryItem.objects.filter(pk=item_id).update(category_id=category_id)
-        if updated == 0:
-            raise InventoryItemNotFoundError
-        row = InventoryItem.objects.select_related("product", "category").get(pk=item_id)
+        row = InventoryItem.objects.select_related("product").get(pk=item_id)
         return self._to_snapshot(row)
 
     def set_photo(self, item_id: int, photo: InventoryPhoto) -> InventoryItemSnapshot:
-        row = InventoryItem.objects.select_related("product", "category").filter(pk=item_id).first()
+        row = InventoryItem.objects.select_related("product").filter(pk=item_id).first()
         if row is None:
             raise InventoryItemNotFoundError
         if row.photo:
@@ -123,7 +106,7 @@ class DjangoInventoryRepository(InventoryRepository):
         return self._to_snapshot(row)
 
     def clear_photo(self, item_id: int) -> InventoryItemSnapshot:
-        row = InventoryItem.objects.select_related("product", "category").filter(pk=item_id).first()
+        row = InventoryItem.objects.select_related("product").filter(pk=item_id).first()
         if row is None:
             raise InventoryItemNotFoundError
         if not row.photo:
@@ -147,8 +130,6 @@ class DjangoInventoryRepository(InventoryRepository):
             quantity=row.quantity,
             unit=unit,
             minimum_quantity=row.minimum_quantity,
-            category_id=row.category_id,
-            category_name=None if row.category is None else row.category.name,
             photo_url=row.photo.url if row.photo else None,
         )
 

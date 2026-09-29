@@ -22,8 +22,6 @@ const ITEM_DTO = {
   quantity: '1.500',
   unit_code: 'l',
   minimum_quantity: '1.000',
-  category_id: null,
-  category_name: null,
   photo_url: null,
   below_minimum: false,
 };
@@ -57,7 +55,6 @@ describe('inventory api', () => {
       quantity: '1.5',
       unitCode: 'l',
       minimumQuantity: null,
-      categoryId: 3,
     });
 
     expect(post).toHaveBeenCalledWith('/inventory/', {
@@ -66,7 +63,6 @@ describe('inventory api', () => {
       quantity: '1.5',
       unit_code: 'l',
       minimum_quantity: null,
-      category_id: 3,
     });
   });
 
@@ -76,7 +72,6 @@ describe('inventory api', () => {
     await updateInventoryItem(5, { quantity: '2.000' });
 
     expect(patch).toHaveBeenCalledWith('/inventory/5/', {
-      product_name: undefined,
       quantity: '2.000',
       unit_code: undefined,
     });

@@ -1,4 +1,4 @@
-import type { MeasurementDimension } from '@/features/catalog/model';
+import type { MeasurementDimension, ProductChanges } from '@/features/catalog/model';
 
 export interface InventoryItem {
   id: number;
@@ -7,15 +7,8 @@ export interface InventoryItem {
   quantity: string;
   unitCode: string;
   minimumQuantity: string | null;
-  categoryId: number | null;
-  categoryName: string | null;
   photoUrl: string | null;
   isBelowMinimum: boolean;
-}
-
-export interface InventoryCategory {
-  id: number;
-  name: string;
 }
 
 export interface NewInventoryItem {
@@ -24,11 +17,9 @@ export interface NewInventoryItem {
   quantity: string;
   unitCode: string;
   minimumQuantity: string | null;
-  categoryId: number | null;
 }
 
 export interface InventoryItemChanges {
-  productName: string;
   quantity: string;
   unitCode: string;
 }
@@ -36,6 +27,11 @@ export interface InventoryItemChanges {
 export interface InventoryItemEdit {
   changes: InventoryItemChanges;
   minimumQuantity: string | null;
+}
+
+export interface PantryItemEdit {
+  product: ProductChanges;
+  item: InventoryItemEdit;
 }
 
 export interface NewInventoryEntry {

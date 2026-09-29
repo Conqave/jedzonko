@@ -49,7 +49,7 @@ def egg(member: User, household_id: int, eggs: Ingredient) -> Product:
 
 def _stock(member: User, household_id: int, product: Product, grams: str) -> None:
     add_item = container().inventory.add_inventory_item
-    add_item.execute(member.pk, household_id, product.pk, Decimal(grams), "g", None, None)
+    add_item.execute(member.pk, household_id, product.pk, Decimal(grams), "g", None)
 
 
 def _recipe_body() -> dict[str, object]:

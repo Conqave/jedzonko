@@ -1,6 +1,6 @@
 <template>
   <q-dialog ref="dialogRef" @hide="onDialogHide">
-    <q-card style="min-width: 340px">
+    <q-card style="min-width: 420px">
       <q-card-section class="text-h6">Edytuj pozycję</q-card-section>
       <q-form @submit="submit">
         <q-card-section class="q-gutter-sm">
@@ -10,6 +10,11 @@
             outlined
             label="Nazwa produktu"
             :rules="[(value: string) => value.trim() !== '' || 'Podaj nazwę']"
+          />
+          <PackageFields
+            v-model="productPackage"
+            :units="units"
+            :default-unit-code="product.defaultUnitCode"
           />
           <q-input
             v-model="quantity"
@@ -41,6 +46,9 @@
             :rules="[(value: string | null) => isOptionalQuantity(value) || 'Podaj ilość']"
           />
         </q-card-section>
+        <q-separator />
+        <ProductIngredientSection :product="product" class="q-py-sm" />
+        <q-separator />
         <q-card-actions align="right">
           <q-btn flat no-caps label="Anuluj" @click="onDialogCancel" />
           <q-btn type="submit" color="primary" no-caps label="Zapisz" />
@@ -53,17 +61,20 @@
 <script setup lang="ts">
 import { useDialogPluginComponent } from 'quasar';
 import { ref } from 'vue';
-import type { MeasurementUnit } from '@/features/catalog/model';
+import PackageFields from '@/features/catalog/components/PackageFields.vue';
+import ProductIngredientSection from '@/features/catalog/components/ProductIngredientSection.vue';
+import type { MeasurementUnit, Product, ProductPackage } from '@/features/catalog/model';
 import { formatQuantity } from '@/shared/formatQuantity';
 import { isPositiveDecimal, toDecimalText } from '@/shared/decimal';
-import type { InventoryItem, InventoryItemEdit } from '../model';
+import type { InventoryItem, PantryItemEdit } from '../model';
 
-const props = defineProps<{ item: InventoryItem; units: MeasurementUnit[] }>();
+const props = defineProps<{ item: InventoryItem; product: Product; units: MeasurementUnit[] }>();
 
 defineEmits([...useDialogPluginComponent.emits]);
 
 const { dialogRef, onDialogHide, onDialogOK, onDialogCancel } = useDialogPluginComponent();
-const productName = ref(props.item.productName);
+const productName = ref(props.product.name);
+const productPackage = ref<ProductPackage | null>(props.product.package);
 const quantity = ref(formatQuantity(props.item.quantity));
 const unitCode = ref(props.item.unitCode);
 const initialMinimum = props.item.minimumQuantity;
@@ -90,14 +101,23 @@ function readMinimum(): string | null {
 }
 
 function submit(): void {
-  const itemEdit: InventoryItemEdit = {
-    changes: {
-      productName: productName.value.trim(),
-      quantity: toDecimalText(quantity.value),
-      unitCode: unitCode.value,
+  const packageValue = productPackage.value;
+  const pantryEdit: PantryItemEdit = {
+    product: {
+      name: productName.value.trim(),
+      package:
+        packageValue === null
+          ? null
+          : { ...packageValue, quantity: toDecimalText(packageValue.quantity) },
     },
-    minimumQuantity: readMinimum(),
+    item: {
+      changes: {
+        quantity: toDecimalText(quantity.value),
+        unitCode: unitCode.value,
+      },
+      minimumQuantity: readMinimum(),
+    },
   };
-  onDialogOK(itemEdit);
+  onDialogOK(pantryEdit);
 }
 </script>

@@ -54,30 +54,28 @@
         </div>
       </q-td>
     </template>
-    <template #body-cell-categoryName="cell">
+    <template #body-cell-tags="cell">
       <q-td :props="cell">
-        {{ cell.row.categoryName ?? '—' }}
-        <q-popup-edit
-          #default="scope"
-          :model-value="cell.row.categoryId"
-          buttons
-          label-set="Zapisz"
-          label-cancel="Anuluj"
-          @save="(value: number | null) => emit('set-category', cell.row, value)"
+        <q-chip
+          v-for="tag in findTags(cell.row.productId)"
+          :key="tag"
+          dense
+          square
+          color="primary"
+          text-color="white"
+          clickable
+          @click="emit('edit', cell.row)"
+          >{{ tag }}</q-chip
         >
-          <q-select
-            v-model="scope.value"
-            dense
-            autofocus
-            clearable
-            emit-value
-            map-options
-            option-value="id"
-            option-label="name"
-            :options="categories"
-            label="Kategoria"
-          />
-        </q-popup-edit>
+        <q-btn
+          v-if="findTags(cell.row.productId).length === 0"
+          flat
+          dense
+          no-caps
+          color="grey-7"
+          label="Bez tagu"
+          @click="emit('edit', cell.row)"
+        />
       </q-td>
     </template>
     <template #body-cell-actions="cell">
@@ -111,21 +109,16 @@
 import type { QTableColumn } from 'quasar';
 import { formatQuantity } from '@/shared/formatQuantity';
 import { productEmoji } from '@/shared/productEmoji';
-import {
-  isEmpty,
-  type InventoryCategory,
-  type InventoryItem,
-  type QuantityDirection,
-} from '../model';
+import { isEmpty, type InventoryItem, type QuantityDirection } from '../model';
 
 const COLUMNS: QTableColumn<InventoryItem>[] = [
   { name: 'photo', label: '', field: 'photoUrl', align: 'left' },
   { name: 'productName', label: 'Produkt', field: 'productName', align: 'left', sortable: true },
   { name: 'quantity', label: 'Ilość', field: 'quantity', align: 'left' },
   {
-    name: 'categoryName',
-    label: 'Kategoria',
-    field: 'categoryName',
+    name: 'tags',
+    label: 'Tagi',
+    field: 'productId',
     align: 'left',
     sortable: true,
   },
@@ -134,7 +127,7 @@ const COLUMNS: QTableColumn<InventoryItem>[] = [
 
 defineProps<{
   items: InventoryItem[];
-  categories: InventoryCategory[];
+  findTags: (productId: number) => string[];
   busy: boolean;
   savingItemId: number | null;
   findUnitName: (code: string) => string;
@@ -142,7 +135,6 @@ defineProps<{
 
 const emit = defineEmits<{
   step: [item: InventoryItem, direction: QuantityDirection];
-  'set-category': [item: InventoryItem, categoryId: number | null];
   edit: [item: InventoryItem];
   photo: [item: InventoryItem];
   remove: [item: InventoryItem];
