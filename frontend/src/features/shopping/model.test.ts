@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { hasAmount, orderPrimaryFirst, reachesPantry, type ShoppingItem } from './model';
+import type { Product } from '@/features/catalog/model';
+import {
+  findPurchaseProductQuestions,
+  hasAmount,
+  orderPrimaryFirst,
+  reachesPantry,
+  toPurchases,
+  type ShoppingItem,
+} from './model';
 
 describe('orderPrimaryFirst', () => {
   it('puts the primary list first and keeps the rest in order', () => {
@@ -40,16 +48,50 @@ describe('hasAmount', () => {
 });
 
 describe('reachesPantry', () => {
-  it('stocks a product and an ingredient with exactly one product', () => {
+  it('stocks products and tagged items', () => {
     const product: ShoppingItem = { ...ITEM, subject: { kind: 'product', productId: 3 } };
 
-    expect(reachesPantry(product, () => 0)).toBe(true);
-    expect(reachesPantry(ITEM, () => 1)).toBe(true);
+    expect(reachesPantry(product)).toBe(true);
+    expect(reachesPantry(ITEM)).toBe(true);
   });
 
-  it('does not stock text lines or ingredients without a single product', () => {
-    expect(reachesPantry(TEXT_ITEM, () => 1)).toBe(false);
-    expect(reachesPantry(ITEM, () => 0)).toBe(false);
-    expect(reachesPantry(ITEM, () => 2)).toBe(false);
+  it('does not stock untagged text lines', () => {
+    expect(reachesPantry(TEXT_ITEM)).toBe(false);
+  });
+});
+
+function makeProduct(id: number, name: string): Product {
+  return { id, householdId: 1, name, defaultUnitCode: 'szt', isFood: true, package: null };
+}
+
+describe('findPurchaseProductQuestions', () => {
+  it('asks only about tagged items carried by several products', () => {
+    const cage = makeProduct(3, 'Jajka klatkowe');
+    const free = makeProduct(4, 'Jajka z wolnego wybiegu');
+    const milk: ShoppingItem = { ...ITEM, id: 2, subject: { kind: 'ingredient', ingredientId: 7 } };
+    const product: ShoppingItem = { ...ITEM, id: 3, subject: { kind: 'product', productId: 3 } };
+    const products = new Map([
+      [9, [cage, free]],
+      [7, [makeProduct(5, 'Mleko')]],
+    ]);
+
+    const questions = findPurchaseProductQuestions(
+      [ITEM, milk, product, TEXT_ITEM],
+      (ingredientId) => products.get(ingredientId) ?? [],
+    );
+
+    expect(questions).toEqual([{ item: ITEM, products: [cage, free] }]);
+  });
+});
+
+describe('toPurchases', () => {
+  it('adds the chosen product only to items it was chosen for', () => {
+    const bread: ShoppingItem = { ...TEXT_ITEM, id: 2 };
+    const purchases = toPurchases([ITEM, bread], new Map([[ITEM.id, 4]]));
+
+    expect(purchases).toEqual([
+      { itemId: ITEM.id, productId: 4 },
+      { itemId: bread.id, productId: null },
+    ]);
   });
 });

@@ -17,6 +17,7 @@ import type {
   ShoppingItem,
   ShoppingItemInterpretation,
   ShoppingItemTagging,
+  ShoppingPurchase,
 } from './model';
 
 export function useShoppingItems(listId: Ref<number | null>) {
@@ -50,13 +51,13 @@ export function useShoppingItems(listId: Ref<number | null>) {
     });
   }
 
-  function buy(itemIds: number[]): Promise<boolean> {
+  function buy(purchases: ShoppingPurchase[]): Promise<boolean> {
     const id = listId.value;
-    if (id === null || itemIds.length === 0) {
+    if (id === null || purchases.length === 0) {
       return Promise.resolve(false);
     }
     return run(async () => {
-      await buyShoppingItems(id, itemIds);
+      await buyShoppingItems(id, purchases);
       await reload(id);
     });
   }

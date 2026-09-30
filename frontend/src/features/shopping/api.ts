@@ -8,6 +8,7 @@ import {
   type ShoppingItemInterpretation,
   type ShoppingItemTagging,
   type ShoppingList,
+  type ShoppingPurchase,
   type ShoppingSubject,
 } from './model';
 
@@ -155,8 +156,15 @@ export async function splitByPromotions(
   return listSchema.array().parse(response.data);
 }
 
-export async function buyShoppingItems(listId: number, itemIds: number[]): Promise<void> {
-  await http.post(`/shopping/lists/${listId}/purchase/`, { item_ids: itemIds });
+export async function buyShoppingItems(
+  listId: number,
+  purchases: ShoppingPurchase[],
+): Promise<void> {
+  const items = purchases.map((purchase) => ({
+    item_id: purchase.itemId,
+    product_id: purchase.productId,
+  }));
+  await http.post(`/shopping/lists/${listId}/purchase/`, { items });
 }
 
 export async function chooseShoppingItemProduct(

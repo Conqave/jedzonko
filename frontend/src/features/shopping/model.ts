@@ -1,4 +1,4 @@
-import type { Ingredient } from '@/features/catalog/model';
+import type { Ingredient, Product } from '@/features/catalog/model';
 
 export interface ShoppingList {
   id: number;
@@ -71,15 +71,40 @@ export function hasAmount(item: ShoppingItem): boolean {
   return item.subject.kind !== 'text';
 }
 
-export function reachesPantry(
-  item: ShoppingItem,
-  countIngredientProducts: (ingredientId: number) => number,
-): boolean {
-  if (item.subject.kind === 'product') {
-    return true;
+export function reachesPantry(item: ShoppingItem): boolean {
+  return item.subject.kind !== 'text';
+}
+
+export interface ShoppingPurchase {
+  itemId: number;
+  productId: number | null;
+}
+
+export interface PurchaseProductQuestion {
+  item: ShoppingItem;
+  products: Product[];
+}
+
+export function findPurchaseProductQuestions(
+  items: ShoppingItem[],
+  findTagProducts: (ingredientId: number) => Product[],
+): PurchaseProductQuestion[] {
+  const questions: PurchaseProductQuestion[] = [];
+  for (const item of items) {
+    if (item.subject.kind !== 'ingredient') {
+      continue;
+    }
+    const products = findTagProducts(item.subject.ingredientId);
+    if (products.length > 1) {
+      questions.push({ item, products });
+    }
   }
-  if (item.subject.kind === 'ingredient') {
-    return countIngredientProducts(item.subject.ingredientId) === 1;
-  }
-  return false;
+  return questions;
+}
+
+export function toPurchases(
+  items: ShoppingItem[],
+  chosenProducts: ReadonlyMap<number, number>,
+): ShoppingPurchase[] {
+  return items.map((item) => ({ itemId: item.id, productId: chosenProducts.get(item.id) ?? null }));
 }

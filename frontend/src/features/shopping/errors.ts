@@ -11,6 +11,12 @@ export const SHOPPING_ERROR_MESSAGES: ErrorMessages = {
   measurement_unit_not_found: 'Nieznana jednostka miary.',
   shopping_item_already_pending: 'Ta pozycja jest już na liście.',
   shopping_item_merge_conflict: 'Tej pozycji nie da się połączyć z istniejącą.',
+  shopping_item_product_ambiguous:
+    'Kilka produktów ma tag tej pozycji. Kliknij „Kupiono” ponownie i wybierz produkt.',
+  chosen_product_not_tagged:
+    'Wybrany produkt nie ma już tagu tej pozycji. Kliknij „Kupiono” ponownie.',
+  tag_product_name_taken:
+    'Produkt o nazwie tagu już istnieje, ale nie ma tego tagu. Otaguj go w katalogu albo wybierz produkt dla pozycji.',
   recipe_not_found: 'Nie znaleziono przepisu.',
   external_recipe_not_found: 'Nie znaleziono przepisu w zewnętrznym źródle.',
   recipe_source_unavailable: 'Zewnętrzne źródło przepisów jest niedostępne.',

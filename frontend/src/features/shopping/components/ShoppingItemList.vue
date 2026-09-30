@@ -40,7 +40,7 @@
             >{{ tag }}</q-chip
           >
           <span v-if="findItemTags(item).length === 0" class="text-grey-7">Bez tagu</span>
-          <span v-if="!reachesPantry(item, countIngredientProducts)" class="text-orange-9 q-ml-sm">
+          <span v-if="!reachesPantry(item)" class="text-orange-9 q-ml-sm">
             <q-icon name="info" /> Nie trafi do zapasów
           </span>
         </q-item-label>
@@ -83,7 +83,7 @@
       header-class="text-grey-8"
     >
       <div class="q-px-md q-pt-sm text-caption text-grey-7">
-        Do zapasów trafiły tylko pozycje powiązane z produktem.
+        Do zapasów trafiły pozycje z produktem lub tagiem. Pozycje bez tagu nie trafiły.
       </div>
       <q-item v-for="item in purchasedItems" :key="item.id">
         <q-item-section side>
@@ -112,12 +112,11 @@ const props = defineProps<{
   purchasedItems: ShoppingItem[];
   describeUnitQuantity: (quantity: string, unitCode: string) => string;
   findProductTags: (productId: number) => string[];
-  countIngredientProducts: (ingredientId: number) => number;
   isTagging: boolean;
 }>();
 
 const emit = defineEmits<{
-  buy: [itemIds: number[]];
+  buy: [items: ShoppingItem[]];
   restore: [item: ShoppingItem];
   'choose-product': [item: ShoppingItem];
   'tag-item': [item: ShoppingItem];
@@ -136,7 +135,9 @@ watch(
 );
 
 function buySelected(): void {
-  emit('buy', [...selectedIds.value]);
+  const selected = new Set(selectedIds.value);
+  const items = props.pendingItems.filter((item) => selected.has(item.id));
+  emit('buy', items);
 }
 
 function findItemTags(item: ShoppingItem): string[] {

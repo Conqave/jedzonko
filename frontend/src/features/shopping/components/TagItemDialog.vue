@@ -62,8 +62,9 @@
             label="Produkt do zapasów (opcjonalnie)"
           />
           <div class="text-caption text-grey-7">
-            Po zakupie produkt trafi do zapasów. Bez produktu pozycja trafi tam tylko wtedy, gdy
-            masz dokładnie jeden produkt z tym tagiem.
+            Po zakupie pozycja trafi do zapasów. Bez wybranego produktu trafi do jedynego produktu z
+            tym tagiem, przy kilku zapytamy o produkt, a gdy nie ma żadnego, utworzymy produkt o
+            nazwie tagu.
           </div>
         </q-card-section>
         <q-card-actions align="right">

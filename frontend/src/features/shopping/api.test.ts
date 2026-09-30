@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   addRecipeItems,
   addShoppingItem,
+  buyShoppingItems,
   fetchShoppingItems,
   interpretShoppingItem,
   tagShoppingItem,
@@ -129,5 +130,21 @@ describe('shopping api', () => {
     const interpretation = await interpretShoppingItem(5);
 
     expect(interpretation).toEqual({ ingredient: null, quantity: null, unitCode: null });
+  });
+
+  it('posts every bought item with its chosen product', async () => {
+    post.mockResolvedValue({ data: null });
+
+    await buyShoppingItems(2, [
+      { itemId: 5, productId: 4 },
+      { itemId: 6, productId: null },
+    ]);
+
+    expect(post).toHaveBeenCalledWith('/shopping/lists/2/purchase/', {
+      items: [
+        { item_id: 5, product_id: 4 },
+        { item_id: 6, product_id: null },
+      ],
+    });
   });
 });
