@@ -2,7 +2,7 @@ from django.core.management.base import BaseCommand, CommandError, CommandParser
 from django.utils import timezone
 
 from config.composition import container
-from recipes.application.errors import IngredientLineInterpreterError
+from recipes.application.errors import IngredientLineInterpreterUnavailableError
 
 
 class Command(BaseCommand):
@@ -22,11 +22,11 @@ class Command(BaseCommand):
             run = use_case.execute(batch_size, limit, timezone.now(), self._report)
         except ValueError as error:
             raise CommandError(str(error)) from error
-        except IngredientLineInterpreterError as error:
-            raise CommandError(f"The model failed, run again to resume: {error}") from error
+        except IngredientLineInterpreterUnavailableError as error:
+            raise CommandError(f"The model is unavailable, run again to resume: {error}") from error
         self.stdout.write(
             f"Pending {run.pending_count}, processed {run.selected_count}, "
-            f"interpreted {run.interpreted_count}."
+            f"interpreted {run.interpreted_count}, skipped {run.skipped_count}."
         )
 
     def _report(self, done: int, total: int) -> None:

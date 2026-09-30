@@ -39,6 +39,7 @@ def test_only_uninterpreted_lines_are_sent_in_batches() -> None:
     assert lines.interpreted == [("2 jajka", "masło"), ("sól",)]
     assert progress == [(2, 3), (3, 3)]
     assert (run.pending_count, run.selected_count, run.interpreted_count) == (3, 3, 3)
+    assert run.skipped_count == 0
 
 
 def test_limit_bounds_the_lines_sent() -> None:
@@ -55,3 +56,12 @@ def test_batch_size_must_be_positive() -> None:
         TagExternalRecipeLines(_catalog(), FakeIngredientLines({})).execute(
             0, None, NOW, lambda done, total: None
         )
+
+
+def test_a_garbled_batch_is_skipped_and_the_run_goes_on() -> None:
+    lines = FakeIngredientLines({}, garbled=frozenset({"mleko"}))
+
+    run = TagExternalRecipeLines(_catalog(), lines).execute(2, None, NOW, lambda done, total: None)
+
+    assert lines.interpreted == [("2 jajka", "masło"), ("mleko", "sól")]
+    assert (run.interpreted_count, run.skipped_count) == (2, 2)

@@ -2,6 +2,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
 
+from recipes.application.errors import IngredientLineInterpreterContractError
 from recipes.application.ports.external_recipe_catalog import ExternalRecipeCatalog
 from recipes.application.ports.ingredient_lines import IngredientLines
 
@@ -11,6 +12,7 @@ class ExternalLineTaggingRun:
     pending_count: int
     selected_count: int
     interpreted_count: int
+    skipped_count: int
 
 
 class TagExternalRecipeLines:
@@ -34,12 +36,17 @@ class TagExternalRecipeLines:
         pending = tuple(text for text in texts if text not in known)
         selected = pending if limit is None else pending[:limit]
         interpreted_count = 0
+        skipped_count = 0
         for start in range(0, len(selected), batch_size):
             batch = selected[start : start + batch_size]
-            interpreted_count += self._lines.interpret(batch, now)
+            try:
+                interpreted_count += self._lines.interpret(batch, now)
+            except IngredientLineInterpreterContractError:
+                skipped_count += len(batch)
             report(start + len(batch), len(selected))
         return ExternalLineTaggingRun(
             pending_count=len(pending),
             selected_count=len(selected),
             interpreted_count=interpreted_count,
+            skipped_count=skipped_count,
         )

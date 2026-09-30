@@ -3,7 +3,11 @@ from contextlib import AbstractContextManager, contextmanager
 from datetime import datetime
 
 from recipes.application.commands import RecipeInput, ResolvedIngredient
-from recipes.application.errors import RecipeNotFoundAtSourceError, RecipeSourceError
+from recipes.application.errors import (
+    IngredientLineInterpreterContractError,
+    RecipeNotFoundAtSourceError,
+    RecipeSourceError,
+)
 from recipes.application.ports.external_recipe_catalog import ExternalRecipeCatalog
 from recipes.application.ports.household_stock_reader import HouseholdStockReader
 from recipes.application.ports.ingredient_lines import IngredientLines
@@ -162,8 +166,13 @@ class FakeRecipeSource(RecipeSource):
 
 
 class FakeIngredientLines(IngredientLines):
-    def __init__(self, interpretations: dict[str, LineInterpretation]) -> None:
+    def __init__(
+        self,
+        interpretations: dict[str, LineInterpretation],
+        garbled: frozenset[str] = frozenset(),
+    ) -> None:
         self.interpretations = interpretations
+        self.garbled = garbled
         self.interpreted: list[tuple[str, ...]] = []
 
     def find_interpretations(self, texts: tuple[str, ...]) -> dict[str, LineInterpretation]:
@@ -171,6 +180,8 @@ class FakeIngredientLines(IngredientLines):
 
     def interpret(self, texts: tuple[str, ...], now: datetime) -> int:
         self.interpreted.append(texts)
+        if self.garbled.intersection(texts):
+            raise IngredientLineInterpreterContractError("The model answer is garbled.")
         return len([text for text in texts if text not in self.interpretations])
 
 
