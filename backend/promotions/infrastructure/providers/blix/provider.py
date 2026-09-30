@@ -28,7 +28,7 @@ class BlixProvider(PromotionSource):
     def list_shops(self) -> list[Shop]:
         response = self._get(f"{self.base_url}/sklepy")
         soup = BeautifulSoup(response.text, "html.parser")
-        shops: list[Shop] = []
+        shops_by_slug: dict[str, Shop] = {}
         for anchor in soup.select("div.section-n__items.section-n__items--brands > a"):
             title = anchor.get("title")
             href = anchor.get("href")
@@ -40,8 +40,15 @@ class BlixProvider(PromotionSource):
             slug = self._extract_shop_slug(url)
             if slug is None:
                 continue
-            shops.append(Shop(name=title.strip(), slug=slug, url=url))
-        return shops
+            shop = Shop(name=title.strip(), slug=slug, url=url)
+            listed_shop = shops_by_slug.get(slug)
+            if listed_shop is not None and listed_shop != shop:
+                raise PromotionSourceContractError(
+                    f"Blix lists shop {slug} with conflicting details"
+                )
+            shops_by_slug[slug] = shop
+        unique_shops = shops_by_slug.values()
+        return list(unique_shops)
 
     def search_promotions(self, query: str, shop_slugs: tuple[str, ...]) -> list[PromotionOffer]:
         normalized_query = query.strip()

@@ -197,15 +197,34 @@ def test_search_maps_http_error_to_provider_unavailable() -> None:
         BlixProvider(client, 5).search_promotions("twaróg", ())
 
 
-def test_list_shops_exposes_shop_slugs() -> None:
+def _build_shops_provider(shops_html: str) -> BlixProvider:
     def handle_request(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(200, text=SHOPS_HTML, request=request)
+        return httpx.Response(200, text=shops_html, request=request)
 
     client = httpx.Client(transport=httpx.MockTransport(handle_request))
+    return BlixProvider(client, 5)
 
-    shops = BlixProvider(client, 5).list_shops()
+
+def test_list_shops_lists_each_shop_once_across_page_sections() -> None:
+    provider = _build_shops_provider(SHOPS_HTML)
+
+    shops = provider.list_shops()
 
     assert [(shop.name, shop.slug, shop.url) for shop in shops] == [
         ("Lidl", "lidl", "https://blix.pl/sklep/lidl"),
         ("Biedronka", "biedronka", "https://blix.pl/sklep/biedronka"),
+        ("Jysk", "jysk", "https://blix.pl/sklep/jysk"),
     ]
+
+
+def test_list_shops_rejects_one_slug_listed_with_different_names() -> None:
+    shops_html = (
+        '<div class="section-n__items section-n__items--brands">'
+        '<a title="Lidl" href="/sklep/lidl"></a></div>'
+        '<div class="section-n__items section-n__items--brands">'
+        '<a title="Lidl Plus" href="/sklep/lidl"></a></div>'
+    )
+    provider = _build_shops_provider(shops_html)
+
+    with pytest.raises(PromotionSourceContractError):
+        provider.list_shops()
