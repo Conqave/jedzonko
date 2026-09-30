@@ -23,6 +23,7 @@ export default defineConfig(() => {
       },
     },
     framework: {
+      lang: 'pl',
       plugins: ['Notify', 'Dialog', 'Loading'],
     },
     animations: [],
