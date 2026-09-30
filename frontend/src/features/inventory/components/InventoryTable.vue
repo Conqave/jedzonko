@@ -65,7 +65,7 @@
                 @click="emit('step', card.row, -1)"
               />
               <span class="q-px-sm">
-                {{ formatQuantity(card.row.quantity) }} {{ findUnitName(card.row.unitCode) }}
+                {{ describeUnitQuantity(card.row.quantity, card.row.unitCode) }}
               </span>
               <q-btn
                 round
@@ -131,7 +131,7 @@
             @click="emit('step', cell.row, -1)"
           />
           <span class="q-px-sm">
-            {{ formatQuantity(cell.row.quantity) }} {{ findUnitName(cell.row.unitCode) }}
+            {{ describeUnitQuantity(cell.row.quantity, cell.row.unitCode) }}
           </span>
           <q-btn
             round
@@ -208,7 +208,6 @@
 
 <script setup lang="ts">
 import { useQuasar, type QTableColumn } from 'quasar';
-import { formatQuantity } from '@/shared/formatQuantity';
 import { productEmoji } from '@/shared/productEmoji';
 import { isEmpty, type InventoryItem, type QuantityDirection } from '../model';
 
@@ -232,7 +231,7 @@ defineProps<{
   findProposalCount: (productId: number) => number;
   busy: boolean;
   savingItemId: number | null;
-  findUnitName: (code: string) => string;
+  describeUnitQuantity: (quantity: string, unitCode: string) => string;
 }>();
 
 const quasar = useQuasar();

@@ -26,7 +26,7 @@
         :find-proposal-count="findProposalCount"
         :busy="busy"
         :saving-item-id="savingItemId"
-        :find-unit-name="findUnitName"
+        :describe-unit-quantity="describeUnitQuantity"
         @step="stepItem"
         @edit="openEditDialog"
         @photo="openPhotoDialog"
@@ -62,7 +62,7 @@ const quasar = useQuasar();
 const households = useHouseholdStore();
 const selectedId = toRef(households, 'selectedId');
 const dialogs = useDialogs();
-const { units, findUnitName } = useMeasurementUnits();
+const { units, describeUnitQuantity } = useMeasurementUnits();
 const {
   items,
   belowMinimumItems,

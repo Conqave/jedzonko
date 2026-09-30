@@ -14,17 +14,17 @@
 </template>
 
 <script setup lang="ts">
-import { formatQuantity } from '@/shared/formatQuantity';
 import type { MissingRecipeItem, RecipeShortfall } from '../model';
 
-const props = defineProps<{ shortfall: RecipeShortfall; findUnitName: (code: string) => string }>();
+const props = defineProps<{
+  shortfall: RecipeShortfall;
+  describeUnitQuantity: (quantity: string, unitCode: string) => string;
+}>();
 
 function describeAmount(item: MissingRecipeItem): string {
   if (item.amount === null || item.unitCode === null) {
     return 'do kupienia';
   }
-  const amount = formatQuantity(item.amount);
-  const unit = props.findUnitName(item.unitCode);
-  return `${amount} ${unit}`;
+  return props.describeUnitQuantity(item.amount, item.unitCode);
 }
 </script>

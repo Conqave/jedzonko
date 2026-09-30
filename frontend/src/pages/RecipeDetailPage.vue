@@ -24,7 +24,7 @@
         />
         <q-btn flat no-caps color="negative" icon="delete" label="Usuń" @click="removeRecipe" />
       </div>
-      <div class="text-caption q-mb-md">
+      <div class="text-caption q-mt-sm q-mb-md">
         autor: {{ recipe.authorUsername ?? 'nieznany' }} · porcje: {{ recipe.servings }} ·
         przygotowanie {{ recipe.preparationTimeMinutes }} min · gotowanie
         {{ recipe.cookingTimeMinutes }} min ·
@@ -46,9 +46,9 @@
       <q-list bordered separator class="q-mb-md">
         <q-item v-for="line in recipe.ingredients" :key="line.name">
           <q-item-section>{{ line.name }}</q-item-section>
-          <q-item-section side
-            >{{ formatQuantity(line.quantity) }} {{ findUnitName(line.unitCode) }}</q-item-section
-          >
+          <q-item-section side>{{
+            describeUnitQuantity(line.quantity, line.unitCode)
+          }}</q-item-section>
         </q-item>
       </q-list>
 
@@ -94,7 +94,7 @@
         <ShortfallView
           v-if="shortfall !== null"
           :shortfall="shortfall"
-          :find-unit-name="findUnitName"
+          :describe-unit-quantity="describeUnitQuantity"
         />
       </template>
     </template>
@@ -110,7 +110,6 @@ import ShortfallView from '@/features/recipes/components/ShortfallView.vue';
 import { DIFFICULTY_LABELS } from '@/features/recipes/model';
 import { useRecipe } from '@/features/recipes/useRecipe';
 import RecipeShoppingButton from '@/features/shopping/components/RecipeShoppingButton.vue';
-import { formatQuantity } from '@/shared/formatQuantity';
 import { useDialogs } from '@/shared/useDialogs';
 
 const route = useRoute();
@@ -119,7 +118,7 @@ const households = useHouseholdStore();
 const dialogs = useDialogs();
 const recipeId = Number(route.params.id);
 const { recipe, shortfall, busy, loadShortfall, confirm, remove } = useRecipe(recipeId);
-const { findUnitName } = useMeasurementUnits();
+const { describeUnitQuantity } = useMeasurementUnits();
 const servings = ref(1);
 
 watch(recipe, (loaded) => {

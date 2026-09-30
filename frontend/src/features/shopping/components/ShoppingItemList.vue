@@ -28,7 +28,7 @@
       </q-item-section>
       <q-item-section>
         <q-item-label>{{ item.name }}</q-item-label>
-        <q-item-label caption>
+        <q-item-label caption class="row wrap items-center">
           <q-chip
             v-for="tag in findItemTags(item)"
             :key="tag"
@@ -36,7 +36,7 @@
             square
             color="primary"
             text-color="white"
-            class="q-ml-none"
+            class="q-ml-none shopping-tag"
             >{{ tag }}</q-chip
           >
           <span v-if="findItemTags(item).length === 0" class="text-grey-7">Bez tagu</span>
@@ -100,7 +100,7 @@ import type { ShoppingItem } from '../model';
 const props = defineProps<{
   pendingItems: ShoppingItem[];
   purchasedItems: ShoppingItem[];
-  findUnitName: (code: string) => string;
+  describeUnitQuantity: (quantity: string, unitCode: string) => string;
   findProductTags: (productId: number) => string[];
   isTagging: boolean;
 }>();
@@ -138,7 +138,20 @@ function findItemTags(item: ShoppingItem): string[] {
 }
 
 function describeQuantity(item: ShoppingItem): string {
-  const amount = formatQuantity(item.quantity);
-  return item.unitCode === null ? amount : `${amount} ${props.findUnitName(item.unitCode)}`;
+  return item.unitCode === null
+    ? formatQuantity(item.quantity)
+    : props.describeUnitQuantity(item.quantity, item.unitCode);
 }
 </script>
+
+<style scoped>
+.shopping-tag {
+  height: auto;
+  max-width: 100%;
+}
+
+.shopping-tag :deep(.q-chip__content) {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+</style>

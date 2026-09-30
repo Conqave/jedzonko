@@ -19,7 +19,10 @@
         </q-item-section>
       </template>
       <div class="q-pa-sm">
-        <ShortfallView :shortfall="entry.suggestion.shortfall" :find-unit-name="findUnitName" />
+        <ShortfallView
+          :shortfall="entry.suggestion.shortfall"
+          :describe-unit-quantity="describeUnitQuantity"
+        />
         <div class="row justify-end items-center q-gutter-sm q-mt-sm">
           <q-btn
             flat
@@ -51,6 +54,6 @@ import ShortfallView from './ShortfallView.vue';
 defineProps<{
   suggestions: CookableSuggestion[];
   householdId: number;
-  findUnitName: (code: string) => string;
+  describeUnitQuantity: (quantity: string, unitCode: string) => string;
 }>();
 </script>

@@ -58,7 +58,11 @@
             :source="{ kind: 'external', reference }"
           />
         </div>
-        <ShortfallView :shortfall="shortfall" :find-unit-name="findUnitName" class="q-mb-md" />
+        <ShortfallView
+          :shortfall="shortfall"
+          :describe-unit-quantity="describeUnitQuantity"
+          class="q-mb-md"
+        />
       </template>
 
       <div class="text-h6 q-mb-sm">Przygotowanie</div>
@@ -92,5 +96,5 @@ const households = useHouseholdStore();
 const reference = String(route.params.reference);
 const selectedId = toRef(households, 'selectedId');
 const { recipe, shortfall, busy, isMatching } = useExternalRecipe(reference, selectedId);
-const { findUnitName } = useMeasurementUnits();
+const { describeUnitQuantity } = useMeasurementUnits();
 </script>

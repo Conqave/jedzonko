@@ -33,7 +33,7 @@
       <ShoppingItemList
         :pending-items="pendingItems"
         :purchased-items="purchasedItems"
-        :find-unit-name="findUnitName"
+        :describe-unit-quantity="describeUnitQuantity"
         :find-product-tags="findProductTags"
         :is-tagging="isTagging"
         @tag="tagItems"
@@ -69,7 +69,7 @@ const accounts = useAccountStore();
 const households = useHouseholdStore();
 const householdId = toRef(households, 'selectedId');
 const dialogs = useDialogs();
-const { units, findUnitName } = useMeasurementUnits();
+const { units, describeUnitQuantity } = useMeasurementUnits();
 const {
   lists,
   selectedListId,

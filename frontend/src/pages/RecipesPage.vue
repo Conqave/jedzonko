@@ -13,7 +13,7 @@
       </template>
     </q-banner>
 
-    <q-tabs v-model="tab" align="left" class="q-mb-md">
+    <q-tabs v-model="tab" align="left" class="q-mb-md" dense outside-arrows mobile-arrows>
       <q-tab name="suggestions" label="Propozycje z zapasów" no-caps />
       <q-tab name="all" label="Wszystkie przepisy" no-caps />
       <q-tab name="external" label="Ania Gotuje" no-caps />
@@ -28,7 +28,7 @@
           <RecipeSuggestionList
             :suggestions="visibleSuggestions"
             :household-id="households.selectedId"
-            :find-unit-name="findUnitName"
+            :describe-unit-quantity="describeUnitQuantity"
           />
         </template>
       </q-tab-panel>
@@ -99,7 +99,7 @@ import { useRecipeCatalog } from '@/features/recipes/useRecipeCatalog';
 const households = useHouseholdStore();
 const selectedId = toRef(households, 'selectedId');
 const { recipes, suggestions, busy } = useRecipeCatalog(selectedId);
-const { findUnitName } = useMeasurementUnits();
+const { describeUnitQuantity } = useMeasurementUnits();
 const {
   page: externalPage,
   pantryIngredientNames,
