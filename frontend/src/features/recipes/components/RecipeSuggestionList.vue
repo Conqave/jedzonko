@@ -1,6 +1,6 @@
 <template>
   <q-banner v-if="suggestions.length === 0" class="bg-grey-3">
-    Brak propozycji dla bieżących zapasów.
+    {{ isFiltered ? NO_MATCHES_LABEL : 'Brak propozycji dla bieżących zapasów.' }}
   </q-banner>
   <q-list v-else bordered separator>
     <q-expansion-item v-for="entry in suggestions" :key="entry.suggestion.recipeId">
@@ -8,7 +8,8 @@
         <q-item-section>
           <q-item-label>{{ entry.suggestion.recipeName }}</q-item-label>
           <q-item-label caption>
-            Składniki w domu: {{ entry.suggestion.shortfall.availableItemCount }} z
+            {{ totalTimeMinutes(entry.recipe) }} min · Składniki w domu:
+            {{ entry.suggestion.shortfall.availableItemCount }} z
             {{ entry.suggestion.shortfall.requiredItemCount }}
           </q-item-label>
         </q-item-section>
@@ -37,7 +38,7 @@
             :source="{
               kind: 'recipe',
               recipeId: entry.suggestion.recipeId,
-              servings: entry.servings,
+              servings: entry.recipe.servings,
             }"
           />
         </div>
@@ -48,11 +49,13 @@
 
 <script setup lang="ts">
 import RecipeShoppingButton from '@/features/shopping/components/RecipeShoppingButton.vue';
-import type { CookableSuggestion } from '../model';
+import { NO_MATCHES_LABEL } from '@/shared/listView';
+import { totalTimeMinutes, type CookableSuggestion } from '../model';
 import ShortfallView from './ShortfallView.vue';
 
 defineProps<{
   suggestions: CookableSuggestion[];
+  isFiltered: boolean;
   householdId: number;
   describeUnitQuantity: (quantity: string, unitCode: string) => string;
 }>();

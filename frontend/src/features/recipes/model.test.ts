@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { attachServings, describeNutrition, moveItem, toDraft, type RecipeDetail } from './model';
+import {
+  arrangeRecipes,
+  arrangeSuggestions,
+  attachRecipes,
+  describeNutrition,
+  moveItem,
+  toDraft,
+  type RecipeDetail,
+  type RecipeSummary,
+  type RecipeView,
+} from './model';
 
 const SHORTFALL = {
   missingItems: [],
@@ -48,11 +58,13 @@ describe('recipe model', () => {
     expect(moveItem(['a', 'b'], 0, -1)).toEqual(['a', 'b']);
   });
 
-  it('gives suggestions the servings of their recipe', () => {
+  it('joins suggestions with their recipe and drops the orphans', () => {
     const suggestion = { recipeId: 1, recipeName: 'Naleśniki', shortfall: SHORTFALL };
     const orphan = { recipeId: 9, recipeName: 'Zniknął', shortfall: SHORTFALL };
 
-    expect(attachServings([suggestion, orphan], [PANCAKES])).toEqual([{ suggestion, servings: 4 }]);
+    expect(attachRecipes([suggestion, orphan], [PANCAKES])).toEqual([
+      { suggestion, recipe: PANCAKES },
+    ]);
   });
 
   it('describes calories in total and per serving', () => {
@@ -72,5 +84,84 @@ describe('recipe model', () => {
     const nutrition = { totalKcal: '0.0', kcalPerServing: null, uncountedIngredients: uncounted };
 
     expect(describeNutrition(nutrition)).toBe('Kalorie nieznane');
+  });
+});
+
+const SOUP: RecipeSummary = {
+  ...PANCAKES,
+  id: 2,
+  name: 'Żurek',
+  preparationTimeMinutes: 20,
+  cookingTimeMinutes: 40,
+  category: { id: 3, name: 'zupy' },
+  tags: ['wielkanoc'],
+};
+
+const SALAD: RecipeSummary = {
+  ...PANCAKES,
+  id: 3,
+  name: 'Sałatka',
+  preparationTimeMinutes: 15,
+  cookingTimeMinutes: 0,
+  category: null,
+  tags: ['szybkie'],
+};
+
+const BY_NAME: RecipeView = { search: '', sort: 'name', isReversed: false };
+
+function recipeNames(recipes: RecipeSummary[]): string[] {
+  return recipes.map((recipe) => recipe.name);
+}
+
+describe('recipe list view', () => {
+  const recipes = [SOUP, PANCAKES, SALAD];
+
+  it('sorts by name in Polish order', () => {
+    expect(recipeNames(arrangeRecipes(recipes, BY_NAME))).toEqual([
+      'Naleśniki',
+      'Sałatka',
+      'Żurek',
+    ]);
+  });
+
+  it('sorts by total time, shortest first unless reversed', () => {
+    const byTime: RecipeView = { ...BY_NAME, sort: 'time' };
+    const reversed: RecipeView = { ...byTime, isReversed: true };
+
+    expect(recipeNames(arrangeRecipes(recipes, byTime))).toEqual(['Sałatka', 'Naleśniki', 'Żurek']);
+    expect(recipeNames(arrangeRecipes(recipes, reversed))).toEqual([
+      'Żurek',
+      'Naleśniki',
+      'Sałatka',
+    ]);
+  });
+
+  it('searches the name, tags and category without diacritics', () => {
+    const search = (text: string) =>
+      recipeNames(arrangeRecipes(recipes, { ...BY_NAME, search: text }));
+
+    expect(search('zurek')).toEqual(['Żurek']);
+    expect(search('WIELKANOC')).toEqual(['Żurek']);
+    expect(search('obiady')).toEqual(['Naleśniki']);
+    expect(search('salat szyb')).toEqual(['Sałatka']);
+    expect(search('pierogi')).toEqual([]);
+  });
+
+  it('filters suggestions by readiness and search, sorted like recipes', () => {
+    const missing = { ...SHORTFALL, isReady: false };
+    const cookable = [
+      { suggestion: { recipeId: 2, recipeName: 'Żurek', shortfall: SHORTFALL }, recipe: SOUP },
+      {
+        suggestion: { recipeId: 1, recipeName: 'Naleśniki', shortfall: missing },
+        recipe: PANCAKES,
+      },
+      { suggestion: { recipeId: 3, recipeName: 'Sałatka', shortfall: SHORTFALL }, recipe: SALAD },
+    ];
+    const names = (isReadyOnly: boolean, view: RecipeView) =>
+      arrangeSuggestions(cookable, view, isReadyOnly).map((entry) => entry.recipe.name);
+
+    expect(names(false, BY_NAME)).toEqual(['Naleśniki', 'Sałatka', 'Żurek']);
+    expect(names(true, BY_NAME)).toEqual(['Sałatka', 'Żurek']);
+    expect(names(true, { ...BY_NAME, search: 'zupy' })).toEqual(['Żurek']);
   });
 });

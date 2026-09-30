@@ -1,4 +1,6 @@
 import { formatQuantity } from '@/shared/formatQuantity';
+import { sortByKeys, type SortKey } from '@/shared/listView';
+import { matchesSearch } from '@/shared/textSearch';
 
 export const RECIPE_DIFFICULTIES = ['easy', 'medium', 'hard'] as const;
 
@@ -214,20 +216,78 @@ export function moveItem<T>(items: T[], index: number, offset: number): T[] {
 
 export interface CookableSuggestion {
   suggestion: RecipeSuggestion;
-  servings: number;
+  recipe: RecipeSummary;
 }
 
-export function attachServings(
+export function attachRecipes(
   suggestions: RecipeSuggestion[],
   recipes: RecipeSummary[],
 ): CookableSuggestion[] {
-  const servingsById = new Map(recipes.map((recipe) => [recipe.id, recipe.servings]));
+  const recipesById = new Map(recipes.map((recipe) => [recipe.id, recipe]));
   const cookable: CookableSuggestion[] = [];
   for (const suggestion of suggestions) {
-    const servings = servingsById.get(suggestion.recipeId);
-    if (servings !== undefined) {
-      cookable.push({ suggestion, servings });
+    const recipe = recipesById.get(suggestion.recipeId);
+    if (recipe !== undefined) {
+      cookable.push({ suggestion, recipe });
     }
   }
   return cookable;
+}
+
+export function totalTimeMinutes(recipe: RecipeSummary): number {
+  return recipe.preparationTimeMinutes + recipe.cookingTimeMinutes;
+}
+
+export const RECIPE_LIST_TABS = ['suggestions', 'all', 'external'] as const;
+
+export type RecipeListTab = (typeof RECIPE_LIST_TABS)[number];
+
+export const RECIPE_SORTS = ['name', 'time'] as const;
+
+export type RecipeSort = (typeof RECIPE_SORTS)[number];
+
+export const RECIPE_SORT_LABELS: Readonly<Record<RecipeSort, string>> = {
+  name: 'Nazwa',
+  time: 'Czas',
+};
+
+export interface RecipeView {
+  search: string;
+  sort: RecipeSort;
+  isReversed: boolean;
+}
+
+function matchesRecipeSearch(recipe: RecipeSummary, search: string): boolean {
+  const categoryNames = recipe.category === null ? [] : [recipe.category.name];
+  return matchesSearch(search, [recipe.name, ...recipe.tags, ...categoryNames]);
+}
+
+function toRecipeSortKeys(recipe: RecipeSummary, sort: RecipeSort): SortKey[] {
+  if (sort === 'name') {
+    return [recipe.name];
+  }
+  return [totalTimeMinutes(recipe), recipe.name];
+}
+
+export function arrangeRecipes(recipes: RecipeSummary[], view: RecipeView): RecipeSummary[] {
+  const visible = recipes.filter((recipe) => matchesRecipeSearch(recipe, view.search));
+  return sortByKeys(visible, (recipe) => toRecipeSortKeys(recipe, view.sort), view.isReversed);
+}
+
+function matchesSuggestion(
+  entry: CookableSuggestion,
+  view: RecipeView,
+  isReadyOnly: boolean,
+): boolean {
+  const matchesReadiness = !isReadyOnly || entry.suggestion.shortfall.isReady;
+  return matchesReadiness && matchesRecipeSearch(entry.recipe, view.search);
+}
+
+export function arrangeSuggestions(
+  suggestions: CookableSuggestion[],
+  view: RecipeView,
+  isReadyOnly: boolean,
+): CookableSuggestion[] {
+  const visible = suggestions.filter((entry) => matchesSuggestion(entry, view, isReadyOnly));
+  return sortByKeys(visible, (entry) => toRecipeSortKeys(entry.recipe, view.sort), view.isReversed);
 }

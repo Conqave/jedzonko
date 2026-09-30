@@ -23,14 +23,31 @@
       <q-tab name="external" label="Ania Gotuje" no-caps />
     </q-tabs>
 
+    <ListFilterBar
+      v-if="tab !== 'external'"
+      v-model:search="search"
+      v-model:sort="sort"
+      v-model:is-reversed="isReversed"
+      search-label="Szukaj po nazwie, tagu lub kategorii"
+      :sorts="RECIPE_SORTS"
+      :sort-labels="RECIPE_SORT_LABELS"
+    >
+      <q-toggle
+        v-if="tab === 'suggestions'"
+        v-model="isReadyOnly"
+        dense
+        label="Tylko te, które ugotuję teraz"
+      />
+    </ListFilterBar>
+
     <q-linear-progress v-if="busy || isSearching" indeterminate class="q-mb-sm" />
 
     <q-tab-panels v-model="tab" animated>
       <q-tab-panel name="suggestions" class="q-pa-none">
         <template v-if="households.selectedId !== null">
-          <q-toggle v-model="isOnlyReady" class="q-mb-sm" label="Tylko te, które ugotuję teraz" />
           <RecipeSuggestionList
             :suggestions="visibleSuggestions"
+            :is-filtered="isSuggestionListFiltered"
             :household-id="households.selectedId"
             :describe-unit-quantity="describeUnitQuantity"
           />
@@ -38,7 +55,7 @@
       </q-tab-panel>
 
       <q-tab-panel name="all" class="q-pa-none">
-        <RecipeList :recipes="recipes" />
+        <RecipeList :recipes="visibleRecipes" :is-filtered="isRecipeListFiltered" />
       </q-tab-panel>
 
       <q-tab-panel name="external" class="q-pa-none">
@@ -91,15 +108,17 @@
 
 <script setup lang="ts">
 import { useQuasar } from 'quasar';
-import { computed, ref, toRef } from 'vue';
+import { ref, toRef } from 'vue';
 import { useMeasurementUnits } from '@/features/catalog/useMeasurementUnits';
 import { useHouseholdStore } from '@/features/households/store';
 import ExternalRecipeList from '@/features/recipes/components/ExternalRecipeList.vue';
 import RecipeList from '@/features/recipes/components/RecipeList.vue';
 import RecipeSuggestionList from '@/features/recipes/components/RecipeSuggestionList.vue';
-import { attachServings } from '@/features/recipes/model';
+import { RECIPE_SORT_LABELS, RECIPE_SORTS } from '@/features/recipes/model';
 import { useExternalRecipeSearch } from '@/features/recipes/useExternalRecipeSearch';
 import { useRecipeCatalog } from '@/features/recipes/useRecipeCatalog';
+import { useRecipeView } from '@/features/recipes/useRecipeView';
+import ListFilterBar from '@/shared/components/ListFilterBar.vue';
 
 const quasar = useQuasar();
 const households = useHouseholdStore();
@@ -116,16 +135,18 @@ const {
   searchByPantry,
 } = useExternalRecipeSearch();
 
-const tab = ref<'suggestions' | 'all' | 'external'>('suggestions');
-const isOnlyReady = ref(false);
+const {
+  tab,
+  search,
+  sort,
+  isReversed,
+  isReadyOnly,
+  visibleRecipes,
+  visibleSuggestions,
+  isRecipeListFiltered,
+  isSuggestionListFiltered,
+} = useRecipeView(recipes, suggestions);
 const externalQuery = ref('');
-
-const visibleSuggestions = computed(() => {
-  const cookable = attachServings(suggestions.value, recipes.value);
-  return isOnlyReady.value
-    ? cookable.filter((entry) => entry.suggestion.shortfall.isReady)
-    : cookable;
-});
 
 async function searchByText(): Promise<void> {
   if (households.selectedId !== null) {
