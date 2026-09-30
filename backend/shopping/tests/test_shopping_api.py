@@ -7,7 +7,7 @@ from django.contrib.auth.models import User
 from django.db import IntegrityError, transaction
 from rest_framework.test import APIClient
 
-from catalog.models import Ingredient, Product
+from catalog.models import Ingredient, Product, ProductIngredient
 from config.composition import container
 from households.models import Household
 from inventory.models import InventoryItem
@@ -208,13 +208,77 @@ def test_ticked_items_are_bought_together(
     bread = _add(member_client, list_id, {"free_text": "chleb", "quantity": "1"})
     url = f"/api/shopping/lists/{list_id}/purchase/"
 
-    bought = member_client.post(url, {"item_ids": [flour_item["id"], bread["id"]]}, format="json")
-    again = member_client.post(url, {"item_ids": [bread["id"]]}, format="json")
+    body = {"items": [{"item_id": flour_item["id"]}, {"item_id": bread["id"]}]}
+
+    bought = member_client.post(url, body, format="json")
+    again = member_client.post(url, {"items": [{"item_id": bread["id"]}]}, format="json")
     items = member_client.get(f"/api/shopping/lists/{list_id}/items/")
 
     assert (bought.status_code, again.status_code) == (204, 404)
     assert InventoryItem.objects.get(product=flour).quantity == Decimal("500.000")
     assert {each["status"] for each in items.data} == {"purchased"}
+
+
+def test_a_bought_tag_without_a_product_becomes_a_tagged_pantry_product(
+    member_client: APIClient, home: Household
+) -> None:
+    eggs = make_ingredient("Jajka")
+    list_id = _primary_list_id(member_client, home)
+    item = _add(
+        member_client, list_id, {"ingredient_id": eggs.pk, "quantity": "6", "unit_code": "szt"}
+    )
+    body = {"items": [{"item_id": item["id"]}]}
+
+    bought = member_client.post(f"/api/shopping/lists/{list_id}/purchase/", body, format="json")
+
+    product = Product.objects.get(household=home)
+    link = ProductIngredient.objects.get(product=product)
+    stock = InventoryItem.objects.get(product=product)
+    assert bought.status_code == 204
+    assert (product.name, product.default_unit_code) == ("Jajka", "szt")
+    assert (link.ingredient_id, link.status, link.source) == (eggs.pk, "confirmed", "manual")
+    assert (stock.quantity, stock.unit_code) == (Decimal("6.000"), "szt")
+
+
+def test_a_tag_of_several_products_is_bought_only_as_a_chosen_one(
+    member_client: APIClient, ala: User, home: Household, flour: Product
+) -> None:
+    wheat = make_ingredient("Mąka pszenna")
+    spelt = make_product(home, "Mąka orkiszowa", "g")
+    confirm_ingredient(ala, flour, wheat)
+    confirm_ingredient(ala, spelt, wheat)
+    list_id = _primary_list_id(member_client, home)
+    bread = _add(member_client, list_id, {"free_text": "chleb", "quantity": "1"})
+    item = _add(
+        member_client, list_id, {"ingredient_id": wheat.pk, "quantity": "1", "unit_code": "kg"}
+    )
+    url = f"/api/shopping/lists/{list_id}/purchase/"
+    unchosen = {"items": [{"item_id": bread["id"]}, {"item_id": item["id"]}]}
+    chosen = {"items": [{"item_id": bread["id"]}, {"item_id": item["id"], "product_id": spelt.pk}]}
+
+    refused = member_client.post(url, unchosen, format="json")
+    pending_after_refusal = ShoppingListItem.objects.filter(status="pending").count()
+    bought = member_client.post(url, chosen, format="json")
+
+    assert (refused.status_code, refused.data["code"]) == (400, "shopping_item_product_ambiguous")
+    assert pending_after_refusal == 2
+    assert bought.status_code == 204
+    assert InventoryItem.objects.get().product_id == spelt.pk
+
+
+def test_a_chosen_product_must_carry_the_items_tag(
+    member_client: APIClient, home: Household, flour: Product
+) -> None:
+    eggs = make_ingredient("Jajka")
+    list_id = _primary_list_id(member_client, home)
+    item = _add(
+        member_client, list_id, {"ingredient_id": eggs.pk, "quantity": "6", "unit_code": "szt"}
+    )
+    body = {"items": [{"item_id": item["id"], "product_id": flour.pk}]}
+
+    response = member_client.post(f"/api/shopping/lists/{list_id}/purchase/", body, format="json")
+
+    assert (response.status_code, response.data["code"]) == (400, "chosen_product_not_tagged")
 
 
 def test_a_bought_item_is_restored_with_the_same_id(

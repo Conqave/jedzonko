@@ -8,6 +8,7 @@ from shopping.application.ports.inventory_writer import InventoryWriter
 from shopping.application.ports.line_interpreter import LineInterpreter
 from shopping.application.ports.promotion_coverage_reader import PromotionCoverageReader
 from shopping.application.ports.recipe_requirement_reader import RecipeRequirementReader
+from shopping.application.ports.tagged_product_creator import TaggedProductCreator
 from shopping.application.use_cases.add_missing_external_recipe_items_to_shopping_list import (
     AddMissingExternalRecipeItemsToShoppingList,
 )
@@ -76,6 +77,7 @@ def build_shopping(
     catalog: CatalogDirectory,
     inventory_reader: HouseholdInventoryReader,
     inventory_writer: InventoryWriter,
+    tagged_products: TaggedProductCreator,
     recipes: RecipeRequirementReader,
     promotions: PromotionCoverageReader,
     line_interpreter: LineInterpreter,
@@ -83,7 +85,9 @@ def build_shopping(
 ) -> ShoppingModule:
     lists = DjangoShoppingListRepository()
     tag_list = TagShoppingList(lists, line_interpreter, memberships, transactions)
-    buy_item = BuyShoppingItem(lists, inventory_writer, catalog, memberships, transactions)
+    buy_item = BuyShoppingItem(
+        lists, inventory_writer, catalog, tagged_products, memberships, transactions
+    )
     add_missing = AddMissingRecipeItemsToShoppingList(
         lists, recipes, catalog, memberships, transactions
     )

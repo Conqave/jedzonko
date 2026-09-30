@@ -2,6 +2,8 @@ from datetime import datetime
 from decimal import Decimal
 
 from shared.household_membership import HouseholdMembershipReader, require_membership
+from shared.measurement import MeasurementDimension
+from shared.measurement_units import BASE_UNIT_CODES
 from shared.transactions import TransactionManager
 from shopping.application.errors import ShoppingItemMergeConflictError, ShoppingListNotFoundError
 from shopping.application.ports.line_interpreter import LineInterpreter
@@ -9,8 +11,6 @@ from shopping.application.ports.shopping_list_repository import ShoppingListRepo
 from shopping.application.shopping_list_rules import put_tag_on_item
 from shopping.domain.line_meaning import LineMeaning
 from shopping.domain.shopping_item_snapshot import ShoppingItemSnapshot
-
-COUNT_UNIT = "szt"
 
 
 class TagShoppingList:
@@ -62,7 +62,7 @@ def _amount(item: ShoppingItemSnapshot, meaning: LineMeaning) -> tuple[Decimal, 
         return meaning.quantity, meaning.unit_code
     if item.unit is not None:
         return item.quantity, item.unit.code
-    return item.quantity, COUNT_UNIT
+    return item.quantity, BASE_UNIT_CODES[MeasurementDimension.COUNT]
 
 
 class TagAllShoppingLists:

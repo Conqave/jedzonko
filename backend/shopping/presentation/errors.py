@@ -2,6 +2,7 @@ from rest_framework.exceptions import NotFound, PermissionDenied, ValidationErro
 
 from config.api_errors import ApiErrors, ServiceUnavailable
 from shopping.application.errors import (
+    ChosenProductNotTaggedError,
     ExternalRecipeNotFoundError,
     IngredientNotFoundError,
     InvalidShoppingItemError,
@@ -15,9 +16,11 @@ from shopping.application.errors import (
     RecipesUnavailableError,
     ShoppingItemAlreadyPendingError,
     ShoppingItemMergeConflictError,
+    ShoppingItemProductAmbiguousError,
     ShoppingListItemNotFoundError,
     ShoppingListNotFoundError,
     TaggingUnavailableError,
+    TagProductNameTakenError,
 )
 from shopping.domain.errors import InvalidShoppingSubjectError
 
@@ -86,5 +89,20 @@ API_ERRORS: ApiErrors = {
         ValidationError,
         "The items use different units and cannot be merged.",
         "shopping_item_merge_conflict",
+    ),
+    ShoppingItemProductAmbiguousError: (
+        ValidationError,
+        "Several products carry the item's tag; choose one.",
+        "shopping_item_product_ambiguous",
+    ),
+    ChosenProductNotTaggedError: (
+        ValidationError,
+        "The chosen product does not carry the item's tag.",
+        "chosen_product_not_tagged",
+    ),
+    TagProductNameTakenError: (
+        ValidationError,
+        "A product named like the tag exists but does not carry the tag.",
+        "tag_product_name_taken",
     ),
 }

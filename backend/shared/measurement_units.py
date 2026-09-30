@@ -30,6 +30,12 @@ _DEFINITIONS_BY_CODE = {definition.code: definition for definition in MEASUREMEN
 
 MEASUREMENT_UNIT_CODES: tuple[str, ...] = tuple(_DEFINITIONS_BY_CODE)
 
+BASE_UNIT_CODES: dict[MeasurementDimension, str] = {
+    MeasurementDimension.MASS: "g",
+    MeasurementDimension.VOLUME: "ml",
+    MeasurementDimension.COUNT: "szt",
+}
+
 
 def find_measurement_unit(code: str) -> MeasurementUnit | None:
     definition = _DEFINITIONS_BY_CODE.get(code)

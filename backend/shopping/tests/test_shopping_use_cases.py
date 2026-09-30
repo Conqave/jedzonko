@@ -5,12 +5,14 @@ import pytest
 
 from shared.household_membership import NotAHouseholdMemberError
 from shopping.application.errors import (
+    ChosenProductNotTaggedError,
     IngredientNotFoundError,
     InvalidShoppingItemError,
     PrimaryShoppingListCannotBeDeletedError,
     ProductNotFoundError,
     ShoppingItemAlreadyPendingError,
     ShoppingItemMergeConflictError,
+    ShoppingItemProductAmbiguousError,
     ShoppingListItemNotFoundError,
     ShoppingListNotFoundError,
 )
@@ -38,6 +40,7 @@ from shopping.domain.inventory_stock_level import InventoryStockLevel
 from shopping.domain.line_meaning import LineMeaning
 from shopping.domain.missing_recipe_item import MissingRecipeItem
 from shopping.domain.shopping_item_interpretation import ShoppingItemInterpretation
+from shopping.domain.shopping_purchase import ShoppingPurchase
 from shopping.domain.shopping_subject import ShoppingSubject
 from shopping.tests.fakes import (
     UNITS,
@@ -48,6 +51,7 @@ from shopping.tests.fakes import (
     FakeLineInterpreter,
     FakeRecipeRequirementReader,
     FakeShoppingListRepository,
+    FakeTaggedProductCreator,
     FakeTransactionManager,
 )
 
@@ -58,6 +62,8 @@ OTHER_HOME = 20
 FLOUR = 100
 FOREIGN_PRODUCT = 200
 EGGS = 300
+SPELT = 400
+NEW_PRODUCT = 900
 
 
 class Shopping:
@@ -66,6 +72,8 @@ class Shopping:
         self.memberships = FakeHouseholdMembershipReader({(ALA, HOME)})
         self.catalog = FakeCatalogDirectory({FLOUR: HOME, FOREIGN_PRODUCT: OTHER_HOME}, {EGGS})
         self.transactions = FakeTransactionManager()
+        self.writer = FakeInventoryWriter()
+        self.products = FakeTaggedProductCreator(NEW_PRODUCT)
         self.primary = CreatePrimaryShoppingList(self.repository).execute(HOME).id
 
     def add(self, subject: ShoppingSubject, quantity: str, unit_code: str | None) -> int:
@@ -80,6 +88,20 @@ class Shopping:
             self.repository, recipes, self.catalog, self.memberships, self.transactions
         )
         add_missing.execute(ALA, self.primary, 1, 4)
+
+    def buyer(self) -> BuyShoppingItem:
+        return BuyShoppingItem(
+            self.repository,
+            self.writer,
+            self.catalog,
+            self.products,
+            self.memberships,
+            self.transactions,
+        )
+
+    def buy(self, item_id: int, chosen_product_id: int | None) -> None:
+        purchase = ShoppingPurchase(item_id=item_id, chosen_product_id=chosen_product_id)
+        self.buyer().execute(ALA, purchase, NOW)
 
     def quantities(self) -> list[tuple[ShoppingSubject, Decimal, str | None]]:
         return [
@@ -234,48 +256,70 @@ def test_minimum_stock_fills_the_primary_list_once(shopping: Shopping) -> None:
 
 def test_buying_a_product_adds_it_to_the_pantry_in_one_transaction(shopping: Shopping) -> None:
     item_id = shopping.add(ShoppingSubject(product_id=FLOUR), "2", "kg")
-    writer = FakeInventoryWriter()
-    buy = BuyShoppingItem(
-        shopping.repository, writer, shopping.catalog, shopping.memberships, shopping.transactions
-    )
     opened_before = shopping.transactions.opened
 
-    buy.execute(ALA, item_id, NOW)
+    shopping.buy(item_id, None)
 
-    assert writer.added == [(HOME, FLOUR, Decimal("2"), "kg")]
+    assert shopping.writer.added == [(HOME, FLOUR, Decimal("2"), "kg")]
     assert shopping.transactions.opened == opened_before + 1
     with pytest.raises(ShoppingListItemNotFoundError):
-        buy.execute(ALA, item_id, NOW)
+        shopping.buy(item_id, None)
 
 
-def test_buying_an_ingredient_or_text_item_leaves_the_pantry_alone(shopping: Shopping) -> None:
-    eggs = shopping.add(ShoppingSubject(ingredient_id=EGGS), "6", "szt")
+def test_buying_a_text_item_leaves_the_pantry_alone(shopping: Shopping) -> None:
     towels = shopping.add(ShoppingSubject(free_text="ręczniki"), "1", None)
-    writer = FakeInventoryWriter()
-    buy = BuyShoppingItem(
-        shopping.repository, writer, shopping.catalog, shopping.memberships, shopping.transactions
+
+    shopping.buy(towels, None)
+
+    assert shopping.writer.added == []
+    assert shopping.products.created == []
+
+
+def test_a_tag_without_a_product_gets_one_named_after_it_and_stocked(
+    shopping: Shopping,
+) -> None:
+    shopping.catalog = FakeCatalogDirectory({}, {EGGS}, ingredient_names={EGGS: "Jajka"})
+    eggs = shopping.add(ShoppingSubject(ingredient_id=EGGS), "1", "kg")
+
+    shopping.buy(eggs, None)
+
+    assert shopping.products.created == [(HOME, NEW_PRODUCT, EGGS, "Jajka", "g")]
+    assert shopping.writer.added == [(HOME, NEW_PRODUCT, Decimal("1"), "kg")]
+
+
+def test_a_tag_with_several_products_needs_a_chosen_one(shopping: Shopping) -> None:
+    shopping.catalog = FakeCatalogDirectory(
+        {FLOUR: HOME, SPELT: HOME}, {EGGS}, ingredient_products={EGGS: (FLOUR, SPELT)}
     )
+    eggs = shopping.add(ShoppingSubject(ingredient_id=EGGS), "6", "szt")
 
-    buy.execute(ALA, eggs, NOW)
-    buy.execute(ALA, towels, NOW)
+    with pytest.raises(ShoppingItemProductAmbiguousError):
+        shopping.buy(eggs, None)
+    with pytest.raises(ChosenProductNotTaggedError):
+        shopping.buy(eggs, FOREIGN_PRODUCT)
+    shopping.buy(eggs, SPELT)
 
-    assert writer.added == []
+    assert shopping.writer.added == [(HOME, SPELT, Decimal("6"), "szt")]
+    assert shopping.products.created == []
+
+
+def test_only_a_tagged_item_takes_a_chosen_product(shopping: Shopping) -> None:
+    flour = shopping.add(ShoppingSubject(product_id=FLOUR), "1", "kg")
+    towels = shopping.add(ShoppingSubject(free_text="ręczniki"), "1", None)
+
+    with pytest.raises(InvalidShoppingItemError):
+        shopping.buy(flour, FLOUR)
+    with pytest.raises(InvalidShoppingItemError):
+        shopping.buy(towels, FLOUR)
 
 
 def test_a_bought_item_can_be_put_back_unless_it_is_listed_again(shopping: Shopping) -> None:
     first = shopping.add(ShoppingSubject(product_id=FLOUR), "1", "kg")
-    buy = BuyShoppingItem(
-        shopping.repository,
-        FakeInventoryWriter(),
-        shopping.catalog,
-        shopping.memberships,
-        shopping.transactions,
-    )
     restore = RestoreShoppingItem(shopping.repository, shopping.memberships, shopping.transactions)
-    buy.execute(ALA, first, NOW)
+    shopping.buy(first, None)
 
     restored = restore.execute(ALA, first)
-    buy.execute(ALA, first, NOW)
+    shopping.buy(first, None)
     shopping.add(ShoppingSubject(product_id=FLOUR), "1", "kg")
 
     assert restored.is_purchased is False
@@ -352,7 +396,9 @@ def test_merging_items_in_different_units_stops(shopping: Shopping) -> None:
 def test_a_missing_ingredient_is_bought_as_the_households_only_product_of_it(
     shopping: Shopping,
 ) -> None:
-    shopping.catalog = FakeCatalogDirectory({FLOUR: HOME}, {EGGS}, only_products={EGGS: FLOUR})
+    shopping.catalog = FakeCatalogDirectory(
+        {FLOUR: HOME}, {EGGS}, ingredient_products={EGGS: (FLOUR,)}
+    )
 
     shopping.add_missing([MissingRecipeItem("Jajka", EGGS, None, Decimal("3"), "szt")])
 
@@ -426,16 +472,15 @@ def test_every_list_with_free_text_is_tagged_in_one_run() -> None:
 def test_buying_an_ingredient_item_stocks_the_households_only_product_of_it(
     shopping: Shopping,
 ) -> None:
-    shopping.catalog = FakeCatalogDirectory({FLOUR: HOME}, {EGGS}, only_products={EGGS: FLOUR})
-    eggs = shopping.add(ShoppingSubject(ingredient_id=EGGS), "6", "szt")
-    writer = FakeInventoryWriter()
-    buy = BuyShoppingItem(
-        shopping.repository, writer, shopping.catalog, shopping.memberships, shopping.transactions
+    shopping.catalog = FakeCatalogDirectory(
+        {FLOUR: HOME}, {EGGS}, ingredient_products={EGGS: (FLOUR,)}
     )
+    eggs = shopping.add(ShoppingSubject(ingredient_id=EGGS), "6", "szt")
 
-    buy.execute(ALA, eggs, NOW)
+    shopping.buy(eggs, None)
 
-    assert writer.added == [(HOME, FLOUR, Decimal("6"), "szt")]
+    assert shopping.writer.added == [(HOME, FLOUR, Decimal("6"), "szt")]
+    assert shopping.products.created == []
 
 
 def tag_item(shopping: Shopping, item_id: int, quantity: str, unit_code: str) -> None:

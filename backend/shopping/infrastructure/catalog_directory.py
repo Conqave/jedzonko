@@ -25,13 +25,10 @@ class CatalogDirectory(CatalogDirectoryPort):
         ingredient = self._get_ingredients.execute({ingredient_id}).get(ingredient_id)
         return None if ingredient is None else ingredient.name
 
-    def find_only_product_of_ingredient(self, household_id: int, ingredient_id: int) -> int | None:
+    def list_products_of_ingredient(self, household_id: int, ingredient_id: int) -> tuple[int, ...]:
         identities = self._describe_products.execute(household_id)
-        product_ids = [
+        return tuple(
             identity.product_id
             for identity in identities.values()
             if any(tag.ingredient_id == ingredient_id for tag in identity.tags)
-        ]
-        if len(product_ids) != 1:
-            return None
-        return product_ids[0]
+        )

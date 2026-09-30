@@ -70,10 +70,15 @@ class ChooseItemProductSerializer(serializers.Serializer[dict[str, int]]):
     product_id = serializers.IntegerField(min_value=1)
 
 
-class BuyItemsSerializer(serializers.Serializer[dict[str, list[int]]]):
-    item_ids = serializers.ListField(
-        child=serializers.IntegerField(min_value=1), min_length=1, max_length=200
+class PurchaseSerializer(serializers.Serializer[dict[str, int | None]]):
+    item_id = serializers.IntegerField(min_value=1)
+    product_id = serializers.IntegerField(
+        min_value=1, required=False, allow_null=True, default=None
     )
+
+
+class BuyItemsSerializer(serializers.Serializer[dict[str, list[dict[str, int | None]]]]):
+    items = serializers.ListField(child=PurchaseSerializer(), min_length=1, max_length=200)
 
 
 class TagItemSerializer(serializers.Serializer[dict[str, object]]):

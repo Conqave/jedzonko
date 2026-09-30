@@ -37,6 +37,7 @@ from shopping.composition import (
 )
 from shopping.infrastructure.catalog_directory import CatalogDirectory
 from shopping.infrastructure.catalog_line_interpreter import CatalogLineInterpreter
+from shopping.infrastructure.catalog_tagged_product_creator import CatalogTaggedProductCreator
 from shopping.infrastructure.inventory_stock_gateway import InventoryStockGateway
 from shopping.infrastructure.inventory_writer_gateway import InventoryWriterGateway
 from shopping.infrastructure.promotions_coverage_reader import PromotionsCoverageReader
@@ -120,6 +121,9 @@ def container() -> Container:
     )
     stock_levels = InventoryStockGateway(inventory.get_household_inventory)
     inventory_writer = InventoryWriterGateway(inventory.add_quantity_to_inventory)
+    tagged_products = CatalogTaggedProductCreator(
+        catalog.create_product, catalog.confirm_product_ingredient
+    )
     recipe_requirements = RecipeRequirementGateway(
         recipes.calculate_missing_recipe_items, recipes.open_external
     )
@@ -131,6 +135,7 @@ def container() -> Container:
         catalog_directory,
         stock_levels,
         inventory_writer,
+        tagged_products,
         recipe_requirements,
         promotion_coverage,
         CatalogLineInterpreter(catalog.open_line_interpretation),

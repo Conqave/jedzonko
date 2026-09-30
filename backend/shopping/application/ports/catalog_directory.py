@@ -16,5 +16,5 @@ class CatalogDirectory(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def find_only_product_of_ingredient(self, household_id: int, ingredient_id: int) -> int | None:
+    def list_products_of_ingredient(self, household_id: int, ingredient_id: int) -> tuple[int, ...]:
         raise NotImplementedError

@@ -6,6 +6,7 @@ from rest_framework.views import APIView
 
 from config.api import current_user_id
 from config.composition import container
+from shopping.domain.shopping_purchase import ShoppingPurchase
 from shopping.domain.shopping_subject import ShoppingSubject
 from shopping.presentation.serializers import (
     AddExternalRecipeItemsSerializer,
@@ -116,8 +117,9 @@ class ShoppingItemPurchaseView(APIView):
     def post(self, request: Request, item_id: int) -> Response:
         user_id = current_user_id(request)
         now = timezone.now()
+        purchase = ShoppingPurchase(item_id=item_id, chosen_product_id=None)
         use_case = container().shopping.buy_shopping_item
-        use_case.execute(user_id, item_id, now)
+        use_case.execute(user_id, purchase, now)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -144,8 +146,11 @@ class ShoppingListPurchaseView(APIView):
         payload = BuyItemsSerializer(data=request.data)
         payload.is_valid(raise_exception=True)
         now = timezone.now()
-        item_ids = tuple(payload.validated_data["item_ids"])
-        container().shopping.buy_shopping_items.execute(user_id, list_id, item_ids, now)
+        purchases = tuple(
+            ShoppingPurchase(item_id=entry["item_id"], chosen_product_id=entry["product_id"])
+            for entry in payload.validated_data["items"]
+        )
+        container().shopping.buy_shopping_items.execute(user_id, list_id, purchases, now)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 

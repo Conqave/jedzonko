@@ -60,3 +60,15 @@ class RecipesUnavailableError(Exception):
 
 class TaggingUnavailableError(Exception):
     pass
+
+
+class ShoppingItemProductAmbiguousError(Exception):
+    pass
+
+
+class ChosenProductNotTaggedError(Exception):
+    pass
+
+
+class TagProductNameTakenError(Exception):
+    pass

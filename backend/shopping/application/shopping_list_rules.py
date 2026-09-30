@@ -113,4 +113,7 @@ def _find_only_product(
 ) -> int | None:
     if item.stocked_product_id is not None or item.ingredient_id is None:
         return None
-    return catalog.find_only_product_of_ingredient(household_id, item.ingredient_id)
+    product_ids = catalog.list_products_of_ingredient(household_id, item.ingredient_id)
+    if len(product_ids) != 1:
+        return None
+    return product_ids[0]

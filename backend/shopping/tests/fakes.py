@@ -14,6 +14,7 @@ from shopping.application.ports.inventory_writer import InventoryWriter
 from shopping.application.ports.line_interpreter import LineInterpreter
 from shopping.application.ports.recipe_requirement_reader import RecipeRequirementReader
 from shopping.application.ports.shopping_list_repository import ShoppingListRepository
+from shopping.application.ports.tagged_product_creator import TaggedProductCreator
 from shopping.domain.inventory_stock_level import InventoryStockLevel
 from shopping.domain.line_meaning import LineMeaning
 from shopping.domain.missing_recipe_item import MissingRecipeItem
@@ -216,13 +217,13 @@ class FakeCatalogDirectory(CatalogDirectory):
         self,
         products: dict[int, int],
         ingredient_ids: set[int],
-        only_products: dict[int, int] | None = None,
+        ingredient_products: dict[int, tuple[int, ...]] | None = None,
         ingredient_names: dict[int, str] | None = None,
     ) -> None:
         self._household_by_product = products
         self._ingredient_ids = ingredient_ids
         self._ingredient_names = {} if ingredient_names is None else ingredient_names
-        self._only_products = {} if only_products is None else only_products
+        self._ingredient_products = {} if ingredient_products is None else ingredient_products
 
     def is_household_product(self, household_id: int, product_id: int) -> bool:
         return self._household_by_product.get(product_id) == household_id
@@ -233,8 +234,8 @@ class FakeCatalogDirectory(CatalogDirectory):
     def find_ingredient_name(self, ingredient_id: int) -> str | None:
         return self._ingredient_names.get(ingredient_id)
 
-    def find_only_product_of_ingredient(self, household_id: int, ingredient_id: int) -> int | None:
-        return self._only_products.get(ingredient_id)
+    def list_products_of_ingredient(self, household_id: int, ingredient_id: int) -> tuple[int, ...]:
+        return self._ingredient_products.get(ingredient_id, ())
 
 
 class FakeInventoryReader(HouseholdInventoryReader):
@@ -253,6 +254,26 @@ class FakeInventoryWriter(InventoryWriter):
         self, household_id: int, product_id: int, amount: Decimal, unit: MeasurementUnit
     ) -> None:
         self.added.append((household_id, product_id, amount, unit.code))
+
+
+class FakeTaggedProductCreator(TaggedProductCreator):
+    def __init__(self, first_product_id: int) -> None:
+        self._next_product_id = first_product_id
+        self.created: list[tuple[int, int, int, str, str]] = []
+
+    def create_tagged_product(
+        self,
+        user_id: int,
+        household_id: int,
+        ingredient_id: int,
+        name: str,
+        unit_code: str,
+        now: datetime,
+    ) -> int:
+        product_id = self._next_product_id
+        self._next_product_id += 1
+        self.created.append((household_id, product_id, ingredient_id, name, unit_code))
+        return product_id
 
 
 class FakeRecipeRequirementReader(RecipeRequirementReader):
