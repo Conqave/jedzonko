@@ -3,6 +3,10 @@ from datetime import UTC, datetime
 import pytest
 
 from catalog.application.use_cases.analyze_product_ingredient import AnalyzeProductIngredient
+from catalog.application.use_cases.delete_rejected_product_ingredients import (
+    DeleteRejectedProductIngredients,
+)
+from catalog.application.use_cases.reject_product_ingredient import RejectProductIngredient
 from catalog.domain.ingredient import IngredientNameSource
 from catalog.domain.names import CatalogName
 from catalog.domain.product_ingredient import ProductIngredientStatus
@@ -32,6 +36,21 @@ class Analysis:
         product = self.products.add(HOME, "Mleko 3,2%")
         self.classifications.add_product(product.id, HOME)
         self.product_id = product.id
+        self.memberships = FakeHouseholdMembershipReader({(ALA, HOME)})
+
+    def reject(self, name: str) -> None:
+        ingredient = self.ingredients.find_by_normalized_name(name)
+        assert ingredient is not None
+        use_case = RejectProductIngredient(
+            self.classifications, self.memberships, self.transactions
+        )
+        use_case.execute(ALA, self.product_id, ingredient.id, NOW)
+
+    def delete_rejected(self) -> None:
+        use_case = DeleteRejectedProductIngredients(
+            self.classifications, self.memberships, self.transactions
+        )
+        use_case.execute(ALA, self.product_id)
 
     def analyze(self, classifier: FakeIngredientClassifier, user_id: int = ALA) -> bool:
         use_case = AnalyzeProductIngredient(
@@ -39,7 +58,7 @@ class Analysis:
             self.ingredients,
             self.classifications,
             classifier,
-            FakeHouseholdMembershipReader({(ALA, HOME)}),
+            self.memberships,
             self.transactions,
         )
         return use_case.execute(user_id, self.product_id, NOW) != ()
@@ -94,3 +113,25 @@ def test_a_tagged_product_is_offered_only_the_other_tags(analysis: Analysis) -> 
 def test_a_non_member_cannot_analyse(analysis: Analysis) -> None:
     with pytest.raises(NotAHouseholdMemberError):
         analysis.analyze(FakeIngredientClassifier({}), user_id=99)
+
+
+def test_a_rejected_tag_is_not_offered_again(analysis: Analysis) -> None:
+    analysis.analyze(FakeIngredientClassifier({"Mleko 3,2%": ("mleko",)}))
+    analysis.reject("mleko")
+    classifier = FakeIngredientClassifier({"Mleko 3,2%": ()})
+
+    analysis.analyze(classifier)
+
+    assert classifier.questions == [("Mleko 3,2%", ("masło", "mleko zsiadłe"))]
+
+
+def test_a_deleted_rejection_may_be_offered_again(analysis: Analysis) -> None:
+    analysis.analyze(FakeIngredientClassifier({"Mleko 3,2%": ("mleko",)}))
+    analysis.reject("mleko")
+    analysis.delete_rejected()
+    classifier = FakeIngredientClassifier({"Mleko 3,2%": ("mleko",)})
+
+    analysis.analyze(classifier)
+
+    assert classifier.questions == [("Mleko 3,2%", ("masło", "mleko", "mleko zsiadłe"))]
+    assert analysis.statuses() == {"mleko": ProductIngredientStatus.CONFIRMED}

@@ -22,6 +22,10 @@ class InvalidProductIngredientTransitionError(Exception):
     pass
 
 
+class ConfirmedProductIngredientDeletionError(Exception):
+    pass
+
+
 class InvalidProductPackageError(Exception):
     pass
 

@@ -15,6 +15,10 @@ from catalog.application.use_cases.decide_candidate import (
     DismissCandidate,
 )
 from catalog.application.use_cases.delete_product import DeleteProduct
+from catalog.application.use_cases.delete_product_ingredient import DeleteProductIngredient
+from catalog.application.use_cases.delete_rejected_product_ingredients import (
+    DeleteRejectedProductIngredients,
+)
 from catalog.application.use_cases.describe_household_products import DescribeHouseholdProducts
 from catalog.application.use_cases.find_household_product import FindHouseholdProduct
 from catalog.application.use_cases.find_ingredient_by_name import FindIngredientByName
@@ -92,6 +96,8 @@ class CatalogModule:
     propose_product_ingredient: ProposeProductIngredient
     confirm_product_ingredient: ConfirmProductIngredient
     reject_product_ingredient: RejectProductIngredient
+    delete_product_ingredient: DeleteProductIngredient
+    delete_rejected_product_ingredients: DeleteRejectedProductIngredients
     import_ingredient_names: ImportIngredientNames
     accept_candidate_as_ingredient: AcceptCandidateAsIngredient
     accept_candidate_as_alias: AcceptCandidateAsAlias
@@ -200,6 +206,12 @@ def build_catalog(
             classifications, ingredients, memberships, transactions
         ),
         reject_product_ingredient=RejectProductIngredient(
+            classifications, memberships, transactions
+        ),
+        delete_product_ingredient=DeleteProductIngredient(
+            classifications, memberships, transactions
+        ),
+        delete_rejected_product_ingredients=DeleteRejectedProductIngredients(
             classifications, memberships, transactions
         ),
         import_ingredient_names=ImportIngredientNames(ingredients, candidates, transactions),

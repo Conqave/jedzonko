@@ -11,6 +11,7 @@ from catalog.application.errors import (
 from catalog.domain.calories import MAX_KCAL_PER_100G
 from catalog.domain.conversions import MAX_GRAMS_PER_ML, MAX_GRAMS_PER_PIECE
 from catalog.domain.errors import (
+    ConfirmedProductIngredientDeletionError,
     InvalidDensityError,
     InvalidNameError,
     InvalidPieceWeightError,
@@ -82,5 +83,10 @@ API_ERRORS: ApiErrors = {
         ValidationError,
         "The ingredient is already rejected.",
         "invalid_product_ingredient_transition",
+    ),
+    ConfirmedProductIngredientDeletionError: (
+        ValidationError,
+        "A confirmed tag is removed by rejecting it, not deleted.",
+        "confirmed_product_ingredient_deletion",
     ),
 }

@@ -108,6 +108,22 @@ class ProductIngredientRejectionView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+class ProductIngredientDetailView(APIView):
+    def delete(self, request: Request, product_id: int, ingredient_id: int) -> Response:
+        user_id = current_user_id(request)
+        use_case = container().catalog.delete_product_ingredient
+        use_case.execute(user_id, product_id, ingredient_id)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class ProductRejectedIngredientListView(APIView):
+    def delete(self, request: Request, product_id: int) -> Response:
+        user_id = current_user_id(request)
+        use_case = container().catalog.delete_rejected_product_ingredients
+        use_case.execute(user_id, product_id)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
 class IngredientListView(APIView):
     def get(self, request: Request) -> Response:
         query = IngredientQuerySerializer(data=request.query_params)

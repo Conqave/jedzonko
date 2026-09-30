@@ -294,6 +294,8 @@ class FakeProductClassificationRepository(ProductClassificationRepository):
         ]
 
     def delete(self, product_id: int, ingredient_id: int) -> None:
+        if self._transactions.depth < 1:
+            raise AssertionError("Classification changes must be deleted inside a transaction.")
         del self.products[product_id].links[ingredient_id]
 
 

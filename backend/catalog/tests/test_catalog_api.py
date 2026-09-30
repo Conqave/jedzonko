@@ -2,10 +2,11 @@ from decimal import Decimal
 
 import pytest
 from django.contrib.auth.models import User
+from django.utils import timezone
 from rest_framework.test import APIClient
 
 from catalog.domain.ingredient import IngredientNameSource
-from catalog.models import Product
+from catalog.models import Ingredient, Product
 from config.composition import container
 from households.models import Household
 from inventory.models import InventoryItem
@@ -205,6 +206,97 @@ def test_a_foreign_product_cannot_be_classified(
     response = api_client.post(f"/api/products/{product.pk}/ingredients/{eggs.pk}/confirmation/")
 
     assert response.status_code == 403
+
+
+def propose_ingredient(product: Product, ingredient: Ingredient) -> None:
+    use_case = container().catalog.propose_product_ingredient
+    now = timezone.now()
+    use_case.execute(product.pk, ingredient.pk, "gpt-oss:20b", now)
+
+
+def test_the_listing_counts_only_pending_proposals_and_shows_only_confirmed_tags(
+    api_client: APIClient, ala: User, household_a: Household
+) -> None:
+    product = make_product(household_a, "Jaja", "opak")
+    eggs = make_ingredient("Jajka")
+    butter = make_ingredient("Masło")
+    milk = make_ingredient("Mleko")
+    confirm_ingredient(ala, product, eggs)
+    propose_ingredient(product, butter)
+    propose_ingredient(product, milk)
+    api_client.force_login(ala)
+
+    api_client.post(f"/api/products/{product.pk}/ingredients/{milk.pk}/rejection/")
+    listed = api_client.get(f"/api/products/?household_id={household_a.pk}")
+
+    assert [tag["name"] for tag in listed.data[0]["tags"]] == ["Jajka"]
+    assert listed.data[0]["open_proposal_count"] == 1
+
+
+def test_member_deletes_a_proposal_and_a_rejection_for_good(
+    api_client: APIClient, ala: User, household_a: Household
+) -> None:
+    product = make_product(household_a, "Jaja", "opak")
+    eggs = make_ingredient("Jajka")
+    butter = make_ingredient("Masło")
+    milk = make_ingredient("Mleko")
+    confirm_ingredient(ala, product, eggs)
+    propose_ingredient(product, butter)
+    propose_ingredient(product, milk)
+    api_client.force_login(ala)
+    base = f"/api/products/{product.pk}/ingredients"
+    api_client.post(f"{base}/{milk.pk}/rejection/")
+
+    proposal = api_client.delete(f"{base}/{butter.pk}/")
+    rejection = api_client.delete(f"{base}/{milk.pk}/")
+    confirmed = api_client.delete(f"{base}/{eggs.pk}/")
+    missing = api_client.delete(f"{base}/{milk.pk}/")
+    links = api_client.get(f"{base}/")
+
+    assert (proposal.status_code, rejection.status_code) == (204, 204)
+    assert confirmed.status_code == 400
+    assert confirmed.data["code"] == "confirmed_product_ingredient_deletion"
+    assert missing.status_code == 404
+    assert missing.data["code"] == "product_ingredient_not_found"
+    assert [(entry["ingredient"]["name"], entry["status"]) for entry in links.data] == [
+        ("Jajka", "confirmed")
+    ]
+
+
+def test_member_deletes_every_rejection_of_a_product(
+    api_client: APIClient, ala: User, household_a: Household
+) -> None:
+    product = make_product(household_a, "Jaja", "opak")
+    eggs = make_ingredient("Jajka")
+    butter = make_ingredient("Masło")
+    milk = make_ingredient("Mleko")
+    confirm_ingredient(ala, product, eggs)
+    confirm_ingredient(ala, product, butter)
+    propose_ingredient(product, milk)
+    api_client.force_login(ala)
+    base = f"/api/products/{product.pk}"
+    api_client.post(f"{base}/ingredients/{butter.pk}/rejection/")
+
+    response = api_client.delete(f"{base}/rejected-ingredients/")
+    links = api_client.get(f"{base}/ingredients/")
+
+    assert response.status_code == 204
+    decisions = {entry["ingredient"]["name"]: entry["status"] for entry in links.data}
+    assert decisions == {"Jajka": "confirmed", "Mleko": "proposed"}
+
+
+def test_a_foreign_products_links_cannot_be_deleted(
+    api_client: APIClient, ola: User, household_a: Household
+) -> None:
+    product = make_product(household_a, "Jaja", "opak")
+    eggs = make_ingredient("Jajka")
+    propose_ingredient(product, eggs)
+    api_client.force_login(ola)
+
+    single = api_client.delete(f"/api/products/{product.pk}/ingredients/{eggs.pk}/")
+    every = api_client.delete(f"/api/products/{product.pk}/rejected-ingredients/")
+
+    assert (single.status_code, every.status_code) == (403, 403)
 
 
 def test_ingredients_are_searched_by_any_of_their_names(api_client: APIClient, ala: User) -> None:

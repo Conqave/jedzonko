@@ -7,11 +7,17 @@ from catalog.application.errors import (
     ProductNotFoundError,
 )
 from catalog.application.use_cases.confirm_product_ingredient import ConfirmProductIngredient
+from catalog.application.use_cases.delete_product_ingredient import DeleteProductIngredient
+from catalog.application.use_cases.delete_rejected_product_ingredients import (
+    DeleteRejectedProductIngredients,
+)
 from catalog.application.use_cases.propose_product_ingredient import ProposeProductIngredient
 from catalog.application.use_cases.reject_product_ingredient import RejectProductIngredient
 from catalog.domain.errors import (
+    ConfirmedProductIngredientDeletionError,
     InvalidProductIngredientTransitionError,
     ProductIngredientAlreadyRecordedError,
+    ProductIngredientNotFoundError,
 )
 from catalog.domain.ingredient import IngredientNameSource
 from catalog.domain.names import CatalogName
@@ -59,6 +65,19 @@ class Catalog:
 
     def reject(self) -> RejectProductIngredient:
         return RejectProductIngredient(self.classifications, self.memberships, self.transactions)
+
+    def delete(self) -> DeleteProductIngredient:
+        return DeleteProductIngredient(self.classifications, self.memberships, self.transactions)
+
+    def delete_rejected(self) -> DeleteRejectedProductIngredients:
+        return DeleteRejectedProductIngredients(
+            self.classifications, self.memberships, self.transactions
+        )
+
+    def linked(self, product_id: int) -> dict[int, ProductIngredientStatus]:
+        classification = self.classifications.find(product_id)
+        assert classification is not None
+        return {link.ingredient_id: link.status for link in classification.links}
 
     def confirmed(self, household_id: int) -> dict[int, tuple[int, ...]]:
         return self.classifications.list_confirmed(household_id)
@@ -172,3 +191,65 @@ def test_confirmed_ingredients_are_listed_per_household(catalog: Catalog) -> Non
 
     assert catalog.confirmed(HOME) == {EGG_BOX: (catalog.eggs,)}
     assert catalog.confirmed(OTHER_HOME) == {}
+
+
+def test_deleting_a_rejection_forgets_it_so_it_may_be_proposed_again(catalog: Catalog) -> None:
+    catalog.propose().execute(EGG_BOX, catalog.butter, "gpt-oss:20b", NOW)
+    catalog.reject().execute(ALA, EGG_BOX, catalog.butter, NOW)
+
+    catalog.delete().execute(ALA, EGG_BOX, catalog.butter)
+    proposal = catalog.propose().execute(EGG_BOX, catalog.butter, "gpt-oss:20b", LATER)
+
+    assert proposal.status is ProductIngredientStatus.PROPOSED
+    assert catalog.linked(EGG_BOX) == {catalog.butter: ProductIngredientStatus.PROPOSED}
+
+
+def test_a_pending_proposal_can_be_deleted(catalog: Catalog) -> None:
+    catalog.propose().execute(EGG_BOX, catalog.butter, "gpt-oss:20b", NOW)
+
+    catalog.delete().execute(ALA, EGG_BOX, catalog.butter)
+
+    assert catalog.linked(EGG_BOX) == {}
+
+
+def test_a_confirmed_tag_is_rejected_not_deleted(catalog: Catalog) -> None:
+    catalog.confirm().execute(ALA, EGG_BOX, catalog.eggs, NOW)
+
+    with pytest.raises(ConfirmedProductIngredientDeletionError):
+        catalog.delete().execute(ALA, EGG_BOX, catalog.eggs)
+    assert catalog.confirmed(HOME) == {EGG_BOX: (catalog.eggs,)}
+
+
+def test_deleting_an_unrecorded_ingredient_or_missing_product_fails(catalog: Catalog) -> None:
+    with pytest.raises(ProductIngredientNotFoundError):
+        catalog.delete().execute(ALA, EGG_BOX, catalog.eggs)
+    with pytest.raises(ProductNotFoundError):
+        catalog.delete().execute(ALA, 404, catalog.eggs)
+    with pytest.raises(ProductNotFoundError):
+        catalog.delete_rejected().execute(ALA, 404)
+
+
+def test_deleting_all_rejections_keeps_tags_and_pending_proposals(catalog: Catalog) -> None:
+    extra = catalog.ingredients.create(CatalogName.parse("Mleko"), IngredientNameSource.MANUAL).id
+    catalog.confirm().execute(ALA, EGG_BOX, catalog.eggs, NOW)
+    catalog.propose().execute(EGG_BOX, catalog.butter, "gpt-oss:20b", NOW)
+    catalog.confirm().execute(ALA, EGG_BOX, extra, NOW)
+    catalog.reject().execute(ALA, EGG_BOX, extra, LATER)
+
+    catalog.delete_rejected().execute(ALA, EGG_BOX)
+
+    assert catalog.linked(EGG_BOX) == {
+        catalog.eggs: ProductIngredientStatus.CONFIRMED,
+        catalog.butter: ProductIngredientStatus.PROPOSED,
+    }
+
+
+def test_only_members_delete_a_products_links(catalog: Catalog) -> None:
+    catalog.propose().execute(FOREIGN_PRODUCT, catalog.eggs, "gpt-oss:20b", NOW)
+    catalog.reject().execute(OLA, FOREIGN_PRODUCT, catalog.eggs, NOW)
+
+    with pytest.raises(NotAHouseholdMemberError):
+        catalog.delete().execute(ALA, FOREIGN_PRODUCT, catalog.eggs)
+    with pytest.raises(NotAHouseholdMemberError):
+        catalog.delete_rejected().execute(ALA, FOREIGN_PRODUCT)
+    assert catalog.linked(FOREIGN_PRODUCT) == {catalog.eggs: ProductIngredientStatus.REJECTED}

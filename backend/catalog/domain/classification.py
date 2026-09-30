@@ -2,6 +2,7 @@ from dataclasses import dataclass, replace
 from datetime import datetime
 
 from catalog.domain.errors import (
+    ConfirmedProductIngredientDeletionError,
     InvalidProductClassificationError,
     InvalidProductIngredientTransitionError,
     ProductIngredientAlreadyRecordedError,
@@ -32,6 +33,9 @@ class ProductClassification:
         return tuple(
             link for link in self.links if link.status is ProductIngredientStatus.CONFIRMED
         )
+
+    def rejected(self) -> tuple[ProductIngredient, ...]:
+        return tuple(link for link in self.links if link.status is ProductIngredientStatus.REJECTED)
 
     def find(self, ingredient_id: int) -> ProductIngredient | None:
         for link in self.links:
@@ -97,6 +101,14 @@ class ProductClassification:
         if existing.status is ProductIngredientStatus.REJECTED:
             raise InvalidProductIngredientTransitionError("The ingredient is already rejected.")
         return replace(existing, status=ProductIngredientStatus.REJECTED, decided_at=now)
+
+    def forget(self, ingredient_id: int) -> ProductIngredient:
+        existing = self.find(ingredient_id)
+        if existing is None:
+            raise ProductIngredientNotFoundError
+        if existing.status is ProductIngredientStatus.CONFIRMED:
+            raise ConfirmedProductIngredientDeletionError
+        return existing
 
     def apply(self, changes: tuple[ProductIngredient, ...]) -> ProductClassification:
         links = {link.ingredient_id: link for link in self.links}
