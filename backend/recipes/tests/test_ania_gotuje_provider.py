@@ -187,7 +187,7 @@ def test_search_always_sends_the_page_and_sort_parameters_the_endpoint_requires(
 
     assert requests[0].url.path == "/client/posts/search"
     assert requests[0].url.params["page"] == "0"
-    assert requests[0].url.params["sort"] == "score,desc"
+    assert requests[0].url.params["sort"] == "finalScore,desc"
     assert requests[0].url.params["perPage"] == "3"
     assert requests[0].url.params["query"] == "naleśniki"
 

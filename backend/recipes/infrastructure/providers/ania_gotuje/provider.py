@@ -13,7 +13,7 @@ from recipes.infrastructure.providers.ania_gotuje.mapper import AniaGotujeRecipe
 
 _REQUEST_HEADERS = {"Accept": "application/json", "Referer": "https://aniagotuje.pl/"}
 
-_SEARCH_SORT = "score,desc"
+_SEARCH_SORT = "finalScore,desc"
 
 
 class AniaGotujeProvider(RecipeSource):
