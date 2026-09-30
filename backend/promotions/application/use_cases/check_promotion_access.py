@@ -2,7 +2,6 @@ from promotions.application.ports.promotion_permission_reader import PromotionPe
 
 
 class CheckPromotionAccess:
-
     def __init__(self, permissions: PromotionPermissionReader) -> None:
         self._permissions = permissions
 

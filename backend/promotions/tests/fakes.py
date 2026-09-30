@@ -4,7 +4,7 @@ from decimal import Decimal
 
 from promotions.application.ports.favourite_shop_repository import FavouriteShopRepository
 from promotions.application.ports.promotion_source import PromotionSource
-from promotions.domain.models import FavouriteShop, Leaflet, LeafletPage, PromotionOffer, Shop
+from promotions.domain.models import FavouriteShop, PromotionOffer, Shop
 
 SHOPS = [
     Shop(name="Biedronka", slug="biedronka", url="https://blix.pl/sklep/biedronka/"),
@@ -46,12 +46,6 @@ class FakePromotionSource(PromotionSource):
     def list_shops(self) -> list[Shop]:
         return list(SHOPS)
 
-    def list_leaflets(self, shop_name: str) -> list[Leaflet]:
-        raise NotImplementedError
-
-    def list_leaflet_pages(self, leaflet_provider_id: str) -> list[LeafletPage]:
-        raise NotImplementedError
-
     def search_promotions(self, query: str, shop_slugs: tuple[str, ...]) -> list[PromotionOffer]:
         self.received_queries.append(query)
         self.received_shop_slugs.append(shop_slugs)
@@ -67,12 +61,6 @@ class FailingPromotionSource(PromotionSource):
 
     def list_shops(self) -> list[Shop]:
         raise self._error
-
-    def list_leaflets(self, shop_name: str) -> list[Leaflet]:
-        raise NotImplementedError
-
-    def list_leaflet_pages(self, leaflet_provider_id: str) -> list[LeafletPage]:
-        raise NotImplementedError
 
     def search_promotions(self, query: str, shop_slugs: tuple[str, ...]) -> list[PromotionOffer]:
         raise self._error

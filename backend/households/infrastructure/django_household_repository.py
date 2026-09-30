@@ -1,5 +1,5 @@
 from django.contrib.auth.models import User
-from django.db.models import Count
+from django.db.models import Count, QuerySet
 
 from households.application.errors import (
     HouseholdNotFoundError,
@@ -13,39 +13,12 @@ from households.models import Household, HouseholdMembership
 
 class DjangoHouseholdRepository(HouseholdRepository):
     def find_households_for_user(self, user_id: int) -> list[HouseholdSummary]:
-        rows = (
-            Household.objects.filter(
-                pk__in=HouseholdMembership.objects.filter(user_id=user_id).values("household_id"),
-                deleted_at__isnull=True,
-            )
-            .annotate(number_of_members=Count("memberships"))
-            .order_by("name")
+        households = Household.objects.filter(
+            pk__in=HouseholdMembership.objects.filter(user_id=user_id).values("household_id"),
+            deleted_at__isnull=True,
         )
-        return [
-            HouseholdSummary(id=row.pk, name=row.name, member_count=row.number_of_members)
-            for row in rows
-        ]
-
-    def list_active_households(self) -> list[HouseholdSummary]:
-        rows = (
-            Household.objects.filter(deleted_at__isnull=True)
-            .annotate(number_of_members=Count("memberships"))
-            .order_by("pk")
-        )
-        return [
-            HouseholdSummary(id=row.pk, name=row.name, member_count=row.number_of_members)
-            for row in rows
-        ]
-
-    def find_household(self, household_id: int) -> HouseholdSummary | None:
-        row = (
-            Household.objects.filter(pk=household_id, deleted_at__isnull=True)
-            .annotate(number_of_members=Count("memberships"))
-            .first()
-        )
-        if row is None:
-            return None
-        return HouseholdSummary(id=row.pk, name=row.name, member_count=row.number_of_members)
+        ordered = households.order_by("name")
+        return _to_summaries(ordered)
 
     def is_member(self, user_id: int, household_id: int) -> bool:
         return HouseholdMembership.objects.filter(
@@ -69,10 +42,8 @@ class DjangoHouseholdRepository(HouseholdRepository):
         )
         if updated == 0:
             raise HouseholdNotFoundError
-        renamed = self.find_household(household_id)
-        if renamed is None:
-            raise HouseholdNotFoundError
-        return renamed
+        renamed = Household.objects.filter(pk=household_id)
+        return _to_summaries(renamed)[0]
 
     def add_member(self, household_id: int, username: str) -> HouseholdMember:
         if not Household.objects.filter(pk=household_id, deleted_at__isnull=True).exists():
@@ -92,3 +63,11 @@ class DjangoHouseholdRepository(HouseholdRepository):
 
     def count_members(self, household_id: int) -> int:
         return HouseholdMembership.objects.filter(household_id=household_id).count()
+
+
+def _to_summaries(households: QuerySet[Household]) -> list[HouseholdSummary]:
+    rows = households.annotate(number_of_members=Count("memberships"))
+    return [
+        HouseholdSummary(id=row.pk, name=row.name, member_count=row.number_of_members)
+        for row in rows
+    ]

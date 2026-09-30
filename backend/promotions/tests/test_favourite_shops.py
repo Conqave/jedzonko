@@ -1,7 +1,8 @@
 import pytest
 
+from promotions.application.errors import UnknownShopError
 from promotions.application.use_cases.list_favourite_shops import ListFavouriteShops
-from promotions.application.use_cases.set_favourite_shops import SetFavouriteShops, UnknownShopError
+from promotions.application.use_cases.set_favourite_shops import SetFavouriteShops
 from promotions.domain.models import FavouriteShop
 from promotions.tests.fakes import FakeFavouriteShopRepository, FakePromotionSource
 

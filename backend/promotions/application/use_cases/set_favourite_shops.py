@@ -1,13 +1,8 @@
+from promotions.application.errors import UnknownShopError
 from promotions.application.ports.favourite_shop_repository import FavouriteShopRepository
 from promotions.application.ports.promotion_source import PromotionSource
 from promotions.application.shop_selection import normalize_shop_slugs
 from promotions.domain.models import FavouriteShop
-
-
-class UnknownShopError(Exception):
-    def __init__(self, shop_slug: str) -> None:
-        super().__init__(f"unknown shop: {shop_slug}")
-        self.shop_slug = shop_slug
 
 
 class SetFavouriteShops:

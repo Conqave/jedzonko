@@ -11,22 +11,6 @@ class Shop:
 
 
 @dataclass(frozen=True, slots=True)
-class Leaflet:
-    provider_id: str
-    shop_name: str
-    url: str
-    cover_url: str | None
-    validity_label: str | None
-    downloaded_on: date
-
-
-@dataclass(frozen=True, slots=True)
-class LeafletPage:
-    leaflet_provider_id: str
-    image_url: str
-
-
-@dataclass(frozen=True, slots=True)
 class PromotionOffer:
     provider_offer_id: str | None
     name: str

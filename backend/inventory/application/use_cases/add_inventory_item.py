@@ -2,12 +2,14 @@ from decimal import Decimal
 
 from inventory.application.errors import (
     DuplicateInventoryItemError,
+    MeasurementUnitNotFoundError,
     ProductNotFoundError,
 )
 from inventory.application.ports.inventory_repository import InventoryRepository
 from inventory.application.ports.product_directory import ProductDirectory
 from inventory.domain.models import InventoryItemSnapshot
 from shared.household_membership import HouseholdMembershipReader, require_membership
+from shared.measurement_units import find_measurement_unit
 
 
 class AddInventoryItem:
@@ -36,4 +38,6 @@ class AddInventoryItem:
         existing = self._repository.find_item_by_product(product_id)
         if existing is not None:
             raise DuplicateInventoryItemError
+        if find_measurement_unit(unit_code) is None:
+            raise MeasurementUnitNotFoundError
         return self._repository.create_item(product_id, quantity, unit_code, minimum_quantity)

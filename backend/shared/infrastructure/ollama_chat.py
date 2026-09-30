@@ -6,15 +6,11 @@ from dataclasses import dataclass
 import httpx
 
 
-class OllamaError(Exception):
+class OllamaUnavailableError(Exception):
     pass
 
 
-class OllamaUnavailableError(OllamaError):
-    pass
-
-
-class OllamaContractError(OllamaError):
+class OllamaContractError(Exception):
     pass
 
 
@@ -38,10 +34,6 @@ class OllamaChat:
     @property
     def model_name(self) -> str:
         return self._model
-
-    def ask(self, prompt: str) -> str:
-        payload = self._build_payload(prompt, self._max_output_tokens)
-        return self._send(payload)
 
     def ask_structured(self, prompt: str, response_schema: dict[str, object]) -> str:
         return self.ask_structured_at_length(prompt, response_schema, self._max_output_tokens)

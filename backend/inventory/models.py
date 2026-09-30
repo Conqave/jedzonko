@@ -5,7 +5,6 @@ from shared.measurement_units import MEASUREMENT_UNIT_CHOICES, MEASUREMENT_UNIT_
 
 
 class InventoryItem(models.Model):
-
     product = models.OneToOneField(
         "catalog.Product", on_delete=models.DB_CASCADE, related_name="inventory_item"
     )

@@ -1,7 +1,7 @@
-from inventory.application.errors import InventoryItemNotFoundError
+from inventory.application.item_membership import require_item_membership
 from inventory.application.ports.inventory_repository import InventoryRepository
 from inventory.domain.models import InventoryItemSnapshot
-from shared.household_membership import HouseholdMembershipReader, require_membership
+from shared.household_membership import HouseholdMembershipReader
 
 
 class DeleteInventoryItemPhoto:
@@ -12,8 +12,5 @@ class DeleteInventoryItemPhoto:
         self._memberships = memberships
 
     def execute(self, user_id: int, item_id: int) -> InventoryItemSnapshot:
-        household_id = self._repository.find_household_id_for_item(item_id)
-        if household_id is None:
-            raise InventoryItemNotFoundError
-        require_membership(self._memberships, user_id, household_id)
+        require_item_membership(self._repository, self._memberships, user_id, item_id)
         return self._repository.clear_photo(item_id)

@@ -6,8 +6,8 @@ from promotions.application.errors import (
     InvalidShopSelectionError,
     PromotionSourceContractError,
     PromotionSourceUnavailableError,
+    UnknownShopError,
 )
-from promotions.application.use_cases.set_favourite_shops import UnknownShopError
 
 API_ERRORS: ApiErrors = {
     PromotionSourceUnavailableError: (
