@@ -133,6 +133,23 @@ def test_restore_inside_the_window_brings_the_household_back_with_its_data(
     assert len(api_client.get(f"/api/products/?household_id={household.pk}").data) == 1
 
 
+def test_a_restored_household_returns_to_its_place_in_creation_order(
+    api_client: APIClient, ala: User, household: Household
+) -> None:
+    earlier = make_household(ala, "Zakupy wspólne")
+    later = make_household(ala, "Ania testuje")
+    Household.objects.filter(pk=earlier.pk).update(
+        created_at=household.created_at - timedelta(days=1)
+    )
+    api_client.force_login(ala)
+    api_client.delete(f"/api/households/{household.pk}/")
+
+    api_client.post(f"/api/households/{household.pk}/restore/")
+
+    listed = api_client.get("/api/households/").data
+    assert [item["id"] for item in listed] == [earlier.pk, household.pk, later.pk]
+
+
 def test_restore_outside_the_window_is_rejected(
     api_client: APIClient, ala: User, household: Household
 ) -> None:

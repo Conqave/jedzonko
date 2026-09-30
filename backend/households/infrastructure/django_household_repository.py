@@ -17,7 +17,7 @@ class DjangoHouseholdRepository(HouseholdRepository):
             pk__in=HouseholdMembership.objects.filter(user_id=user_id).values("household_id"),
             deleted_at__isnull=True,
         )
-        ordered = households.order_by("name")
+        ordered = households.order_by("created_at", "pk")
         return _to_summaries(ordered)
 
     def is_member(self, user_id: int, household_id: int) -> bool:

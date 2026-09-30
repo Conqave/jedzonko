@@ -43,6 +43,18 @@ def test_user_sees_only_own_households(api_client: APIClient, ala: User, ola: Us
     assert [item["name"] for item in response.data] == ["Dom Ali"]
 
 
+def test_households_are_listed_in_the_order_they_were_created(
+    api_client: APIClient, ala: User
+) -> None:
+    _create_household("Jugosłowiańska", ala)
+    _create_household("Dom testowy", ala)
+    api_client.force_login(ala)
+
+    response = api_client.get("/api/households/")
+
+    assert [item["name"] for item in response.data] == ["Jugosłowiańska", "Dom testowy"]
+
+
 def test_create_household_makes_creator_a_member(api_client: APIClient, ala: User) -> None:
     api_client.force_login(ala)
 

@@ -78,9 +78,8 @@ export const useHouseholdStore = defineStore('households', () => {
   }
 
   async function restore(householdId: number): Promise<void> {
-    const restored = await restoreHousehold(householdId);
-    households.value = [...households.value, restored];
-    selectAvailable();
+    await restoreHousehold(householdId);
+    await load();
   }
 
   function refreshMemberCount(householdId: number, memberCount: number): void {
