@@ -3,12 +3,12 @@ from decimal import Decimal
 
 from shared.household_membership import HouseholdMembershipReader, require_membership
 from shared.transactions import TransactionManager
-from shopping.application.errors import ShoppingListNotFoundError
+from shopping.application.errors import ShoppingItemMergeConflictError, ShoppingListNotFoundError
 from shopping.application.ports.line_interpreter import LineInterpreter
 from shopping.application.ports.shopping_list_repository import ShoppingListRepository
+from shopping.application.shopping_list_rules import put_tag_on_item
 from shopping.domain.line_meaning import LineMeaning
 from shopping.domain.shopping_item_snapshot import ShoppingItemSnapshot
-from shopping.domain.shopping_subject import ShoppingSubject
 
 COUNT_UNIT = "szt"
 
@@ -51,16 +51,10 @@ class TagShoppingList:
 
     def _retag(self, item: ShoppingItemSnapshot, ingredient_id: int, meaning: LineMeaning) -> None:
         quantity, unit_code = _amount(item, meaning)
-        subject = ShoppingSubject(ingredient_id=ingredient_id)
-        existing = self._repository.find_pending_item(item.list_id, subject)
-        if existing is None:
-            self._repository.retag_item(item.id, ingredient_id, quantity, unit_code)
+        try:
+            put_tag_on_item(self._repository, item, ingredient_id, quantity, unit_code)
+        except ShoppingItemMergeConflictError:
             return
-        existing_unit = None if existing.unit is None else existing.unit.code
-        if existing_unit != unit_code:
-            return
-        self._repository.set_item_quantity(existing.id, existing.quantity + quantity, unit_code)
-        self._repository.delete_item(item.id)
 
 
 def _amount(item: ShoppingItemSnapshot, meaning: LineMeaning) -> tuple[Decimal, str]:

@@ -5,6 +5,7 @@ from shopping.application.errors import (
     IngredientNotFoundError,
     InvalidShoppingItemError,
     ProductNotFoundError,
+    ShoppingItemMergeConflictError,
 )
 from shopping.application.ports.catalog_directory import CatalogDirectory
 from shopping.application.ports.shopping_list_repository import ShoppingListRepository
@@ -66,6 +67,23 @@ def ensure_on_list(
     if _unit_code(existing) == unit_code and existing.quantity >= quantity:
         return
     repository.set_item_quantity(existing.id, quantity, unit_code)
+
+
+def put_tag_on_item(
+    repository: ShoppingListRepository,
+    item: ShoppingItemSnapshot,
+    ingredient_id: int,
+    quantity: Decimal,
+    unit_code: str,
+) -> ShoppingItemSnapshot:
+    subject = ShoppingSubject(ingredient_id=ingredient_id)
+    existing = repository.find_pending_item(item.list_id, subject)
+    if existing is None or existing.id == item.id:
+        return repository.retag_item(item.id, ingredient_id, quantity, unit_code)
+    if _unit_code(existing) != unit_code:
+        raise ShoppingItemMergeConflictError
+    repository.delete_item(item.id)
+    return repository.set_item_quantity(existing.id, existing.quantity + quantity, unit_code)
 
 
 def _unit_code(item: ShoppingItemSnapshot) -> str | None:

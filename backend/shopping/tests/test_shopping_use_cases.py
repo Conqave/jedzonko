@@ -26,15 +26,18 @@ from shopping.application.use_cases.choose_shopping_item_product import ChooseSh
 from shopping.application.use_cases.create_primary_shopping_list import CreatePrimaryShoppingList
 from shopping.application.use_cases.delete_shopping_list import DeleteShoppingList
 from shopping.application.use_cases.get_shopping_list_items import GetShoppingListItems
+from shopping.application.use_cases.interpret_shopping_item import InterpretShoppingItem
 from shopping.application.use_cases.list_shopping_lists import ListShoppingLists
 from shopping.application.use_cases.reassign_shopping_ingredient import ReassignShoppingIngredient
 from shopping.application.use_cases.restore_shopping_item import RestoreShoppingItem
 from shopping.application.use_cases.synchronize_minimum_stock import SynchronizeMinimumStock
+from shopping.application.use_cases.tag_shopping_item import TagShoppingItem
 from shopping.application.use_cases.tag_shopping_list import TagAllShoppingLists, TagShoppingList
 from shopping.domain.errors import InvalidShoppingSubjectError
 from shopping.domain.inventory_stock_level import InventoryStockLevel
 from shopping.domain.line_meaning import LineMeaning
 from shopping.domain.missing_recipe_item import MissingRecipeItem
+from shopping.domain.shopping_item_interpretation import ShoppingItemInterpretation
 from shopping.domain.shopping_subject import ShoppingSubject
 from shopping.tests.fakes import (
     UNITS,
@@ -232,7 +235,9 @@ def test_minimum_stock_fills_the_primary_list_once(shopping: Shopping) -> None:
 def test_buying_a_product_adds_it_to_the_pantry_in_one_transaction(shopping: Shopping) -> None:
     item_id = shopping.add(ShoppingSubject(product_id=FLOUR), "2", "kg")
     writer = FakeInventoryWriter()
-    buy = BuyShoppingItem(shopping.repository, writer, shopping.memberships, shopping.transactions)
+    buy = BuyShoppingItem(
+        shopping.repository, writer, shopping.catalog, shopping.memberships, shopping.transactions
+    )
     opened_before = shopping.transactions.opened
 
     buy.execute(ALA, item_id, NOW)
@@ -247,7 +252,9 @@ def test_buying_an_ingredient_or_text_item_leaves_the_pantry_alone(shopping: Sho
     eggs = shopping.add(ShoppingSubject(ingredient_id=EGGS), "6", "szt")
     towels = shopping.add(ShoppingSubject(free_text="ręczniki"), "1", None)
     writer = FakeInventoryWriter()
-    buy = BuyShoppingItem(shopping.repository, writer, shopping.memberships, shopping.transactions)
+    buy = BuyShoppingItem(
+        shopping.repository, writer, shopping.catalog, shopping.memberships, shopping.transactions
+    )
 
     buy.execute(ALA, eggs, NOW)
     buy.execute(ALA, towels, NOW)
@@ -258,7 +265,11 @@ def test_buying_an_ingredient_or_text_item_leaves_the_pantry_alone(shopping: Sho
 def test_a_bought_item_can_be_put_back_unless_it_is_listed_again(shopping: Shopping) -> None:
     first = shopping.add(ShoppingSubject(product_id=FLOUR), "1", "kg")
     buy = BuyShoppingItem(
-        shopping.repository, FakeInventoryWriter(), shopping.memberships, shopping.transactions
+        shopping.repository,
+        FakeInventoryWriter(),
+        shopping.catalog,
+        shopping.memberships,
+        shopping.transactions,
     )
     restore = RestoreShoppingItem(shopping.repository, shopping.memberships, shopping.transactions)
     buy.execute(ALA, first, NOW)
@@ -410,3 +421,128 @@ def test_every_list_with_free_text_is_tagged_in_one_run() -> None:
 
     assert count == 1
     assert shopping.quantities() == [(ShoppingSubject(ingredient_id=EGGS), Decimal("6"), "szt")]
+
+
+def test_buying_an_ingredient_item_stocks_the_households_only_product_of_it(
+    shopping: Shopping,
+) -> None:
+    shopping.catalog = FakeCatalogDirectory({FLOUR: HOME}, {EGGS}, only_products={EGGS: FLOUR})
+    eggs = shopping.add(ShoppingSubject(ingredient_id=EGGS), "6", "szt")
+    writer = FakeInventoryWriter()
+    buy = BuyShoppingItem(
+        shopping.repository, writer, shopping.catalog, shopping.memberships, shopping.transactions
+    )
+
+    buy.execute(ALA, eggs, NOW)
+
+    assert writer.added == [(HOME, FLOUR, Decimal("6"), "szt")]
+
+
+def tag_item(shopping: Shopping, item_id: int, quantity: str, unit_code: str) -> None:
+    use_case = TagShoppingItem(
+        shopping.repository, shopping.catalog, shopping.memberships, shopping.transactions
+    )
+    use_case.execute(ALA, item_id, EGGS, Decimal(quantity), unit_code)
+
+
+def test_a_free_text_item_is_tagged_by_hand(shopping: Shopping) -> None:
+    item_id = shopping.add(ShoppingSubject(free_text="6 jajek"), "1", None)
+
+    tag_item(shopping, item_id, "6", "szt")
+
+    assert shopping.quantities() == [(ShoppingSubject(ingredient_id=EGGS), Decimal("6"), "szt")]
+
+
+def test_a_product_item_is_retagged_by_hand(shopping: Shopping) -> None:
+    item_id = shopping.add(ShoppingSubject(product_id=FLOUR), "2", "kg")
+
+    tag_item(shopping, item_id, "10", "szt")
+
+    assert shopping.quantities() == [(ShoppingSubject(ingredient_id=EGGS), Decimal("10"), "szt")]
+
+
+def test_retagging_an_item_with_its_own_tag_changes_the_amount(shopping: Shopping) -> None:
+    item_id = shopping.add(ShoppingSubject(ingredient_id=EGGS), "4", "szt")
+
+    tag_item(shopping, item_id, "8", "szt")
+
+    assert shopping.quantities() == [(ShoppingSubject(ingredient_id=EGGS), Decimal("8"), "szt")]
+
+
+def test_a_hand_tagged_item_adds_up_with_a_pending_item_of_the_same_tag(
+    shopping: Shopping,
+) -> None:
+    shopping.add(ShoppingSubject(ingredient_id=EGGS), "4", "szt")
+    item_id = shopping.add(ShoppingSubject(free_text="jajka"), "1", None)
+
+    tag_item(shopping, item_id, "6", "szt")
+
+    assert shopping.quantities() == [(ShoppingSubject(ingredient_id=EGGS), Decimal("10"), "szt")]
+
+
+def test_a_hand_tag_in_another_unit_than_the_pending_item_is_rejected(
+    shopping: Shopping,
+) -> None:
+    shopping.add(ShoppingSubject(ingredient_id=EGGS), "4", "szt")
+    item_id = shopping.add(ShoppingSubject(free_text="jajka"), "1", None)
+
+    with pytest.raises(ShoppingItemMergeConflictError):
+        tag_item(shopping, item_id, "300", "g")
+
+
+def test_a_hand_tag_must_be_a_known_ingredient_with_a_valid_amount(shopping: Shopping) -> None:
+    item_id = shopping.add(ShoppingSubject(free_text="jajka"), "1", None)
+    use_case = TagShoppingItem(
+        shopping.repository, shopping.catalog, shopping.memberships, shopping.transactions
+    )
+
+    with pytest.raises(IngredientNotFoundError):
+        use_case.execute(ALA, item_id, FLOUR, Decimal("1"), "szt")
+    with pytest.raises(InvalidShoppingItemError):
+        use_case.execute(ALA, item_id, EGGS, Decimal("1"), "furlong")
+
+
+def test_only_members_tag_pending_items(shopping: Shopping) -> None:
+    item_id = shopping.add(ShoppingSubject(free_text="jajka"), "1", None)
+    use_case = TagShoppingItem(
+        shopping.repository, shopping.catalog, shopping.memberships, shopping.transactions
+    )
+
+    with pytest.raises(NotAHouseholdMemberError):
+        use_case.execute(2, item_id, EGGS, Decimal("1"), "szt")
+
+
+def interpret(shopping: Shopping, item_id: int, meanings: dict[str, LineMeaning]) -> object:
+    use_case = InterpretShoppingItem(
+        shopping.repository, FakeLineInterpreter(meanings), shopping.catalog, shopping.memberships
+    )
+    return use_case.execute(ALA, item_id, NOW)
+
+
+def test_the_model_proposes_a_tag_and_an_amount_for_an_item() -> None:
+    shopping = Shopping()
+    shopping.catalog = FakeCatalogDirectory({}, {EGGS}, ingredient_names={EGGS: "Jajka"})
+    item_id = shopping.add(ShoppingSubject(free_text="6 jajek"), "1", None)
+    meaning = LineMeaning(ingredient_id=EGGS, quantity=Decimal("6"), unit_code="szt")
+
+    proposal = interpret(shopping, item_id, {"6 jajek": meaning})
+
+    assert proposal == ShoppingItemInterpretation(EGGS, "Jajka", Decimal("6"), "szt")
+    assert shopping.quantities() == [(ShoppingSubject(free_text="6 jajek"), Decimal("1"), None)]
+
+
+def test_an_unrecognised_item_gets_an_empty_proposal(shopping: Shopping) -> None:
+    item_id = shopping.add(ShoppingSubject(free_text="coś na ząb"), "1", None)
+
+    proposal = interpret(shopping, item_id, {})
+
+    assert proposal == ShoppingItemInterpretation(None, None, None, None)
+
+
+def test_a_proposed_tag_outside_the_catalog_is_dropped(shopping: Shopping) -> None:
+    item_id = shopping.add(ShoppingSubject(free_text="6 jajek"), "1", None)
+    meaning = LineMeaning(ingredient_id=EGGS, quantity=Decimal("6"), unit_code="szt")
+
+    proposal = interpret(shopping, item_id, {"6 jajek": meaning})
+
+    assert proposal == ShoppingItemInterpretation(None, None, Decimal("6"), "szt")

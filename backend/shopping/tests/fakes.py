@@ -217,9 +217,11 @@ class FakeCatalogDirectory(CatalogDirectory):
         products: dict[int, int],
         ingredient_ids: set[int],
         only_products: dict[int, int] | None = None,
+        ingredient_names: dict[int, str] | None = None,
     ) -> None:
         self._household_by_product = products
         self._ingredient_ids = ingredient_ids
+        self._ingredient_names = {} if ingredient_names is None else ingredient_names
         self._only_products = {} if only_products is None else only_products
 
     def is_household_product(self, household_id: int, product_id: int) -> bool:
@@ -227,6 +229,9 @@ class FakeCatalogDirectory(CatalogDirectory):
 
     def has_ingredient(self, ingredient_id: int) -> bool:
         return ingredient_id in self._ingredient_ids
+
+    def find_ingredient_name(self, ingredient_id: int) -> str | None:
+        return self._ingredient_names.get(ingredient_id)
 
     def find_only_product_of_ingredient(self, household_id: int, ingredient_id: int) -> int | None:
         return self._only_products.get(ingredient_id)

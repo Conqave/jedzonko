@@ -3,6 +3,8 @@ from django.urls import URLPattern, path
 from shopping.presentation.views import (
     MinimumStockSynchronizationView,
     ShoppingItemDetailView,
+    ShoppingItemIngredientView,
+    ShoppingItemInterpretationView,
     ShoppingItemProductView,
     ShoppingItemPurchaseView,
     ShoppingItemRestoreView,
@@ -31,6 +33,8 @@ urlpatterns: list[URLPattern] = [
     path("households/<int:household_id>/minimum-stock/", MinimumStockSynchronizationView.as_view()),
     path("items/<int:item_id>/", ShoppingItemDetailView.as_view()),
     path("items/<int:item_id>/product/", ShoppingItemProductView.as_view()),
+    path("items/<int:item_id>/ingredient/", ShoppingItemIngredientView.as_view()),
+    path("items/<int:item_id>/interpretation/", ShoppingItemInterpretationView.as_view()),
     path("items/<int:item_id>/purchase/", ShoppingItemPurchaseView.as_view()),
     path("items/<int:item_id>/restore/", ShoppingItemRestoreView.as_view()),
 ]

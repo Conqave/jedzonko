@@ -16,9 +16,11 @@ from shopping.presentation.serializers import (
     CreateShoppingListSerializer,
     HouseholdQuerySerializer,
     RenameShoppingListSerializer,
+    ShoppingItemInterpretationSerializer,
     ShoppingItemSerializer,
     ShoppingListSerializer,
     SplitByPromotionsSerializer,
+    TagItemSerializer,
 )
 
 
@@ -164,6 +166,30 @@ class ShoppingItemProductView(APIView):
         use_case = container().shopping.choose_shopping_item_product
         item = use_case.execute(user_id, item_id, payload.validated_data["product_id"])
         serializer = ShoppingItemSerializer(item)
+        return Response(serializer.data)
+
+
+class ShoppingItemIngredientView(APIView):
+    def put(self, request: Request, item_id: int) -> Response:
+        user_id = current_user_id(request)
+        payload = TagItemSerializer(data=request.data)
+        payload.is_valid(raise_exception=True)
+        data = payload.validated_data
+        use_case = container().shopping.tag_shopping_item
+        item = use_case.execute(
+            user_id, item_id, data["ingredient_id"], data["quantity"], data["unit_code"]
+        )
+        serializer = ShoppingItemSerializer(item)
+        return Response(serializer.data)
+
+
+class ShoppingItemInterpretationView(APIView):
+    def post(self, request: Request, item_id: int) -> Response:
+        user_id = current_user_id(request)
+        now = timezone.now()
+        use_case = container().shopping.interpret_shopping_item
+        interpretation = use_case.execute(user_id, item_id, now)
+        serializer = ShoppingItemInterpretationSerializer(interpretation)
         return Response(serializer.data)
 
 

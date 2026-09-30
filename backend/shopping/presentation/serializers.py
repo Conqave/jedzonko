@@ -74,3 +74,18 @@ class BuyItemsSerializer(serializers.Serializer[dict[str, list[int]]]):
     item_ids = serializers.ListField(
         child=serializers.IntegerField(min_value=1), min_length=1, max_length=200
     )
+
+
+class TagItemSerializer(serializers.Serializer[dict[str, object]]):
+    ingredient_id = serializers.IntegerField(min_value=1)
+    quantity = serializers.DecimalField(max_digits=12, decimal_places=3, min_value=Decimal("0.001"))
+    unit_code = serializers.CharField(max_length=16)
+
+
+class ShoppingItemInterpretationSerializer(serializers.Serializer[object]):
+    ingredient_id = serializers.IntegerField(read_only=True, allow_null=True)
+    ingredient_name = serializers.CharField(read_only=True, allow_null=True)
+    quantity = serializers.DecimalField(
+        max_digits=12, decimal_places=3, read_only=True, allow_null=True
+    )
+    unit_code = serializers.CharField(read_only=True, allow_null=True)

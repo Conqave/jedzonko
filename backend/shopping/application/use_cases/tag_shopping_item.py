@@ -1,31 +1,35 @@
-from datetime import datetime
+from decimal import Decimal
 
 from shared.household_membership import HouseholdMembershipReader, require_membership
 from shared.transactions import TransactionManager
 from shopping.application.errors import ShoppingListItemNotFoundError, ShoppingListNotFoundError
 from shopping.application.ports.catalog_directory import CatalogDirectory
-from shopping.application.ports.inventory_writer import InventoryWriter
 from shopping.application.ports.shopping_list_repository import ShoppingListRepository
+from shopping.application.shopping_list_rules import (
+    put_tag_on_item,
+    require_known_subject,
+    require_valid_amount,
+)
 from shopping.domain.shopping_item_snapshot import ShoppingItemSnapshot
+from shopping.domain.shopping_subject import ShoppingSubject
 
 
-class BuyShoppingItem:
-
+class TagShoppingItem:
     def __init__(
         self,
         repository: ShoppingListRepository,
-        inventory: InventoryWriter,
         catalog: CatalogDirectory,
         memberships: HouseholdMembershipReader,
         transactions: TransactionManager,
     ) -> None:
         self._repository = repository
-        self._inventory = inventory
         self._catalog = catalog
         self._memberships = memberships
         self._transactions = transactions
 
-    def execute(self, user_id: int, item_id: int, now: datetime) -> None:
+    def execute(
+        self, user_id: int, item_id: int, ingredient_id: int, quantity: Decimal, unit_code: str
+    ) -> ShoppingItemSnapshot:
         item = self._repository.find_item(item_id)
         if item is None or item.is_purchased:
             raise ShoppingListItemNotFoundError
@@ -33,16 +37,8 @@ class BuyShoppingItem:
         if shopping_list is None:
             raise ShoppingListNotFoundError
         require_membership(self._memberships, user_id, shopping_list.household_id)
+        subject = ShoppingSubject(ingredient_id=ingredient_id)
+        require_known_subject(self._catalog, shopping_list.household_id, subject)
+        require_valid_amount(subject, quantity, unit_code)
         with self._transactions.atomic():
-            self._repository.mark_purchased(item_id, now)
-            product_id = self._find_product(shopping_list.household_id, item)
-            if product_id is not None and item.unit is not None:
-                self._inventory.add_purchased_quantity(
-                    shopping_list.household_id, product_id, item.quantity, item.unit
-                )
-
-    def _find_product(self, household_id: int, item: ShoppingItemSnapshot) -> int | None:
-        ingredient_id = item.subject.ingredient_id
-        if ingredient_id is None:
-            return item.subject.product_id
-        return self._catalog.find_only_product_of_ingredient(household_id, ingredient_id)
+            return put_tag_on_item(self._repository, item, ingredient_id, quantity, unit_code)

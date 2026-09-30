@@ -12,5 +12,9 @@ class CatalogDirectory(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def find_ingredient_name(self, ingredient_id: int) -> str | None:
+        raise NotImplementedError
+
+    @abstractmethod
     def find_only_product_of_ingredient(self, household_id: int, ingredient_id: int) -> int | None:
         raise NotImplementedError

@@ -21,6 +21,10 @@ class CatalogDirectory(CatalogDirectoryPort):
     def has_ingredient(self, ingredient_id: int) -> bool:
         return ingredient_id in self._get_ingredients.execute({ingredient_id})
 
+    def find_ingredient_name(self, ingredient_id: int) -> str | None:
+        ingredient = self._get_ingredients.execute({ingredient_id}).get(ingredient_id)
+        return None if ingredient is None else ingredient.name
+
     def find_only_product_of_ingredient(self, household_id: int, ingredient_id: int) -> int | None:
         identities = self._describe_products.execute(household_id)
         product_ids = [

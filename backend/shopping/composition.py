@@ -23,6 +23,7 @@ from shopping.application.use_cases.create_shopping_list import CreateShoppingLi
 from shopping.application.use_cases.delete_shopping_list import DeleteShoppingList
 from shopping.application.use_cases.delete_shopping_list_item import DeleteShoppingListItem
 from shopping.application.use_cases.get_shopping_list_items import GetShoppingListItems
+from shopping.application.use_cases.interpret_shopping_item import InterpretShoppingItem
 from shopping.application.use_cases.list_shopping_lists import ListShoppingLists
 from shopping.application.use_cases.reassign_shopping_ingredient import ReassignShoppingIngredient
 from shopping.application.use_cases.rename_shopping_list import RenameShoppingList
@@ -31,6 +32,7 @@ from shopping.application.use_cases.split_shopping_list_by_promotions import (
     SplitShoppingListByPromotions,
 )
 from shopping.application.use_cases.synchronize_minimum_stock import SynchronizeMinimumStock
+from shopping.application.use_cases.tag_shopping_item import TagShoppingItem
 from shopping.application.use_cases.tag_shopping_list import (
     TagAllShoppingLists,
     TagShoppingList,
@@ -54,6 +56,8 @@ class ShoppingModule:
     restore_shopping_item: RestoreShoppingItem
     delete_shopping_list_item: DeleteShoppingListItem
     choose_shopping_item_product: ChooseShoppingItemProduct
+    tag_shopping_item: TagShoppingItem
+    interpret_shopping_item: InterpretShoppingItem
     tag_shopping_list: TagShoppingList
     tag_all_shopping_lists: TagAllShoppingLists
     split_shopping_list_by_promotions: SplitShoppingListByPromotions
@@ -79,7 +83,7 @@ def build_shopping(
 ) -> ShoppingModule:
     lists = DjangoShoppingListRepository()
     tag_list = TagShoppingList(lists, line_interpreter, memberships, transactions)
-    buy_item = BuyShoppingItem(lists, inventory_writer, memberships, transactions)
+    buy_item = BuyShoppingItem(lists, inventory_writer, catalog, memberships, transactions)
     add_missing = AddMissingRecipeItemsToShoppingList(
         lists, recipes, catalog, memberships, transactions
     )
@@ -105,6 +109,10 @@ def build_shopping(
         delete_shopping_list_item=DeleteShoppingListItem(lists, memberships),
         choose_shopping_item_product=ChooseShoppingItemProduct(
             lists, catalog, memberships, transactions
+        ),
+        tag_shopping_item=TagShoppingItem(lists, catalog, memberships, transactions),
+        interpret_shopping_item=InterpretShoppingItem(
+            lists, line_interpreter, catalog, memberships
         ),
         tag_shopping_list=tag_list,
         tag_all_shopping_lists=TagAllShoppingLists(lists, tag_list),

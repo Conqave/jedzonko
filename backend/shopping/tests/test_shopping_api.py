@@ -1,3 +1,5 @@
+from collections.abc import Callable, Iterator
+from datetime import datetime
 from decimal import Decimal
 
 import pytest
@@ -6,10 +8,15 @@ from django.db import IntegrityError, transaction
 from rest_framework.test import APIClient
 
 from catalog.models import Ingredient, Product
+from config.composition import container
 from households.models import Household
 from inventory.models import InventoryItem
 from recipes.models import Recipe
+from shopping.application.errors import TaggingUnavailableError
+from shopping.application.ports.line_interpreter import LineInterpreter
+from shopping.domain.line_meaning import LineMeaning
 from shopping.models import ShoppingList, ShoppingListItem
+from shopping.tests.fakes import FakeLineInterpreter
 from tests.factories import (
     add_recipe_line,
     confirm_ingredient,
@@ -342,3 +349,89 @@ def test_splitting_by_promotions_requires_promotion_access(
 
     assert response.status_code == 403
     assert response.data["code"] == "promotions_not_allowed"
+
+
+def test_a_free_text_item_is_tagged_and_bought_into_the_pantry(
+    member_client: APIClient, ala: User, home: Household
+) -> None:
+    eggs = make_ingredient("Jajka")
+    carton = make_product(home, "Jajka z wolnego wybiegu", "szt")
+    confirm_ingredient(ala, carton, eggs)
+    list_id = _primary_list_id(member_client, home)
+    item = _add(member_client, list_id, {"free_text": "6 jajek", "quantity": "1"})
+    body = {"ingredient_id": eggs.pk, "quantity": "6", "unit_code": "szt"}
+
+    tagged = member_client.put(f"/api/shopping/items/{item['id']}/ingredient/", body, format="json")
+    member_client.post(f"/api/shopping/items/{item['id']}/purchase/")
+
+    assert tagged.status_code == 200, tagged.data
+    summary = (tagged.data["ingredient_id"], tagged.data["free_text"], tagged.data["unit_code"])
+    assert summary == (eggs.pk, None, "szt")
+    assert InventoryItem.objects.get(product=carton).quantity == Decimal("6.000")
+
+
+def test_tagging_an_item_requires_a_unit(member_client: APIClient, home: Household) -> None:
+    eggs = make_ingredient("Jajka")
+    list_id = _primary_list_id(member_client, home)
+    item = _add(member_client, list_id, {"free_text": "jajka", "quantity": "1"})
+    body = {"ingredient_id": eggs.pk, "quantity": "6"}
+
+    response = member_client.put(
+        f"/api/shopping/items/{item['id']}/ingredient/", body, format="json"
+    )
+
+    assert response.status_code == 400
+
+
+InstallInterpreter = Callable[[LineInterpreter], None]
+
+
+@pytest.fixture
+def use_interpreter(monkeypatch: pytest.MonkeyPatch) -> Iterator[InstallInterpreter]:
+    def install(interpreter: LineInterpreter) -> None:
+        def build(open_interpretation: object) -> LineInterpreter:
+            return interpreter
+
+        monkeypatch.setattr("config.composition.CatalogLineInterpreter", build)
+        container.cache_clear()
+
+    yield install
+    container.cache_clear()
+
+
+class UnavailableLineInterpreter(LineInterpreter):
+    def interpret(self, texts: tuple[str, ...], now: datetime) -> dict[str, LineMeaning]:
+        raise TaggingUnavailableError
+
+
+def test_the_model_proposes_a_tag_for_one_item(
+    member_client: APIClient, home: Household, use_interpreter: InstallInterpreter
+) -> None:
+    eggs = make_ingredient("Jajka")
+    meaning = LineMeaning(ingredient_id=eggs.pk, quantity=Decimal("6"), unit_code="szt")
+    use_interpreter(FakeLineInterpreter({"6 jajek": meaning}))
+    list_id = _primary_list_id(member_client, home)
+    item = _add(member_client, list_id, {"free_text": "6 jajek", "quantity": "1"})
+
+    response = member_client.post(f"/api/shopping/items/{item['id']}/interpretation/")
+
+    assert response.status_code == 200
+    assert response.data == {
+        "ingredient_id": eggs.pk,
+        "ingredient_name": "Jajka",
+        "quantity": "6.000",
+        "unit_code": "szt",
+    }
+
+
+def test_an_unavailable_model_is_reported(
+    member_client: APIClient, home: Household, use_interpreter: InstallInterpreter
+) -> None:
+    use_interpreter(UnavailableLineInterpreter())
+    list_id = _primary_list_id(member_client, home)
+    item = _add(member_client, list_id, {"free_text": "jajka", "quantity": "1"})
+
+    response = member_client.post(f"/api/shopping/items/{item['id']}/interpretation/")
+
+    assert response.status_code == 503
+    assert response.data["code"] == "tagging_unavailable"
