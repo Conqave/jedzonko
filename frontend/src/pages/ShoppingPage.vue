@@ -29,10 +29,33 @@
         :busy="isItemBusy"
         :add-item="addItem"
       />
+      <ListFilterBar
+        v-if="selectedListId !== null"
+        v-model:search="search"
+        v-model:sort="sort"
+        v-model:is-reversed="isReversed"
+        search-label="Szukaj po nazwie lub tagu"
+        :sorts="SHOPPING_SORTS"
+        :sort-labels="SHOPPING_SORT_LABELS"
+      >
+        <ChoiceToggle
+          v-model="status"
+          :choices="SHOPPING_STATUS_FILTERS"
+          :labels="SHOPPING_STATUS_FILTER_LABELS"
+          label="Status"
+        />
+        <ChoiceToggle
+          v-model="tag"
+          :choices="TAG_FILTERS"
+          :labels="TAG_FILTER_LABELS"
+          label="Tag"
+        />
+      </ListFilterBar>
       <q-linear-progress v-if="isItemBusy" indeterminate class="q-mb-sm" />
       <ShoppingItemList
         :pending-items="pendingItems"
         :purchased-items="purchasedItems"
+        :is-filtered="isFiltered"
         :describe-unit-quantity="describeUnitQuantity"
         :find-product-tags="findProductTags"
         :is-tagging="isTagging"
@@ -52,7 +75,7 @@
 import { useQuasar } from 'quasar';
 import { toRef } from 'vue';
 import { useAccountStore } from '@/features/accounts/store';
-import type { Product } from '@/features/catalog/model';
+import { TAG_FILTER_LABELS, TAG_FILTERS, type Product } from '@/features/catalog/model';
 import { useMeasurementUnits } from '@/features/catalog/useMeasurementUnits';
 import { useProductCatalog } from '@/features/catalog/useProductCatalog';
 import { useHouseholdStore } from '@/features/households/store';
@@ -66,6 +89,10 @@ import ShoppingListToolbar from '@/features/shopping/components/ShoppingListTool
 import TagItemDialog from '@/features/shopping/components/TagItemDialog.vue';
 import {
   COUNT_UNIT_CODE,
+  SHOPPING_SORT_LABELS,
+  SHOPPING_SORTS,
+  SHOPPING_STATUS_FILTER_LABELS,
+  SHOPPING_STATUS_FILTERS,
   describeItemCount,
   findPurchaseProductQuestions,
   toPurchases,
@@ -75,8 +102,11 @@ import {
   type ShoppingItemTagRequest,
   type ShoppingList,
 } from '@/features/shopping/model';
+import { useShoppingItemView } from '@/features/shopping/useShoppingItemView';
 import { useShoppingItems } from '@/features/shopping/useShoppingItems';
 import { useShoppingLists } from '@/features/shopping/useShoppingLists';
+import ChoiceToggle from '@/shared/components/ChoiceToggle.vue';
+import ListFilterBar from '@/shared/components/ListFilterBar.vue';
 import { formatQuantity } from '@/shared/formatQuantity';
 import { useDialogs } from '@/shared/useDialogs';
 
@@ -98,8 +128,7 @@ const {
   splitSelected,
 } = useShoppingLists(householdId);
 const {
-  pendingItems,
-  purchasedItems,
+  items,
   busy: isItemBusy,
   load: loadItems,
   add: addItem,
@@ -127,6 +156,9 @@ function findProductTags(productId: number): string[] {
   const listing = productListings.value.find((entry) => entry.product.id === productId);
   return listing === undefined ? [] : listing.tags.map((tag) => tag.name);
 }
+
+const { search, status, tag, sort, isReversed, pendingItems, purchasedItems, isFiltered } =
+  useShoppingItemView(items, findProductTags);
 
 function findTagProducts(ingredientId: number): Product[] {
   const tagged = productListings.value.filter((entry) =>

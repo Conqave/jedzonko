@@ -1,4 +1,11 @@
-import type { Ingredient, Product } from '@/features/catalog/model';
+import {
+  matchesTagFilter,
+  type Ingredient,
+  type Product,
+  type TagFilter,
+} from '@/features/catalog/model';
+import { sortByKeys, type SortKey } from '@/shared/listView';
+import { matchesSearch } from '@/shared/textSearch';
 
 export interface ShoppingList {
   id: number;
@@ -119,4 +126,96 @@ export function describeItemCount(count: number): string {
     return `${String(count)} pozycje`;
   }
   return `${String(count)} pozycji`;
+}
+
+export const SHOPPING_STATUS_FILTERS = ['all', 'pending', 'purchased'] as const;
+
+export type ShoppingStatusFilter = (typeof SHOPPING_STATUS_FILTERS)[number];
+
+export const SHOPPING_STATUS_FILTER_LABELS: Readonly<Record<ShoppingStatusFilter, string>> = {
+  all: 'Wszystkie',
+  pending: 'Do kupienia',
+  purchased: 'Kupione',
+};
+
+export const SHOPPING_SORTS = ['added', 'name', 'tag'] as const;
+
+export type ShoppingSort = (typeof SHOPPING_SORTS)[number];
+
+export const SHOPPING_SORT_LABELS: Readonly<Record<ShoppingSort, string>> = {
+  added: 'Dodano',
+  name: 'Nazwa',
+  tag: 'Tag',
+};
+
+export interface ShoppingItemView {
+  search: string;
+  status: ShoppingStatusFilter;
+  tag: TagFilter;
+  sort: ShoppingSort;
+  isReversed: boolean;
+}
+
+export function findShoppingItemTags(
+  item: ShoppingItem,
+  findProductTags: (productId: number) => string[],
+): string[] {
+  if (item.subject.kind === 'product') {
+    return findProductTags(item.subject.productId);
+  }
+  if (item.subject.kind === 'ingredient') {
+    return [item.name];
+  }
+  return [];
+}
+
+interface ShoppingItemEntry {
+  item: ShoppingItem;
+  tagNames: string[];
+  position: number;
+}
+
+function matchesShoppingItemView(entry: ShoppingItemEntry, view: ShoppingItemView): boolean {
+  const matchesStatus = view.status === 'all' || entry.item.status === view.status;
+  const matchesTag = matchesTagFilter(view.tag, entry.tagNames);
+  const matchesText = matchesSearch(view.search, [entry.item.name, ...entry.tagNames]);
+  return matchesStatus && matchesTag && matchesText;
+}
+
+function toShoppingSortKeys(entry: ShoppingItemEntry, sort: ShoppingSort): SortKey[] {
+  if (sort === 'added') {
+    return [-entry.position];
+  }
+  if (sort === 'name') {
+    return [entry.item.name];
+  }
+  const tagKey = entry.tagNames.length === 0 ? null : entry.tagNames.join(', ');
+  return [tagKey, entry.item.name];
+}
+
+export function arrangeShoppingItems(
+  itemsInAddedOrder: ShoppingItem[],
+  view: ShoppingItemView,
+  findProductTags: (productId: number) => string[],
+): ShoppingItem[] {
+  const entries = itemsInAddedOrder.map((item, position) => ({
+    item,
+    tagNames: findShoppingItemTags(item, findProductTags),
+    position,
+  }));
+  const visible = entries.filter((entry) => matchesShoppingItemView(entry, view));
+  const sorted = sortByKeys(
+    visible,
+    (entry) => toShoppingSortKeys(entry, view.sort),
+    view.isReversed,
+  );
+  return sorted.map((entry) => entry.item);
+}
+
+export function findVisibleSelection(
+  visibleItems: ShoppingItem[],
+  selectedIds: readonly number[],
+): ShoppingItem[] {
+  const selected = new Set(selectedIds);
+  return visibleItems.filter((item) => selected.has(item.id));
 }

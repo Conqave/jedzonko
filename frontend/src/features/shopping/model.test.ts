@@ -1,13 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import type { Product } from '@/features/catalog/model';
 import {
+  arrangeShoppingItems,
   describeItemCount,
+  findShoppingItemTags,
+  findVisibleSelection,
   findPurchaseProductQuestions,
   hasAmount,
   orderPrimaryFirst,
   reachesPantry,
   toPurchases,
   type ShoppingItem,
+  type ShoppingItemView,
 } from './model';
 
 describe('orderPrimaryFirst', () => {
@@ -114,5 +118,104 @@ describe('describeItemCount', () => {
       '112 pozycji',
       '122 pozycje',
     ]);
+  });
+});
+
+const PRODUCT_TAGS: ReadonlyMap<number, string[]> = new Map([
+  [7, ['Nabiał', 'Ser']],
+  [8, []],
+]);
+
+function findProductTags(productId: number): string[] {
+  return PRODUCT_TAGS.get(productId) ?? [];
+}
+
+const EGGS: ShoppingItem = ITEM;
+const CHEESE: ShoppingItem = {
+  ...ITEM,
+  id: 2,
+  subject: { kind: 'product', productId: 7 },
+  name: 'Gouda plastry',
+};
+const MILK_NOTE: ShoppingItem = { ...TEXT_ITEM, id: 3, name: 'Mleko łaciate' };
+const BREAD: ShoppingItem = {
+  ...ITEM,
+  id: 4,
+  subject: { kind: 'product', productId: 8 },
+  name: 'Chleb żytni',
+  status: 'purchased',
+  purchasedAt: new Date('2026-09-01T10:00:00Z'),
+};
+const ADDED_ORDER = [EGGS, CHEESE, MILK_NOTE, BREAD];
+const EVERYTHING: ShoppingItemView = {
+  search: '',
+  status: 'all',
+  tag: 'all',
+  sort: 'added',
+  isReversed: false,
+};
+
+function arrangedIds(view: Partial<ShoppingItemView>): number[] {
+  const arranged = arrangeShoppingItems(ADDED_ORDER, { ...EVERYTHING, ...view }, findProductTags);
+  return arranged.map((item) => item.id);
+}
+
+describe('findShoppingItemTags', () => {
+  it('names the tags of a product, the ingredient itself, and none for a text line', () => {
+    expect(findShoppingItemTags(CHEESE, findProductTags)).toEqual(['Nabiał', 'Ser']);
+    expect(findShoppingItemTags(EGGS, findProductTags)).toEqual(['jajka']);
+    expect(findShoppingItemTags(MILK_NOTE, findProductTags)).toEqual([]);
+  });
+});
+
+describe('arrangeShoppingItems', () => {
+  it('shows the newest item first when sorted by date added', () => {
+    expect(arrangedIds({})).toEqual([4, 3, 2, 1]);
+    expect(arrangedIds({ isReversed: true })).toEqual([1, 2, 3, 4]);
+  });
+
+  it('sorts by name in Polish order', () => {
+    expect(arrangedIds({ sort: 'name' })).toEqual([4, 2, 1, 3]);
+  });
+
+  it('sorts by tag with untagged items last in either direction', () => {
+    expect(arrangedIds({ sort: 'tag' })).toEqual([1, 2, 4, 3]);
+    expect(arrangedIds({ sort: 'tag', isReversed: true })).toEqual([2, 1, 3, 4]);
+  });
+
+  it('filters by status', () => {
+    expect(arrangedIds({ status: 'pending' })).toEqual([3, 2, 1]);
+    expect(arrangedIds({ status: 'purchased' })).toEqual([4]);
+  });
+
+  it('filters by having a tag', () => {
+    expect(arrangedIds({ tag: 'tagged' })).toEqual([2, 1]);
+    expect(arrangedIds({ tag: 'untagged' })).toEqual([4, 3]);
+  });
+
+  it('searches item names and tag names without diacritics', () => {
+    expect(arrangedIds({ search: 'nabial' })).toEqual([2]);
+    expect(arrangedIds({ search: 'LACIATE' })).toEqual([3]);
+    expect(arrangedIds({ search: 'zytni' })).toEqual([4]);
+    expect(arrangedIds({ search: 'ser gouda' })).toEqual([2]);
+    expect(arrangedIds({ search: 'ser', status: 'purchased' })).toEqual([]);
+  });
+});
+
+describe('findVisibleSelection', () => {
+  it('acts only on ticked items that the filters still show', () => {
+    const visible = arrangeShoppingItems(
+      ADDED_ORDER,
+      { ...EVERYTHING, status: 'pending', search: 'jajka' },
+      findProductTags,
+    );
+
+    const selected = findVisibleSelection(visible, [1, 2, 3]);
+
+    expect(selected.map((item) => item.id)).toEqual([1]);
+  });
+
+  it('ignores ticks of items that are gone', () => {
+    expect(findVisibleSelection([EGGS], [99])).toEqual([]);
   });
 });

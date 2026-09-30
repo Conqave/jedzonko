@@ -1,6 +1,6 @@
 <template>
   <q-banner v-if="pendingItems.length === 0 && purchasedItems.length === 0" class="bg-grey-3">
-    Lista jest pusta.
+    {{ isFiltered ? NO_MATCHES_LABEL : 'Lista jest pusta.' }}
   </q-banner>
   <div v-else-if="pendingItems.length > 0" class="row justify-end q-gutter-sm q-mb-sm">
     <q-btn
@@ -114,7 +114,14 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
 import { formatQuantity } from '@/shared/formatQuantity';
-import { hasAmount, reachesPantry, type ShoppingItem } from '../model';
+import { NO_MATCHES_LABEL } from '@/shared/listView';
+import {
+  findShoppingItemTags,
+  findVisibleSelection,
+  hasAmount,
+  reachesPantry,
+  type ShoppingItem,
+} from '../model';
 
 const props = defineProps<{
   pendingItems: ShoppingItem[];
@@ -122,6 +129,7 @@ const props = defineProps<{
   describeUnitQuantity: (quantity: string, unitCode: string) => string;
   findProductTags: (productId: number) => string[];
   isTagging: boolean;
+  isFiltered: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -138,25 +146,18 @@ const selectedIds = ref<number[]>([]);
 
 watch(
   () => props.pendingItems,
-  (pending) => {
-    const pendingIds = new Set(pending.map((item) => item.id));
-    selectedIds.value = selectedIds.value.filter((id) => pendingIds.has(id));
+  (visiblePending) => {
+    const kept = findVisibleSelection(visiblePending, selectedIds.value);
+    selectedIds.value = kept.map((item) => item.id);
   },
 );
 
 function findSelectedItems(): ShoppingItem[] {
-  const selected = new Set(selectedIds.value);
-  return props.pendingItems.filter((item) => selected.has(item.id));
+  return findVisibleSelection(props.pendingItems, selectedIds.value);
 }
 
 function findItemTags(item: ShoppingItem): string[] {
-  if (item.subject.kind === 'product') {
-    return props.findProductTags(item.subject.productId);
-  }
-  if (item.subject.kind === 'ingredient') {
-    return [item.name];
-  }
-  return [];
+  return findShoppingItemTags(item, props.findProductTags);
 }
 
 function describeQuantity(item: ShoppingItem): string {

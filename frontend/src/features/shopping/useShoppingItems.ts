@@ -1,4 +1,4 @@
-import { computed, ref, watch, type Ref } from 'vue';
+import { ref, watch, type Ref } from 'vue';
 import { useApiAction } from '@/shared/useApiAction';
 import {
   addShoppingItem,
@@ -24,9 +24,6 @@ import type {
 export function useShoppingItems(listId: Ref<number | null>) {
   const items = ref<ShoppingItem[]>([]);
   const { busy, run } = useApiAction(SHOPPING_ERROR_MESSAGES);
-
-  const pendingItems = computed(() => items.value.filter((item) => item.status === 'pending'));
-  const purchasedItems = computed(() => items.value.filter((item) => item.status === 'purchased'));
 
   async function reload(id: number): Promise<void> {
     items.value = await fetchShoppingItems(id);
@@ -137,8 +134,6 @@ export function useShoppingItems(listId: Ref<number | null>) {
 
   return {
     items,
-    pendingItems,
-    purchasedItems,
     busy,
     load,
     add,
