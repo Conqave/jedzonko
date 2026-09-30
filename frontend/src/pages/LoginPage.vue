@@ -21,7 +21,14 @@
           />
         </q-card-section>
         <q-card-actions>
-          <q-btn type="submit" color="primary" class="full-width" label="Zaloguj" :loading="busy" />
+          <q-btn
+            type="submit"
+            no-caps
+            color="primary"
+            class="full-width"
+            label="Zaloguj"
+            :loading="busy"
+          />
         </q-card-actions>
       </q-form>
     </q-card>

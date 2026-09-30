@@ -34,7 +34,10 @@
       label="Usunięte domy"
       @show="loadDeleted"
     >
-      <DeletedHouseholdList :households="deletedHouseholds" @restore="restoreHousehold" />
+      <div v-if="deletedHouseholds.length === 0" class="q-pa-md text-grey-7">
+        Brak usuniętych domów
+      </div>
+      <DeletedHouseholdList v-else :households="deletedHouseholds" @restore="restoreHousehold" />
     </q-expansion-item>
   </q-page>
 </template>
