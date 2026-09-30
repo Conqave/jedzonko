@@ -1,4 +1,4 @@
-import type { MeasurementDimension, ProductChanges } from '@/features/catalog/model';
+import type { MeasurementUnit, ProductChanges } from '@/features/catalog/model';
 
 export interface InventoryItem {
   id: number;
@@ -43,7 +43,8 @@ export type QuantityDirection = -1 | 1;
 
 const THOUSANDTHS_PER_UNIT = 1000n;
 const COUNT_STEP_THOUSANDTHS = 1000n;
-const MEASURED_STEP_THOUSANDTHS = 100n;
+const BASE_UNIT_STEP_THOUSANDTHS = 50000n;
+const LARGE_UNIT_STEP_THOUSANDTHS = 100n;
 
 function toThousandths(quantity: string): bigint {
   const [whole = '0', fraction = ''] = quantity.split('.');
@@ -58,12 +59,20 @@ function fromThousandths(thousandths: bigint): string {
   return `${whole.toString()}.${paddedFraction}`;
 }
 
+function findStep(unit: MeasurementUnit): bigint {
+  if (unit.dimension === 'count') {
+    return COUNT_STEP_THOUSANDTHS;
+  }
+  const isBaseUnit = toThousandths(unit.factorToBase) === 1000n;
+  return isBaseUnit ? BASE_UNIT_STEP_THOUSANDTHS : LARGE_UNIT_STEP_THOUSANDTHS;
+}
+
 export function stepQuantity(
   quantity: string,
-  dimension: MeasurementDimension,
+  unit: MeasurementUnit,
   direction: QuantityDirection,
 ): string {
-  const step = dimension === 'count' ? COUNT_STEP_THOUSANDTHS : MEASURED_STEP_THOUSANDTHS;
+  const step = findStep(unit);
   const current = toThousandths(quantity);
   const next = current + BigInt(direction) * step;
   const clamped = next < 0n ? 0n : next;

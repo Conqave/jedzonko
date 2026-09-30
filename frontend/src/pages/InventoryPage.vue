@@ -149,7 +149,7 @@ async function stepItem(item: InventoryItem, direction: QuantityDirection): Prom
   if (unit === undefined) {
     return;
   }
-  const quantity = stepQuantity(item.quantity, unit.dimension, direction);
+  const quantity = stepQuantity(item.quantity, unit, direction);
   await update(item.id, { quantity });
 }
 

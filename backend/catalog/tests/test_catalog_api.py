@@ -222,7 +222,12 @@ def test_units_come_from_code_constants(api_client: APIClient, ala: User) -> Non
 
     by_code = {unit["code"]: unit for unit in response.data}
     assert set(by_code) == {"g", "kg", "ml", "l", "szt", "opak"}
-    assert by_code["kg"] == {"code": "kg", "name": "kilogram", "dimension": "mass"}
+    assert by_code["kg"] == {
+        "code": "kg",
+        "name": "kilogram",
+        "dimension": "mass",
+        "factor_to_base": "1000.000",
+    }
 
 
 def test_deleting_a_product_takes_it_out_of_pantry_and_lists(

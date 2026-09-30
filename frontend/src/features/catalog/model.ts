@@ -6,6 +6,7 @@ export interface MeasurementUnit {
   code: string;
   name: string;
   dimension: MeasurementDimension;
+  factorToBase: string;
 }
 
 export interface ProductPackage {

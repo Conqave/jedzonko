@@ -73,11 +73,19 @@ const decisionSchema = z
     decidedAt: value.decided_at,
   }));
 
-const unitSchema = z.object({
-  code: z.string(),
-  name: z.string(),
-  dimension: z.enum(MEASUREMENT_DIMENSIONS),
-});
+const unitSchema = z
+  .object({
+    code: z.string(),
+    name: z.string(),
+    dimension: z.enum(MEASUREMENT_DIMENSIONS),
+    factor_to_base: z.string(),
+  })
+  .transform((unit): MeasurementUnit => ({
+    code: unit.code,
+    name: unit.name,
+    dimension: unit.dimension,
+    factorToBase: unit.factor_to_base,
+  }));
 
 function toPackagePayload(value: ProductPackage | null) {
   return value === null ? null : { quantity: value.quantity, unit_code: value.unitCode };

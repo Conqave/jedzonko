@@ -70,6 +70,7 @@ class MeasurementUnitSerializer(serializers.Serializer[object]):
     code = serializers.CharField(read_only=True)
     name = serializers.CharField(read_only=True)
     dimension = serializers.CharField(read_only=True)
+    factor_to_base = serializers.DecimalField(max_digits=12, decimal_places=3, read_only=True)
 
 
 def to_package(data: object) -> ProductPackage | None:
