@@ -71,6 +71,24 @@ export interface ProductListing {
   openProposalCount: number;
 }
 
+export const TAG_FILTERS = ['all', 'tagged', 'untagged'] as const;
+
+export type TagFilter = (typeof TAG_FILTERS)[number];
+
+export const TAG_FILTER_LABELS: Readonly<Record<TagFilter, string>> = {
+  all: 'Wszystkie',
+  tagged: 'Z tagiem',
+  untagged: 'Bez tagu',
+};
+
+export function matchesTagFilter(filter: TagFilter, tagNames: readonly string[]): boolean {
+  if (filter === 'all') {
+    return true;
+  }
+  const isTagged = tagNames.length > 0;
+  return filter === 'tagged' ? isTagged : !isTagged;
+}
+
 export const PRODUCT_INGREDIENT_STATUSES = ['proposed', 'confirmed', 'rejected'] as const;
 
 export type ProductIngredientStatus = (typeof PRODUCT_INGREDIENT_STATUSES)[number];
