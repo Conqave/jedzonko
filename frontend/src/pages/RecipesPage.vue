@@ -14,8 +14,12 @@
     </q-banner>
 
     <q-tabs v-model="tab" align="left" class="q-mb-md" dense outside-arrows mobile-arrows>
-      <q-tab name="suggestions" label="Propozycje z zapasów" no-caps />
-      <q-tab name="all" label="Wszystkie przepisy" no-caps />
+      <q-tab
+        name="suggestions"
+        :label="quasar.screen.xs ? 'Z zapasów' : 'Propozycje z zapasów'"
+        no-caps
+      />
+      <q-tab name="all" :label="quasar.screen.xs ? 'Wszystkie' : 'Wszystkie przepisy'" no-caps />
       <q-tab name="external" label="Ania Gotuje" no-caps />
     </q-tabs>
 
@@ -86,6 +90,7 @@
 </template>
 
 <script setup lang="ts">
+import { useQuasar } from 'quasar';
 import { computed, ref, toRef } from 'vue';
 import { useMeasurementUnits } from '@/features/catalog/useMeasurementUnits';
 import { useHouseholdStore } from '@/features/households/store';
@@ -96,6 +101,7 @@ import { attachServings } from '@/features/recipes/model';
 import { useExternalRecipeSearch } from '@/features/recipes/useExternalRecipeSearch';
 import { useRecipeCatalog } from '@/features/recipes/useRecipeCatalog';
 
+const quasar = useQuasar();
 const households = useHouseholdStore();
 const selectedId = toRef(households, 'selectedId');
 const { recipes, suggestions, busy } = useRecipeCatalog(selectedId);

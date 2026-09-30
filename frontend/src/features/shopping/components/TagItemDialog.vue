@@ -6,8 +6,8 @@
         <div class="text-caption text-grey-8">„{{ itemName }}”</div>
       </q-card-section>
       <q-form @submit="submit">
-        <q-card-section class="q-gutter-sm">
-          <div class="row items-center q-gutter-sm">
+        <q-card-section class="column q-gutter-y-sm">
+          <div class="row items-center q-gutter-x-sm">
             <q-btn
               outline
               no-caps
@@ -30,7 +30,7 @@
             </span>
           </div>
           <IngredientPicker v-model="ingredient" label="Tag (składnik)" />
-          <div class="row q-col-gutter-sm">
+          <div class="row q-col-gutter-x-sm">
             <div class="col-6">
               <q-input
                 v-model="quantity"
