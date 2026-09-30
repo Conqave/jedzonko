@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { http } from '@/shared/http';
 import {
+  CALORIE_PROVENANCES,
   PRODUCT_INGREDIENT_PROVENANCES,
   PRODUCT_INGREDIENT_STATUSES,
   MEASUREMENT_DIMENSIONS,
@@ -12,6 +13,7 @@ import {
   type ProductIngredientDecision,
   type ProductListing,
   type ProductPackage,
+  type TagCalories,
 } from './model';
 
 const packageSchema = z
@@ -38,6 +40,24 @@ const productSchema = z
 
 const ingredientSchema = z.object({ id: z.number().int(), name: z.string() });
 
+const caloriesSchema = z
+  .object({
+    kcal_per_100g: z.string(),
+    provenance: z.enum(CALORIE_PROVENANCES),
+    reference_url: z.string().nullable(),
+  })
+  .transform((value): TagCalories => ({
+    kcalPer100g: value.kcal_per_100g,
+    provenance: value.provenance,
+    referenceUrl: value.reference_url,
+  }));
+
+const tagSchema = z.object({
+  id: z.number().int(),
+  name: z.string(),
+  calories: caloriesSchema.nullable(),
+});
+
 const listingSchema = z
   .object({
     product: productSchema,
@@ -57,7 +77,7 @@ const dateOrNull = z.iso
 
 const decisionSchema = z
   .object({
-    ingredient: ingredientSchema,
+    ingredient: tagSchema,
     status: z.enum(PRODUCT_INGREDIENT_STATUSES),
     provenance: z.enum(PRODUCT_INGREDIENT_PROVENANCES),
     model_name: z.string().nullable(),
@@ -65,7 +85,8 @@ const decisionSchema = z
     decided_at: dateOrNull,
   })
   .transform((value): ProductIngredientDecision => ({
-    ingredient: value.ingredient,
+    ingredient: { id: value.ingredient.id, name: value.ingredient.name },
+    calories: value.ingredient.calories,
     status: value.status,
     provenance: value.provenance,
     modelName: value.model_name,
@@ -155,6 +176,16 @@ export async function analyzeProductIngredient(productId: number): Promise<numbe
 export async function searchIngredients(search: string): Promise<Ingredient[]> {
   const response = await http.get('/ingredients/', { params: { search } });
   return ingredientSchema.array().parse(response.data);
+}
+
+export async function setTagCalories(
+  ingredientId: number,
+  kcalPer100g: string | null,
+): Promise<TagCalories | null> {
+  const payload = { kcal_per_100g: kcalPer100g };
+  const response = await http.put(`/ingredients/${ingredientId}/calories/`, payload);
+  const tag = tagSchema.parse(response.data);
+  return tag.calories;
 }
 
 export async function fetchMeasurementUnits(): Promise<MeasurementUnit[]> {

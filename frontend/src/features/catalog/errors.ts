@@ -14,4 +14,6 @@ export const CATALOG_ERROR_MESSAGES: ErrorMessages = {
   product_already_classified:
     'Produkt ma już potwierdzony składnik. Odrzuć go, aby przeanalizować ponownie.',
   invalid_product_ingredient_transition: 'Ten składnik został już odrzucony.',
+  invalid_tag_calories:
+    'Kalorie na 100 g to liczba od 0 do 900 z najwyżej jednym miejscem po przecinku.',
 };

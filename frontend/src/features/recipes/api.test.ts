@@ -1,5 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { createRecipe, fetchExternalShortfall, fetchSuggestions } from './api';
+import {
+  createRecipe,
+  fetchExternalRecipeNutrition,
+  fetchExternalShortfall,
+  fetchRecipeNutrition,
+  fetchSuggestions,
+} from './api';
 import { createEmptyDraft } from './model';
 
 const { get, post } = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn() }));
@@ -58,5 +64,37 @@ describe('recipes api', () => {
       { position: 1, text: 'Roztrzep.' },
       { position: 2, text: 'Usmaż.' },
     ]);
+  });
+
+  it('reads the nutrition of a recipe with what was not counted', async () => {
+    get.mockResolvedValue({
+      data: {
+        total_kcal: '1310.0',
+        kcal_per_serving: '327.5',
+        uncounted_ingredients: [{ name: 'mleko', reason: 'not_by_mass' }],
+      },
+    });
+
+    const nutrition = await fetchRecipeNutrition(4);
+
+    expect(get).toHaveBeenCalledWith('/recipes/4/nutrition/');
+    expect(nutrition).toEqual({
+      totalKcal: '1310.0',
+      kcalPerServing: '327.5',
+      uncountedIngredients: [{ name: 'mleko', reason: 'not_by_mass' }],
+    });
+  });
+
+  it('rejects an unknown reason for an uncounted line', async () => {
+    get.mockResolvedValue({
+      data: {
+        total_kcal: '0.0',
+        kcal_per_serving: null,
+        uncounted_ingredients: [{ name: 'mleko', reason: 'too_tasty' }],
+      },
+    });
+
+    await expect(fetchExternalRecipeNutrition('omlet')).rejects.toThrow();
+    expect(get).toHaveBeenCalledWith('/recipes/external/omlet/nutrition/');
   });
 });

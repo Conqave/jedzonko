@@ -1,12 +1,19 @@
 import { onMounted, ref } from 'vue';
 import { useApiAction } from '@/shared/useApiAction';
-import { confirmPreparation, deleteRecipe, fetchRecipe, fetchShortfall } from './api';
+import {
+  confirmPreparation,
+  deleteRecipe,
+  fetchRecipe,
+  fetchRecipeNutrition,
+  fetchShortfall,
+} from './api';
 import { RECIPE_ERROR_MESSAGES } from './errors';
-import type { RecipeDetail, RecipeShortfall } from './model';
+import type { RecipeDetail, RecipeNutrition, RecipeShortfall } from './model';
 
 export function useRecipe(recipeId: number) {
   const recipe = ref<RecipeDetail | null>(null);
   const shortfall = ref<RecipeShortfall | null>(null);
+  const nutrition = ref<RecipeNutrition | null>(null);
   const { busy, run } = useApiAction(RECIPE_ERROR_MESSAGES);
 
   function loadShortfall(householdId: number, servings: number): Promise<boolean> {
@@ -30,7 +37,10 @@ export function useRecipe(recipeId: number) {
     void run(async () => {
       recipe.value = await fetchRecipe(recipeId);
     });
+    void run(async () => {
+      nutrition.value = await fetchRecipeNutrition(recipeId);
+    });
   });
 
-  return { recipe, shortfall, busy, loadShortfall, confirm, remove };
+  return { recipe, shortfall, nutrition, busy, loadShortfall, confirm, remove };
 }

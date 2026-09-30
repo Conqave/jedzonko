@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { attachServings, moveItem, toDraft, type RecipeDetail } from './model';
+import { attachServings, describeNutrition, moveItem, toDraft, type RecipeDetail } from './model';
 
 const SHORTFALL = {
   missingItems: [],
@@ -53,5 +53,24 @@ describe('recipe model', () => {
     const orphan = { recipeId: 9, recipeName: 'Zniknął', shortfall: SHORTFALL };
 
     expect(attachServings([suggestion, orphan], [PANCAKES])).toEqual([{ suggestion, servings: 4 }]);
+  });
+
+  it('describes calories in total and per serving', () => {
+    const nutrition = { totalKcal: '1310.4', kcalPerServing: '327.6', uncountedIngredients: [] };
+
+    expect(describeNutrition(nutrition)).toBe('ok. 1310 kcal · 328 kcal/porcję');
+  });
+
+  it('gives only the total when servings are unknown', () => {
+    const nutrition = { totalKcal: '899.6', kcalPerServing: null, uncountedIngredients: [] };
+
+    expect(describeNutrition(nutrition)).toBe('ok. 900 kcal');
+  });
+
+  it('admits unknown calories when nothing could be counted', () => {
+    const uncounted = [{ name: 'sól', reason: 'no_amount' as const }];
+    const nutrition = { totalKcal: '0.0', kcalPerServing: null, uncountedIngredients: uncounted };
+
+    expect(describeNutrition(nutrition)).toBe('Kalorie nieznane');
   });
 });

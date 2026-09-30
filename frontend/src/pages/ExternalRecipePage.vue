@@ -38,6 +38,8 @@
         <span v-if="recipe.yieldLabel !== ''"> · {{ recipe.yieldLabel }}</span>
       </div>
 
+      <NutritionSummary v-if="nutrition !== null" :nutrition="nutrition" class="q-mb-md" />
+
       <div class="text-h6 q-mb-sm">Składniki</div>
       <q-list bordered separator class="q-mb-md">
         <q-item v-for="(line, index) in recipe.ingredients" :key="index">
@@ -87,6 +89,7 @@ import { toRef } from 'vue';
 import { useRoute } from 'vue-router';
 import { useMeasurementUnits } from '@/features/catalog/useMeasurementUnits';
 import { useHouseholdStore } from '@/features/households/store';
+import NutritionSummary from '@/features/recipes/components/NutritionSummary.vue';
 import ShortfallView from '@/features/recipes/components/ShortfallView.vue';
 import { useExternalRecipe } from '@/features/recipes/useExternalRecipe';
 import RecipeShoppingButton from '@/features/shopping/components/RecipeShoppingButton.vue';
@@ -95,6 +98,6 @@ const route = useRoute();
 const households = useHouseholdStore();
 const reference = String(route.params.reference);
 const selectedId = toRef(households, 'selectedId');
-const { recipe, shortfall, busy, isMatching } = useExternalRecipe(reference, selectedId);
+const { recipe, shortfall, nutrition, busy, isMatching } = useExternalRecipe(reference, selectedId);
 const { describeUnitQuantity } = useMeasurementUnits();
 </script>

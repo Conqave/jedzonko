@@ -31,6 +31,7 @@
         {{ DIFFICULTY_LABELS[recipe.difficulty] }}
         <span v-if="recipe.category !== null"> · {{ recipe.category.name }}</span>
       </div>
+      <NutritionSummary v-if="nutrition !== null" :nutrition="nutrition" class="q-mb-md" />
       <div class="q-gutter-xs q-mb-md">
         <q-badge v-for="tag in recipe.tags" :key="tag" color="primary" outline>{{ tag }}</q-badge>
       </div>
@@ -106,6 +107,7 @@ import { ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useMeasurementUnits } from '@/features/catalog/useMeasurementUnits';
 import { useHouseholdStore } from '@/features/households/store';
+import NutritionSummary from '@/features/recipes/components/NutritionSummary.vue';
 import ShortfallView from '@/features/recipes/components/ShortfallView.vue';
 import { DIFFICULTY_LABELS } from '@/features/recipes/model';
 import { useRecipe } from '@/features/recipes/useRecipe';
@@ -117,7 +119,7 @@ const router = useRouter();
 const households = useHouseholdStore();
 const dialogs = useDialogs();
 const recipeId = Number(route.params.id);
-const { recipe, shortfall, busy, loadShortfall, confirm, remove } = useRecipe(recipeId);
+const { recipe, shortfall, nutrition, busy, loadShortfall, confirm, remove } = useRecipe(recipeId);
 const { describeUnitQuantity } = useMeasurementUnits();
 const servings = ref(1);
 

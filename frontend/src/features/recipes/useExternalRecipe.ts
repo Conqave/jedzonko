@@ -1,12 +1,18 @@
 import { onMounted, ref, watch, type Ref } from 'vue';
 import { useApiAction } from '@/shared/useApiAction';
-import { fetchExternalRecipe, fetchExternalShortfall, matchExternalRecipeIngredients } from './api';
+import {
+  fetchExternalRecipe,
+  fetchExternalRecipeNutrition,
+  fetchExternalShortfall,
+  matchExternalRecipeIngredients,
+} from './api';
 import { RECIPE_ERROR_MESSAGES } from './errors';
-import type { ExternalRecipe, RecipeShortfall } from './model';
+import type { ExternalRecipe, RecipeNutrition, RecipeShortfall } from './model';
 
 export function useExternalRecipe(reference: string, householdId: Ref<number | null>) {
   const recipe = ref<ExternalRecipe | null>(null);
   const shortfall = ref<RecipeShortfall | null>(null);
+  const nutrition = ref<RecipeNutrition | null>(null);
   const isMatching = ref(false);
   const { busy, run } = useApiAction(RECIPE_ERROR_MESSAGES);
 
@@ -21,6 +27,12 @@ export function useExternalRecipe(reference: string, householdId: Ref<number | n
     });
   }
 
+  async function loadNutrition(): Promise<void> {
+    await run(async () => {
+      nutrition.value = await fetchExternalRecipeNutrition(reference);
+    });
+  }
+
   async function matchIngredients(): Promise<void> {
     isMatching.value = true;
     const interpretedCount = ref(0);
@@ -29,7 +41,7 @@ export function useExternalRecipe(reference: string, householdId: Ref<number | n
     });
     isMatching.value = false;
     if (interpretedCount.value > 0) {
-      await loadShortfall();
+      await Promise.all([loadShortfall(), loadNutrition()]);
     }
   }
 
@@ -38,10 +50,11 @@ export function useExternalRecipe(reference: string, householdId: Ref<number | n
       recipe.value = await fetchExternalRecipe(reference);
     });
     void loadShortfall();
+    void loadNutrition();
     void matchIngredients();
   });
 
   watch(householdId, loadShortfall);
 
-  return { recipe, shortfall, busy, isMatching, loadShortfall };
+  return { recipe, shortfall, nutrition, busy, isMatching, loadShortfall };
 }

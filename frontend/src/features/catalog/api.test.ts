@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { createProduct, searchProducts } from './api';
+import { createProduct, fetchProductDecisions, searchProducts, setTagCalories } from './api';
 
-const { get, post } = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn() }));
+const { get, post, put } = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), put: vi.fn() }));
 
-vi.mock('@/shared/http', () => ({ http: { get, post } }));
+vi.mock('@/shared/http', () => ({ http: { get, post, put } }));
 
 const PRODUCT_DTO = {
   id: 7,
@@ -17,6 +17,7 @@ const PRODUCT_DTO = {
 beforeEach(() => {
   get.mockReset();
   post.mockReset();
+  put.mockReset();
 });
 
 describe('catalog api', () => {
@@ -67,5 +68,51 @@ describe('catalog api', () => {
       is_food: true,
       package: { quantity: '1', unit_code: 'l' },
     });
+  });
+
+  it('reads the calories of each decided tag', async () => {
+    const decision = {
+      status: 'confirmed',
+      provenance: 'manual',
+      model_name: null,
+      proposed_at: null,
+      decided_at: '2026-09-30T08:00:00+02:00',
+    };
+    get.mockResolvedValue({
+      data: [
+        {
+          ...decision,
+          ingredient: {
+            id: 3,
+            name: 'jabłko',
+            calories: {
+              kcal_per_100g: '52.0',
+              provenance: 'reference',
+              reference_url: 'https://example.org/apple',
+            },
+          },
+        },
+        { ...decision, ingredient: { id: 4, name: 'woda', calories: null } },
+      ],
+    });
+
+    const [apple, water] = await fetchProductDecisions(7);
+
+    expect(apple?.ingredient).toEqual({ id: 3, name: 'jabłko' });
+    expect(apple?.calories).toEqual({
+      kcalPer100g: '52.0',
+      provenance: 'reference',
+      referenceUrl: 'https://example.org/apple',
+    });
+    expect(water?.calories).toBeNull();
+  });
+
+  it('sets or clears the calories of a tag', async () => {
+    put.mockResolvedValue({ data: { id: 3, name: 'jabłko', calories: null } });
+
+    const calories = await setTagCalories(3, null);
+
+    expect(put).toHaveBeenCalledWith('/ingredients/3/calories/', { kcal_per_100g: null });
+    expect(calories).toBeNull();
   });
 });

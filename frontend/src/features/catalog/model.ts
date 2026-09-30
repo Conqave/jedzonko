@@ -37,6 +37,34 @@ export interface Ingredient {
   name: string;
 }
 
+export const CALORIE_PROVENANCES = ['manual', 'reference'] as const;
+
+export type CalorieProvenance = (typeof CALORIE_PROVENANCES)[number];
+
+export interface TagCalories {
+  kcalPer100g: string;
+  provenance: CalorieProvenance;
+  referenceUrl: string | null;
+}
+
+export function describeTagCalories(calories: TagCalories | null): string {
+  if (calories === null) {
+    return 'brak kcal';
+  }
+  return `${formatQuantity(calories.kcalPer100g)} kcal/100 g`;
+}
+
+const KCAL_INPUT = /^\d{1,3}([.,]\d)?$/;
+
+export function isKcalInput(value: string): boolean {
+  return KCAL_INPUT.test(value.trim());
+}
+
+export function toKcalPayload(value: string): string | null {
+  const trimmed = value.trim();
+  return trimmed === '' ? null : toDecimalText(trimmed);
+}
+
 export interface ProductListing {
   product: Product;
   tags: Ingredient[];
@@ -53,6 +81,7 @@ export type ProductIngredientProvenance = (typeof PRODUCT_INGREDIENT_PROVENANCES
 
 export interface ProductIngredientDecision {
   ingredient: Ingredient;
+  calories: TagCalories | null;
   status: ProductIngredientStatus;
   provenance: ProductIngredientProvenance;
   modelName: string | null;

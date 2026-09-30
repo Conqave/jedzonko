@@ -27,9 +27,27 @@
               >· propozycja modelu {{ decision.modelName }}</template
             >
           </q-item-label>
+          <q-item-label caption>
+            {{ describeTagCalories(decision.calories) }}
+            <template v-if="decision.calories !== null && decision.calories.referenceUrl !== null">
+              ·
+              <a :href="decision.calories.referenceUrl" target="_blank" rel="noopener">źródło</a>
+            </template>
+            <template v-else-if="decision.calories !== null">· wpisane ręcznie</template>
+          </q-item-label>
         </q-item-section>
         <q-item-section side>
           <div class="row no-wrap q-gutter-xs">
+            <q-btn
+              flat
+              dense
+              round
+              color="deep-orange"
+              icon="local_fire_department"
+              :aria-label="`Kalorie ${decision.ingredient.name}`"
+              :loading="busy"
+              @click="editCalories(decision)"
+            />
             <q-btn
               v-if="decision.status !== 'confirmed'"
               flat
@@ -81,7 +99,17 @@
 <script setup lang="ts">
 import { useQuasar } from 'quasar';
 import { ref } from 'vue';
-import type { Ingredient, Product, ProductIngredientStatus } from '../model';
+import { formatQuantity } from '@/shared/formatQuantity';
+import { useDialogs } from '@/shared/useDialogs';
+import {
+  describeTagCalories,
+  isKcalInput,
+  toKcalPayload,
+  type Ingredient,
+  type Product,
+  type ProductIngredientDecision,
+  type ProductIngredientStatus,
+} from '../model';
 import { useProductDecisions } from '../useProductDecisions';
 import IngredientPicker from './IngredientPicker.vue';
 
@@ -94,7 +122,8 @@ const STATUS_LABELS: Readonly<Record<ProductIngredientStatus, string>> = {
 const props = defineProps<{ product: Product }>();
 
 const quasar = useQuasar();
-const { decisions, busy, isAnalyzing, confirm, reject, analyze } = useProductDecisions(
+const dialogs = useDialogs();
+const { decisions, busy, isAnalyzing, confirm, reject, setCalories, analyze } = useProductDecisions(
   props.product.id,
 );
 const chosen = ref<Ingredient | null>(null);
@@ -108,6 +137,21 @@ async function confirmChosen(): Promise<void> {
   if (isConfirmed) {
     chosen.value = null;
   }
+}
+
+async function editCalories(decision: ProductIngredientDecision): Promise<void> {
+  const calories = decision.calories;
+  const prompt = {
+    title: `Kalorie: ${decision.ingredient.name}`,
+    label: 'kcal na 100 g (puste pole usuwa wartość)',
+    initial: calories === null ? '' : formatQuantity(calories.kcalPer100g),
+  };
+  const entered = await dialogs.promptOptionalText(prompt, isKcalInput);
+  if (entered === null) {
+    return;
+  }
+  const kcalPer100g = toKcalPayload(entered);
+  await setCalories(decision.ingredient.id, kcalPer100g);
 }
 
 async function analyzeAgain(): Promise<void> {

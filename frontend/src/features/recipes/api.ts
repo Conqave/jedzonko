@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { http } from '@/shared/http';
 import {
   RECIPE_DIFFICULTIES,
+  UNCOUNTED_REASONS,
   type ExternalRecipe,
   type ExternalRecipeMatch,
   type ExternalRecipePage,
@@ -10,6 +11,7 @@ import {
   type RecipeCategory,
   type RecipeDetail,
   type RecipeDraft,
+  type RecipeNutrition,
   type RecipeShortfall,
   type RecipeSuggestion,
   type RecipeSummary,
@@ -101,6 +103,20 @@ const shortfallSchema = z
     availableItemCount: value.available_item_count,
     unmeasuredIngredients: value.unmeasured_ingredients,
     isReady: value.is_ready,
+  }));
+
+const nutritionSchema = z
+  .object({
+    total_kcal: z.string(),
+    kcal_per_serving: z.string().nullable(),
+    uncounted_ingredients: z.array(
+      z.object({ name: z.string(), reason: z.enum(UNCOUNTED_REASONS) }),
+    ),
+  })
+  .transform((value): RecipeNutrition => ({
+    totalKcal: value.total_kcal,
+    kcalPerServing: value.kcal_per_serving,
+    uncountedIngredients: value.uncounted_ingredients,
   }));
 
 const suggestionSchema = z
@@ -249,6 +265,16 @@ export async function updateRecipe(recipeId: number, draft: RecipeDraft): Promis
 
 export async function deleteRecipe(recipeId: number): Promise<void> {
   await http.delete(`/recipes/${recipeId}/`);
+}
+
+export async function fetchRecipeNutrition(recipeId: number): Promise<RecipeNutrition> {
+  const response = await http.get(`/recipes/${recipeId}/nutrition/`);
+  return nutritionSchema.parse(response.data);
+}
+
+export async function fetchExternalRecipeNutrition(reference: string): Promise<RecipeNutrition> {
+  const response = await http.get(`/recipes/external/${reference}/nutrition/`);
+  return nutritionSchema.parse(response.data);
 }
 
 export async function fetchSuggestions(householdId: number): Promise<RecipeSuggestion[]> {

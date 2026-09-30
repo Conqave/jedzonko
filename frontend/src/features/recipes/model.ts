@@ -66,6 +66,42 @@ export interface RecipeSuggestion {
   shortfall: RecipeShortfall;
 }
 
+export const UNCOUNTED_REASONS = ['no_amount', 'not_by_mass', 'no_calories'] as const;
+
+export type UncountedReason = (typeof UNCOUNTED_REASONS)[number];
+
+export const UNCOUNTED_REASON_LABELS: Readonly<Record<UncountedReason, string>> = {
+  no_amount: 'brak ilości',
+  not_by_mass: 'ilość nie w gramach',
+  no_calories: 'tag bez kalorii',
+};
+
+export interface UncountedIngredient {
+  name: string;
+  reason: UncountedReason;
+}
+
+export interface RecipeNutrition {
+  totalKcal: string;
+  kcalPerServing: string | null;
+  uncountedIngredients: UncountedIngredient[];
+}
+
+function roundKcal(value: string): string {
+  return Math.round(Number(value)).toString();
+}
+
+export function describeNutrition(nutrition: RecipeNutrition): string {
+  if (Number(nutrition.totalKcal) === 0 && nutrition.uncountedIngredients.length > 0) {
+    return 'Kalorie nieznane';
+  }
+  const total = `ok. ${roundKcal(nutrition.totalKcal)} kcal`;
+  if (nutrition.kcalPerServing === null) {
+    return total;
+  }
+  return `${total} · ${roundKcal(nutrition.kcalPerServing)} kcal/porcję`;
+}
+
 export interface RecipeDraftIngredient {
   name: string;
   quantity: string;
