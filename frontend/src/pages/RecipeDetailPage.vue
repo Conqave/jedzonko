@@ -25,8 +25,9 @@
         <q-btn flat no-caps color="negative" icon="delete" label="Usuń" @click="removeRecipe" />
       </div>
       <div class="text-caption q-mb-md">
-        autor: {{ recipe.authorUsername }} · porcje: {{ recipe.servings }} · przygotowanie
-        {{ recipe.preparationTimeMinutes }} min · gotowanie {{ recipe.cookingTimeMinutes }} min ·
+        autor: {{ recipe.authorUsername ?? 'nieznany' }} · porcje: {{ recipe.servings }} ·
+        przygotowanie {{ recipe.preparationTimeMinutes }} min · gotowanie
+        {{ recipe.cookingTimeMinutes }} min ·
         {{ DIFFICULTY_LABELS[recipe.difficulty] }}
         <span v-if="recipe.category !== null"> · {{ recipe.category.name }}</span>
       </div>

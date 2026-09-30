@@ -24,7 +24,7 @@ export interface RecipeSummary {
   category: RecipeCategory | null;
   tags: string[];
   imageUrl: string | null;
-  authorUsername: string;
+  authorUsername: string | null;
 }
 
 export interface RecipeStep {

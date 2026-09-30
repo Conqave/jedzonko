@@ -61,7 +61,9 @@ class Migration(migrations.Migration):
                 (
                     "created_by",
                     models.ForeignKey(
-                        on_delete=django.db.models.deletion.DO_NOTHING,
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.DB_SET_NULL,
                         related_name="created_recipes",
                         to=settings.AUTH_USER_MODEL,
                     ),

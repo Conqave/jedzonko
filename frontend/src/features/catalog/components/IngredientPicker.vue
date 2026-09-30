@@ -4,6 +4,8 @@
     dense
     outlined
     use-input
+    hide-selected
+    fill-input
     input-debounce="300"
     :label="label"
     option-label="name"

@@ -1,9 +1,12 @@
 <template>
   <q-select
+    ref="selectRef"
     :model-value="modelValue"
     dense
     outlined
     use-input
+    hide-selected
+    fill-input
     input-debounce="300"
     :label="label"
     option-label="name"
@@ -12,7 +15,7 @@
     :loading="busy"
     :rules="rules"
     @filter="filterProducts"
-    @update:model-value="(value: Product | null) => emit('update:modelValue', value)"
+    @update:model-value="choose"
   >
     <template #no-option>
       <q-item clickable @click="openCreateDialog">
@@ -30,7 +33,7 @@
 </template>
 
 <script setup lang="ts">
-import { useQuasar, type ValidationRule } from 'quasar';
+import { QSelect, useQuasar, type ValidationRule } from 'quasar';
 import { ref } from 'vue';
 import type { MeasurementUnit, Product } from '../model';
 import { useProductSearch } from '../useProductSearch';
@@ -52,6 +55,12 @@ const emit = defineEmits<{ 'update:modelValue': [value: Product | null] }>();
 const quasar = useQuasar();
 const { products, busy, search } = useProductSearch();
 const term = ref('');
+const selectRef = ref<QSelect | null>(null);
+
+function choose(product: Product | null): void {
+  emit('update:modelValue', product);
+  selectRef.value?.hidePopup();
+}
 
 function filterProducts(value: string, update: (callback: () => void) => void): void {
   term.value = value;
@@ -66,8 +75,9 @@ function openCreateDialog(): void {
     units: props.units,
     initialName: term.value,
   };
+  selectRef.value?.hidePopup();
   quasar.dialog({ component: ProductCreateDialog, componentProps }).onOk((product: Product) => {
-    emit('update:modelValue', product);
+    choose(product);
   });
 }
 </script>

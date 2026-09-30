@@ -180,7 +180,7 @@ class DjangoRecipeRepository(RecipeRepository):
             category=None if row.category is None else _to_category(row.category),
             tag_names=tuple(tag.name for tag in row.tags.all()),
             image_url=row.image.url if row.image else None,
-            author_username=row.created_by.get_username(),
+            author_username=None if row.created_by is None else row.created_by.get_username(),
         )
 
     @classmethod

@@ -44,7 +44,7 @@ class RecipeSummary:
     category: RecipeCategory | None
     tag_names: tuple[str, ...]
     image_url: str | None
-    author_username: str
+    author_username: str | None
 
 
 @dataclass(frozen=True, slots=True)

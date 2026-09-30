@@ -30,7 +30,7 @@ const summaryFields = {
   category: categorySchema.nullable(),
   tags: z.array(z.string()),
   image_url: z.string().nullable(),
-  author_username: z.string(),
+  author_username: z.string().nullable(),
 };
 
 type SummaryDto = z.infer<z.ZodObject<typeof summaryFields>>;

@@ -18,7 +18,8 @@
         <q-item-label caption>
           Porcje: {{ recipe.servings }} ·
           {{ recipe.preparationTimeMinutes + recipe.cookingTimeMinutes }} min ·
-          {{ DIFFICULTY_LABELS[recipe.difficulty] }} · autor: {{ recipe.authorUsername }}
+          {{ DIFFICULTY_LABELS[recipe.difficulty] }} · autor:
+          {{ recipe.authorUsername ?? 'nieznany' }}
         </q-item-label>
       </q-item-section>
     </q-item>

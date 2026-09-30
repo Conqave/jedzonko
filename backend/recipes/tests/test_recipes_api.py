@@ -325,3 +325,15 @@ def test_recipe_lines_name_their_ingredient_or_stay_unresolved(
 
     lines = {line["name"]: line["ingredient_id"] for line in response.data["ingredients"]}
     assert lines == {"Jajko": eggs.pk, "szczypta miłości": None}
+
+
+def test_a_recipe_outlives_its_author(api_client: APIClient, member: User) -> None:
+    recipe_id = _create_recipe(api_client, member)
+    reader = User.objects.create_user(username="czytelnik", password="Ma-Kota-1234")
+
+    member.delete()
+    api_client.force_authenticate(reader)
+    response = api_client.get(f"/api/recipes/{recipe_id}/")
+
+    assert response.status_code == 200
+    assert response.data["author_username"] is None

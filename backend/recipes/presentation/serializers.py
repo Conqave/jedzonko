@@ -63,7 +63,7 @@ class RecipeSummarySerializer(serializers.Serializer[object]):
     category = RecipeCategorySerializer(read_only=True, allow_null=True)
     tags = serializers.ListField(source="tag_names", child=serializers.CharField(), read_only=True)
     image_url = serializers.CharField(read_only=True, allow_null=True)
-    author_username = serializers.CharField(read_only=True)
+    author_username = serializers.CharField(read_only=True, allow_null=True)
 
 
 class RecipeStepDetailSerializer(serializers.Serializer[object]):
@@ -95,7 +95,9 @@ class RecipeDetailSerializer(serializers.Serializer[object]):
         source="summary.tag_names", child=serializers.CharField(), read_only=True
     )
     image_url = serializers.CharField(source="summary.image_url", read_only=True, allow_null=True)
-    author_username = serializers.CharField(source="summary.author_username", read_only=True)
+    author_username = serializers.CharField(
+        source="summary.author_username", read_only=True, allow_null=True
+    )
     steps = RecipeStepDetailSerializer(many=True, read_only=True)
     ingredients = RecipeIngredientDetailSerializer(many=True, read_only=True)
 
