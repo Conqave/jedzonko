@@ -19,6 +19,7 @@ from shared.infrastructure.ollama_chat import (
 )
 from shared.measurement_units import find_measurement_unit
 
+INTERPRETATION_OUTPUT_TOKENS = 32768
 _QUANTITY_LIMIT = Decimal("1000000000")
 
 
@@ -43,7 +44,7 @@ class OllamaIngredientLineInterpreter(IngredientLineInterpreter):
 
     def _ask(self, prompt: str, schema: dict[str, object]) -> str:
         try:
-            return self._chat.ask_structured(prompt, schema)
+            return self._chat.ask_structured_at_length(prompt, schema, INTERPRETATION_OUTPUT_TOKENS)
         except OllamaUnavailableError as error:
             raise IngredientClassifierUnavailableError(str(error)) from error
         except OllamaContractError as error:

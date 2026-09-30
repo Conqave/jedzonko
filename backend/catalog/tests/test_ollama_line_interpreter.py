@@ -12,6 +12,7 @@ from catalog.application.errors import (
 from catalog.domain.ingredient import Ingredient
 from catalog.domain.ingredient_line import LineInterpretation
 from catalog.infrastructure.providers.ollama.line_interpreter import (
+    INTERPRETATION_OUTPUT_TOKENS,
     OllamaIngredientLineInterpreter,
 )
 from shared.infrastructure.ollama_chat import OllamaChat, OllamaSettings
@@ -66,7 +67,7 @@ def test_the_request_is_structured_bounded_and_lists_every_line() -> None:
     body = seen[0]
     prompt = json.dumps(body["messages"], ensure_ascii=False)
     assert body["model"] == "gpt-oss:20b-128k"
-    assert body["options"] == {"num_predict": 2048, "num_ctx": 98304}
+    assert body["options"] == {"num_predict": INTERPRETATION_OUTPUT_TOKENS, "num_ctx": 98304}
     assert isinstance(body["format"], dict)
     assert "1. jajko" in prompt and "3. szczypta soli" in prompt
 
