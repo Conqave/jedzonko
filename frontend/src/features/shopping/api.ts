@@ -5,6 +5,8 @@ import {
   type NewShoppingItem,
   type RecipeShoppingSource,
   type ShoppingItem,
+  type ShoppingItemInterpretation,
+  type ShoppingItemTagging,
   type ShoppingList,
   type ShoppingSubject,
 } from './model';
@@ -61,6 +63,22 @@ const itemSchema = z
     unitCode: value.unit_code,
     status: value.status,
     purchasedAt: value.purchased_at === null ? null : new Date(value.purchased_at),
+  }));
+
+const interpretationSchema = z
+  .object({
+    ingredient_id: z.number().int().nullable(),
+    ingredient_name: z.string().nullable(),
+    quantity: z.string().nullable(),
+    unit_code: z.string().nullable(),
+  })
+  .transform((value): ShoppingItemInterpretation => ({
+    ingredient:
+      value.ingredient_id === null || value.ingredient_name === null
+        ? null
+        : { id: value.ingredient_id, name: value.ingredient_name },
+    quantity: value.quantity,
+    unitCode: value.unit_code,
   }));
 
 function toSubjectPayload(subject: ShoppingSubject) {
@@ -148,6 +166,24 @@ export async function chooseShoppingItemProduct(
   const payload = { product_id: productId };
   const response = await http.put(`/shopping/items/${itemId}/product/`, payload);
   return itemSchema.parse(response.data);
+}
+
+export async function tagShoppingItem(
+  itemId: number,
+  tagging: ShoppingItemTagging,
+): Promise<ShoppingItem> {
+  const payload = {
+    ingredient_id: tagging.ingredientId,
+    quantity: tagging.quantity,
+    unit_code: tagging.unitCode,
+  };
+  const response = await http.put(`/shopping/items/${itemId}/ingredient/`, payload);
+  return itemSchema.parse(response.data);
+}
+
+export async function interpretShoppingItem(itemId: number): Promise<ShoppingItemInterpretation> {
+  const response = await http.post(`/shopping/items/${itemId}/interpretation/`);
+  return interpretationSchema.parse(response.data);
 }
 
 export async function tagShoppingList(listId: number): Promise<ShoppingItem[]> {

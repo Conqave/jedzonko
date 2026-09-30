@@ -40,30 +40,40 @@
             >{{ tag }}</q-chip
           >
           <span v-if="findItemTags(item).length === 0" class="text-grey-7">Bez tagu</span>
+          <span v-if="!reachesPantry(item, countIngredientProducts)" class="text-orange-9 q-ml-sm">
+            <q-icon name="info" /> Nie trafi do zapasów
+          </span>
         </q-item-label>
       </q-item-section>
-      <q-item-section side>{{ describeQuantity(item) }}</q-item-section>
-      <q-item-section side>
-        <q-btn
-          v-if="item.subject.kind === 'ingredient'"
-          flat
-          dense
-          round
-          icon="inventory_2"
-          :aria-label="`Wybierz produkt dla ${item.name}`"
-          @click="emit('choose-product', item)"
-        />
+      <q-item-section side class="shopping-quantity">
+        {{ hasAmount(item) ? describeQuantity(item) : '' }}
       </q-item-section>
       <q-item-section side>
-        <q-btn
-          flat
-          dense
-          round
-          color="negative"
-          icon="delete"
-          :aria-label="`Usuń ${item.name}`"
-          @click="emit('remove', item)"
-        />
+        <q-btn flat dense round icon="more_vert" :aria-label="`Więcej: ${item.name}`">
+          <q-menu>
+            <q-list style="min-width: 200px">
+              <q-item v-close-popup clickable @click="emit('tag-item', item)">
+                <q-item-section avatar><q-icon name="sell" /></q-item-section>
+                <q-item-section>{{
+                  item.subject.kind === 'text' ? 'Otaguj' : 'Zmień tag'
+                }}</q-item-section>
+              </q-item>
+              <q-item
+                v-if="item.subject.kind === 'ingredient'"
+                v-close-popup
+                clickable
+                @click="emit('choose-product', item)"
+              >
+                <q-item-section avatar><q-icon name="inventory_2" /></q-item-section>
+                <q-item-section>Wybierz produkt</q-item-section>
+              </q-item>
+              <q-item v-close-popup clickable class="text-negative" @click="emit('remove', item)">
+                <q-item-section avatar><q-icon name="delete" color="negative" /></q-item-section>
+                <q-item-section>Usuń</q-item-section>
+              </q-item>
+            </q-list>
+          </q-menu>
+        </q-btn>
       </q-item-section>
     </q-item>
     <q-expansion-item
@@ -73,7 +83,7 @@
       header-class="text-grey-8"
     >
       <div class="q-px-md q-pt-sm text-caption text-grey-7">
-        Kupione produkty trafiły do zapasów.
+        Do zapasów trafiły tylko pozycje powiązane z produktem.
       </div>
       <q-item v-for="item in purchasedItems" :key="item.id">
         <q-item-section side>
@@ -85,7 +95,7 @@
         </q-item-section>
         <q-item-section>
           <q-item-label class="text-strike text-grey">{{ item.name }}</q-item-label>
-          <q-item-label caption>{{ describeQuantity(item) }}</q-item-label>
+          <q-item-label v-if="hasAmount(item)" caption>{{ describeQuantity(item) }}</q-item-label>
         </q-item-section>
       </q-item>
     </q-expansion-item>
@@ -95,13 +105,14 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
 import { formatQuantity } from '@/shared/formatQuantity';
-import type { ShoppingItem } from '../model';
+import { hasAmount, reachesPantry, type ShoppingItem } from '../model';
 
 const props = defineProps<{
   pendingItems: ShoppingItem[];
   purchasedItems: ShoppingItem[];
   describeUnitQuantity: (quantity: string, unitCode: string) => string;
   findProductTags: (productId: number) => string[];
+  countIngredientProducts: (ingredientId: number) => number;
   isTagging: boolean;
 }>();
 
@@ -109,6 +120,7 @@ const emit = defineEmits<{
   buy: [itemIds: number[]];
   restore: [item: ShoppingItem];
   'choose-product': [item: ShoppingItem];
+  'tag-item': [item: ShoppingItem];
   tag: [];
   remove: [item: ShoppingItem];
 }>();
@@ -145,6 +157,11 @@ function describeQuantity(item: ShoppingItem): string {
 </script>
 
 <style scoped>
+.shopping-quantity {
+  min-width: 5.5rem;
+  align-items: flex-end;
+}
+
 .shopping-tag {
   height: auto;
   max-width: 100%;

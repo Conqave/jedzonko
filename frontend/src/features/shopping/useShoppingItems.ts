@@ -6,11 +6,18 @@ import {
   chooseShoppingItemProduct,
   deleteShoppingItem,
   fetchShoppingItems,
+  interpretShoppingItem,
   restoreShoppingItem,
+  tagShoppingItem,
   tagShoppingList,
 } from './api';
 import { SHOPPING_ERROR_MESSAGES } from './errors';
-import type { NewShoppingItem, ShoppingItem } from './model';
+import type {
+  NewShoppingItem,
+  ShoppingItem,
+  ShoppingItemInterpretation,
+  ShoppingItemTagging,
+} from './model';
 
 export function useShoppingItems(listId: Ref<number | null>) {
   const items = ref<ShoppingItem[]>([]);
@@ -83,6 +90,28 @@ export function useShoppingItems(listId: Ref<number | null>) {
     });
   }
 
+  function tagItem(
+    item: ShoppingItem,
+    tagging: ShoppingItemTagging,
+    productId: number | null,
+  ): Promise<boolean> {
+    return run(async () => {
+      const tagged = await tagShoppingItem(item.id, tagging);
+      if (productId !== null) {
+        await chooseShoppingItemProduct(tagged.id, productId);
+      }
+      await reload(item.listId);
+    });
+  }
+
+  async function interpretItem(item: ShoppingItem): Promise<ShoppingItemInterpretation | null> {
+    const interpretation = ref<ShoppingItemInterpretation | null>(null);
+    await run(async () => {
+      interpretation.value = await interpretShoppingItem(item.id);
+    });
+    return interpretation.value;
+  }
+
   function remove(item: ShoppingItem): Promise<boolean> {
     return run(async () => {
       await deleteShoppingItem(item.id);
@@ -104,6 +133,8 @@ export function useShoppingItems(listId: Ref<number | null>) {
     chooseProduct,
     tagList,
     isTagging,
+    tagItem,
+    interpretItem,
     remove,
   };
 }

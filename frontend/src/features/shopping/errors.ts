@@ -17,5 +17,6 @@ export const SHOPPING_ERROR_MESSAGES: ErrorMessages = {
   no_shops_chosen: 'Wybierz co najmniej jeden sklep.',
   nothing_to_split: 'Na liście nie ma niekupionych pozycji do podziału.',
   promotions_not_allowed: 'Brak dostępu do promocji.',
+  tagging_unavailable: 'Ollama jest chwilowo niedostępna albo zajęta. Spróbuj ponownie za chwilę.',
   promotion_source_unavailable: 'Źródło promocji jest chwilowo niedostępne.',
 };

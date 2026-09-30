@@ -1,3 +1,5 @@
+import type { Ingredient } from '@/features/catalog/model';
+
 export interface ShoppingList {
   id: number;
   householdId: number;
@@ -32,6 +34,25 @@ export interface NewShoppingItem {
   unitCode: string | null;
 }
 
+export const COUNT_UNIT_CODE = 'szt';
+
+export interface ShoppingItemTagging {
+  ingredientId: number;
+  quantity: string;
+  unitCode: string;
+}
+
+export interface ShoppingItemTagRequest {
+  tagging: ShoppingItemTagging;
+  productId: number | null;
+}
+
+export interface ShoppingItemInterpretation {
+  ingredient: Ingredient | null;
+  quantity: string | null;
+  unitCode: string | null;
+}
+
 export type RecipeShoppingSource =
   { kind: 'recipe'; recipeId: number; servings: number } | { kind: 'external'; reference: string };
 
@@ -44,4 +65,21 @@ export function orderPrimaryFirst(lists: ShoppingList[]): ShoppingList[] {
   const primary = lists.filter((list) => list.isPrimary);
   const others = lists.filter((list) => !list.isPrimary);
   return [...primary, ...others];
+}
+
+export function hasAmount(item: ShoppingItem): boolean {
+  return item.subject.kind !== 'text';
+}
+
+export function reachesPantry(
+  item: ShoppingItem,
+  countIngredientProducts: (ingredientId: number) => number,
+): boolean {
+  if (item.subject.kind === 'product') {
+    return true;
+  }
+  if (item.subject.kind === 'ingredient') {
+    return countIngredientProducts(item.subject.ingredientId) === 1;
+  }
+  return false;
 }

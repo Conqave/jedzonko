@@ -35,11 +35,13 @@
         :purchased-items="purchasedItems"
         :describe-unit-quantity="describeUnitQuantity"
         :find-product-tags="findProductTags"
+        :count-ingredient-products="countIngredientProducts"
         :is-tagging="isTagging"
         @tag="tagItems"
         @buy="buyItem"
         @restore="restoreItem"
         @choose-product="chooseItemProduct"
+        @tag-item="tagItem"
         @remove="removeItem"
       />
     </template>
@@ -59,9 +61,17 @@ import PromotionSplitDialog from '@/features/shopping/components/PromotionSplitD
 import ShoppingItemForm from '@/features/shopping/components/ShoppingItemForm.vue';
 import ShoppingItemList from '@/features/shopping/components/ShoppingItemList.vue';
 import ShoppingListToolbar from '@/features/shopping/components/ShoppingListToolbar.vue';
-import type { ShopOption, ShoppingItem, ShoppingList } from '@/features/shopping/model';
+import TagItemDialog from '@/features/shopping/components/TagItemDialog.vue';
+import {
+  COUNT_UNIT_CODE,
+  type ShopOption,
+  type ShoppingItem,
+  type ShoppingItemTagRequest,
+  type ShoppingList,
+} from '@/features/shopping/model';
 import { useShoppingItems } from '@/features/shopping/useShoppingItems';
 import { useShoppingLists } from '@/features/shopping/useShoppingLists';
+import { formatQuantity } from '@/shared/formatQuantity';
 import { useDialogs } from '@/shared/useDialogs';
 
 const quasar = useQuasar();
@@ -92,6 +102,8 @@ const {
   chooseProduct,
   tagList,
   isTagging,
+  tagItem: tagShoppingItem,
+  interpretItem,
   remove: removeShoppingItem,
 } = useShoppingItems(selectedListId);
 
@@ -107,6 +119,41 @@ const { listings: productListings, load: loadProductTags } = useProductCatalog(h
 function findProductTags(productId: number): string[] {
   const listing = productListings.value.find((entry) => entry.product.id === productId);
   return listing === undefined ? [] : listing.tags.map((tag) => tag.name);
+}
+
+function countIngredientProducts(ingredientId: number): number {
+  const tagged = productListings.value.filter((entry) =>
+    entry.tags.some((tag) => tag.id === ingredientId),
+  );
+  return tagged.length;
+}
+
+function tagItem(item: ShoppingItem): void {
+  const householdIdValue = households.selectedId;
+  if (householdIdValue === null) {
+    return;
+  }
+  const componentProps = {
+    itemName: item.name,
+    householdId: householdIdValue,
+    units: units.value,
+    initialIngredient:
+      item.subject.kind === 'ingredient'
+        ? { id: item.subject.ingredientId, name: item.name }
+        : null,
+    initialQuantity: formatQuantity(item.quantity),
+    initialUnitCode: item.unitCode ?? COUNT_UNIT_CODE,
+    interpret: () => interpretItem(item),
+  };
+  quasar
+    .dialog({ component: TagItemDialog, componentProps })
+    .onOk((request: ShoppingItemTagRequest) => {
+      void tagShoppingItem(item, request.tagging, request.productId).then((isTagged) => {
+        if (isTagged) {
+          void loadProductTags();
+        }
+      });
+    });
 }
 
 async function tagItems(): Promise<void> {

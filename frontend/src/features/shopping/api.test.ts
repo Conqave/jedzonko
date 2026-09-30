@@ -1,9 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { addRecipeItems, addShoppingItem, fetchShoppingItems } from './api';
+import {
+  addRecipeItems,
+  addShoppingItem,
+  fetchShoppingItems,
+  interpretShoppingItem,
+  tagShoppingItem,
+} from './api';
 
-const { get, post } = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn() }));
+const { get, post, put } = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), put: vi.fn() }));
 
-vi.mock('@/shared/http', () => ({ http: { get, post } }));
+vi.mock('@/shared/http', () => ({ http: { get, post, put } }));
 
 const ITEM_DTO = {
   id: 5,
@@ -21,6 +27,7 @@ const ITEM_DTO = {
 beforeEach(() => {
   get.mockReset();
   post.mockReset();
+  put.mockReset();
 });
 
 describe('shopping api', () => {
@@ -76,5 +83,51 @@ describe('shopping api', () => {
       recipe_id: 4,
       servings: 3,
     });
+  });
+
+  it('puts a tag with its amount on an item', async () => {
+    put.mockResolvedValue({ data: ITEM_DTO });
+
+    const item = await tagShoppingItem(5, { ingredientId: 9, quantity: '6', unitCode: 'szt' });
+
+    expect(put).toHaveBeenCalledWith('/shopping/items/5/ingredient/', {
+      ingredient_id: 9,
+      quantity: '6',
+      unit_code: 'szt',
+    });
+    expect(item.subject).toEqual({ kind: 'ingredient', ingredientId: 9 });
+  });
+
+  it('maps the model proposal to an ingredient', async () => {
+    const proposal = {
+      ingredient_id: 9,
+      ingredient_name: 'Jajka',
+      quantity: '6.000',
+      unit_code: 'szt',
+    };
+    post.mockResolvedValue({ data: proposal });
+
+    const interpretation = await interpretShoppingItem(5);
+
+    expect(post).toHaveBeenCalledWith('/shopping/items/5/interpretation/');
+    expect(interpretation).toEqual({
+      ingredient: { id: 9, name: 'Jajka' },
+      quantity: '6.000',
+      unitCode: 'szt',
+    });
+  });
+
+  it('maps an unrecognised line to an empty proposal', async () => {
+    const proposal = {
+      ingredient_id: null,
+      ingredient_name: null,
+      quantity: null,
+      unit_code: null,
+    };
+    post.mockResolvedValue({ data: proposal });
+
+    const interpretation = await interpretShoppingItem(5);
+
+    expect(interpretation).toEqual({ ingredient: null, quantity: null, unitCode: null });
   });
 });
