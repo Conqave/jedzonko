@@ -1,35 +1,35 @@
 from recipes.application.external_requirements import read_external_requirements
 from recipes.application.ports.external_recipe_catalog import ExternalRecipeCatalog
-from recipes.application.ports.household_stock_reader import HouseholdStockReader
+from recipes.application.ports.ingredient_calories import IngredientCalories
 from recipes.application.ports.ingredient_lines import IngredientLines
 from recipes.application.ports.ingredient_resolver import IngredientResolver
 from recipes.application.ports.recipe_source import RecipeSource
-from recipes.domain.missing_items import calculate_shortfall
-from recipes.domain.suggestion import RecipeShortfall
-from shared.household_membership import HouseholdMembershipReader, require_membership
+from recipes.domain.nutrition import (
+    RecipeNutrition,
+    list_tagged_ingredient_ids,
+    summarize_nutrition,
+)
 
 
-class CalculateExternalRecipeShortfall:
+class GetExternalRecipeNutrition:
     def __init__(
         self,
         catalog: ExternalRecipeCatalog,
         source: RecipeSource,
-        stock: HouseholdStockReader,
         resolver: IngredientResolver,
         lines: IngredientLines,
-        memberships: HouseholdMembershipReader,
+        calories: IngredientCalories,
     ) -> None:
         self._catalog = catalog
         self._source = source
-        self._stock = stock
         self._resolver = resolver
         self._lines = lines
-        self._memberships = memberships
+        self._calories = calories
 
-    def execute(self, user_id: int, household_id: int, reference: str) -> RecipeShortfall:
-        require_membership(self._memberships, user_id, household_id)
+    def execute(self, reference: str) -> RecipeNutrition:
         requirements = read_external_requirements(
             self._catalog, self._source, self._resolver, self._lines, reference
         )
-        stock = self._stock.get_stock(user_id, household_id)
-        return calculate_shortfall(requirements, stock)
+        ingredient_ids = list_tagged_ingredient_ids(requirements)
+        kcal_per_100g = self._calories.find_kcal_per_100g(ingredient_ids)
+        return summarize_nutrition(requirements, kcal_per_100g, None)

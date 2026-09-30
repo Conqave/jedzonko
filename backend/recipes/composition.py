@@ -7,6 +7,7 @@ import httpx
 
 from recipes.application.ports.external_recipe_catalog import ExternalRecipeCatalog
 from recipes.application.ports.household_stock_reader import HouseholdStockReader
+from recipes.application.ports.ingredient_calories import IngredientCalories
 from recipes.application.ports.ingredient_lines import IngredientLines
 from recipes.application.ports.ingredient_resolver import IngredientResolver
 from recipes.application.ports.inventory_consumer import HouseholdInventoryConsumer
@@ -21,7 +22,11 @@ from recipes.application.use_cases.create_recipe import CreateRecipe
 from recipes.application.use_cases.delete_recipe import DeleteRecipe
 from recipes.application.use_cases.external_recipes import ExternalRecipes
 from recipes.application.use_cases.get_external_recipe import GetExternalRecipe
+from recipes.application.use_cases.get_external_recipe_nutrition import (
+    GetExternalRecipeNutrition,
+)
 from recipes.application.use_cases.get_recipe import GetRecipe
+from recipes.application.use_cases.get_recipe_nutrition import GetRecipeNutrition
 from recipes.application.use_cases.import_external_recipes import ImportExternalRecipes
 from recipes.application.use_cases.list_recipe_categories import ListRecipeCategories
 from recipes.application.use_cases.list_recipes import ListRecipes
@@ -60,6 +65,7 @@ class RecipesModule:
     list_recipes: ListRecipes
     list_recipe_categories: ListRecipeCategories
     get_recipe: GetRecipe
+    get_recipe_nutrition: GetRecipeNutrition
     create_recipe: CreateRecipe
     update_recipe: UpdateRecipe
     delete_recipe: DeleteRecipe
@@ -73,6 +79,7 @@ class RecipesModule:
     stock: HouseholdStockReader
     resolver: IngredientResolver
     lines: IngredientLines
+    calories: IngredientCalories
     memberships: HouseholdMembershipReader
     source_settings: RecipeSourceSettings
     transactions: TransactionManager
@@ -129,6 +136,9 @@ class RecipesModule:
                     self.lines,
                     self.memberships,
                 ),
+                get_nutrition=GetExternalRecipeNutrition(
+                    self.external_catalog, source, self.resolver, self.lines, self.calories
+                ),
             )
 
 
@@ -141,6 +151,7 @@ def build_recipes(
     stock: HouseholdStockReader,
     resolver: IngredientResolver,
     lines: IngredientLines,
+    calories: IngredientCalories,
     consumer: HouseholdInventoryConsumer,
     reassign_recipe_ingredient: ReassignRecipeIngredient,
     source_settings: RecipeSourceSettings,
@@ -152,6 +163,7 @@ def build_recipes(
         list_recipes=ListRecipes(recipes),
         list_recipe_categories=ListRecipeCategories(recipes),
         get_recipe=GetRecipe(recipes),
+        get_recipe_nutrition=GetRecipeNutrition(recipes, calories),
         create_recipe=CreateRecipe(recipes, resolver, transactions),
         update_recipe=UpdateRecipe(recipes, resolver, transactions),
         delete_recipe=DeleteRecipe(recipes),
@@ -167,6 +179,7 @@ def build_recipes(
         stock=stock,
         resolver=resolver,
         lines=lines,
+        calories=calories,
         memberships=memberships,
         source_settings=source_settings,
         transactions=transactions,

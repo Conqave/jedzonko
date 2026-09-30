@@ -337,3 +337,37 @@ def test_a_recipe_outlives_its_author(api_client: APIClient, member: User) -> No
 
     assert response.status_code == 200
     assert response.data["author_username"] is None
+
+
+def test_recipe_nutrition_counts_tagged_mass_lines_per_serving(
+    api_client: APIClient, member: User, eggs: Ingredient
+) -> None:
+    container().catalog.set_tag_calories.execute(eggs.pk, Decimal("143"))
+    body = _recipe_body()
+    body["ingredients"] = [
+        {"name": "jajko", "quantity": "100", "unit_code": "g"},
+        {"name": "mleko", "quantity": "50", "unit_code": "ml"},
+        {"name": "szczypiorek", "quantity": "5", "unit_code": "g"},
+    ]
+    api_client.force_authenticate(member)
+    created = api_client.post("/api/recipes/", body, format="json")
+
+    response = api_client.get(f"/api/recipes/{created.data['id']}/nutrition/")
+
+    assert response.status_code == 200
+    assert response.data == {
+        "total_kcal": "143.0",
+        "kcal_per_serving": "71.5",
+        "uncounted_ingredients": [
+            {"name": "mleko", "reason": "not_by_mass"},
+            {"name": "szczypiorek", "reason": "no_calories"},
+        ],
+    }
+
+
+def test_nutrition_of_an_unknown_recipe_is_not_found(api_client: APIClient, member: User) -> None:
+    api_client.force_authenticate(member)
+
+    response = api_client.get("/api/recipes/9999/nutrition/")
+
+    assert response.status_code == 404

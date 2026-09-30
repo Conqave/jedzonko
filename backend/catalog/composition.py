@@ -23,6 +23,7 @@ from catalog.application.use_cases.find_ingredients_by_names import FindIngredie
 from catalog.application.use_cases.get_ingredients import GetIngredients
 from catalog.application.use_cases.get_product_classification import GetProductClassification
 from catalog.application.use_cases.import_ingredient_names import ImportIngredientNames
+from catalog.application.use_cases.import_tag_calories import ImportTagCalories
 from catalog.application.use_cases.interpret_ingredient_lines import InterpretIngredientLines
 from catalog.application.use_cases.list_household_products import ListHouseholdProducts
 from catalog.application.use_cases.list_measurement_units import ListMeasurementUnits
@@ -34,6 +35,7 @@ from catalog.application.use_cases.propose_ingredients_for_products import (
 from catalog.application.use_cases.propose_product_ingredient import ProposeProductIngredient
 from catalog.application.use_cases.reject_product_ingredient import RejectProductIngredient
 from catalog.application.use_cases.search_ingredients import SearchIngredients
+from catalog.application.use_cases.set_tag_calories import SetTagCalories
 from catalog.application.use_cases.split_alias import SplitAlias
 from catalog.application.use_cases.unify_tags import UnifyTags
 from catalog.application.use_cases.update_product import UpdateProduct
@@ -73,6 +75,8 @@ class CatalogModule:
     get_ingredients: GetIngredients
     search_ingredients: SearchIngredients
     list_tags: ListTags
+    set_tag_calories: SetTagCalories
+    import_tag_calories: ImportTagCalories
     merge_ingredients: MergeIngredients
     split_alias: SplitAlias
     find_ingredient_lines: FindIngredientLines
@@ -168,6 +172,8 @@ def build_catalog(
         get_ingredients=GetIngredients(ingredients),
         search_ingredients=SearchIngredients(ingredients),
         list_tags=ListTags(ingredients),
+        set_tag_calories=SetTagCalories(ingredients, transactions),
+        import_tag_calories=ImportTagCalories(ingredients, transactions),
         merge_ingredients=MergeIngredients(
             ingredients, classifications, references, lines, transactions
         ),

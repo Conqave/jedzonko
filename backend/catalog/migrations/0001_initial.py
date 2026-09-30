@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 import django.db.models.deletion
 from django.db import migrations, models
 
@@ -21,6 +23,20 @@ class Migration(migrations.Migration):
                     ),
                 ),
                 ("name", models.CharField(max_length=120)),
+                (
+                    "kcal_per_100g",
+                    models.DecimalField(blank=True, decimal_places=1, max_digits=4, null=True),
+                ),
+                (
+                    "kcal_source",
+                    models.CharField(
+                        blank=True,
+                        choices=[("manual", "manual"), ("reference", "reference")],
+                        max_length=16,
+                        null=True,
+                    ),
+                ),
+                ("kcal_reference_url", models.URLField(blank=True, max_length=500, null=True)),
                 ("created_at", models.DateTimeField(auto_now_add=True)),
             ],
             options={
@@ -29,7 +45,41 @@ class Migration(migrations.Migration):
                     models.CheckConstraint(
                         condition=models.Q(("name", ""), _negated=True),
                         name="ingredient_name_not_empty",
-                    )
+                    ),
+                    models.CheckConstraint(
+                        condition=models.Q(
+                            ("kcal_per_100g__isnull", True),
+                            models.Q(
+                                ("kcal_per_100g__gte", 0), ("kcal_per_100g__lte", Decimal("900"))
+                            ),
+                            _connector="OR",
+                        ),
+                        name="ingredient_kcal_in_range",
+                    ),
+                    models.CheckConstraint(
+                        condition=models.Q(
+                            models.Q(
+                                ("kcal_per_100g__isnull", True),
+                                ("kcal_reference_url__isnull", True),
+                                ("kcal_source__isnull", True),
+                            ),
+                            models.Q(
+                                ("kcal_per_100g__isnull", False),
+                                ("kcal_reference_url__isnull", True),
+                                ("kcal_source", "manual"),
+                                ("kcal_source__isnull", False),
+                            ),
+                            models.Q(
+                                ("kcal_per_100g__isnull", False),
+                                ("kcal_reference_url__isnull", False),
+                                ("kcal_source", "reference"),
+                                ("kcal_source__isnull", False),
+                                models.Q(("kcal_reference_url", ""), _negated=True),
+                            ),
+                            _connector="OR",
+                        ),
+                        name="ingredient_kcal_provenance",
+                    ),
                 ],
             },
         ),

@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 
+from catalog.domain.calories import TagCalories
 from catalog.domain.ingredient import (
     Ingredient,
     IngredientName,
@@ -32,7 +33,11 @@ class IngredientRepository(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def list_names(self) -> list[IngredientName]:
+    def list_tags(self) -> list[Ingredient]:
+        raise NotImplementedError
+
+    @abstractmethod
+    def save_calories(self, ingredient_id: int, calories: TagCalories | None) -> None:
         raise NotImplementedError
 
     @abstractmethod

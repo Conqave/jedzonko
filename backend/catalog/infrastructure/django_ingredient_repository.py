@@ -1,4 +1,5 @@
 from catalog.application.ports.ingredient_repository import IngredientRepository
+from catalog.domain.calories import CalorieSource, TagCalories
 from catalog.domain.ingredient import (
     Ingredient,
     IngredientName,
@@ -39,8 +40,24 @@ class DjangoIngredientRepository(IngredientRepository):
         ).select_related("ingredient")
         return [_to_name_match(row) for row in rows]
 
-    def list_names(self) -> list[IngredientName]:
-        return [_to_name(row) for row in IngredientNameRow.objects.all()]
+    def list_tags(self) -> list[Ingredient]:
+        rows = (
+            IngredientNameRow.objects.filter(kind=CANONICAL)
+            .select_related("ingredient")
+            .order_by("normalized_name")
+        )
+        return [_to_ingredient(row.ingredient) for row in rows]
+
+    def save_calories(self, ingredient_id: int, calories: TagCalories | None) -> None:
+        rows = IngredientRow.objects.filter(pk=ingredient_id)
+        if calories is None:
+            rows.update(kcal_per_100g=None, kcal_source=None, kcal_reference_url=None)
+            return
+        rows.update(
+            kcal_per_100g=calories.kcal_per_100g,
+            kcal_source=calories.source.value,
+            kcal_reference_url=calories.reference_url,
+        )
 
     def create(self, name: CatalogName, source: IngredientNameSource) -> Ingredient:
         row = IngredientRow.objects.create(name=name.name)
@@ -91,7 +108,19 @@ class DjangoIngredientRepository(IngredientRepository):
 
 
 def _to_ingredient(row: IngredientRow) -> Ingredient:
-    return Ingredient(id=row.pk, name=row.name)
+    calories = _to_calories(row)
+    return Ingredient(id=row.pk, name=row.name, calories=calories)
+
+
+def _to_calories(row: IngredientRow) -> TagCalories | None:
+    if row.kcal_per_100g is None:
+        return None
+    if row.kcal_source is None:
+        raise AssertionError(f"Ingredient {row.pk} has calories without a source.")
+    source = CalorieSource(row.kcal_source)
+    return TagCalories(
+        kcal_per_100g=row.kcal_per_100g, source=source, reference_url=row.kcal_reference_url
+    )
 
 
 def _to_name_match(row: IngredientNameRow) -> IngredientNameMatch:

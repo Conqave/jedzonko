@@ -13,6 +13,7 @@ from catalog.presentation.serializers import (
     ProductListingSerializer,
     ProductQuerySerializer,
     ProductSerializer,
+    SetTagCaloriesSerializer,
     UpdateProductSerializer,
     to_package,
 )
@@ -112,6 +113,16 @@ class IngredientListView(APIView):
         use_case = container().catalog.search_ingredients
         ingredients = use_case.execute(query.validated_data["search"])
         serializer = IngredientSerializer(ingredients, many=True)
+        return Response(serializer.data)
+
+
+class IngredientCaloriesView(APIView):
+    def put(self, request: Request, ingredient_id: int) -> Response:
+        payload = SetTagCaloriesSerializer(data=request.data)
+        payload.is_valid(raise_exception=True)
+        use_case = container().catalog.set_tag_calories
+        ingredient = use_case.execute(ingredient_id, payload.validated_data["kcal_per_100g"])
+        serializer = IngredientSerializer(ingredient)
         return Response(serializer.data)
 
 

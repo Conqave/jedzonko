@@ -32,3 +32,7 @@ class IngredientClassifierUnavailableError(IngredientClassifierError):
 
 class IngredientClassifierContractError(IngredientClassifierError):
     pass
+
+
+class DuplicateCalorieReferenceError(Exception):
+    pass

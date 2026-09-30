@@ -1,6 +1,7 @@
 from collections.abc import Iterator
 from contextlib import AbstractContextManager, contextmanager
 from datetime import datetime
+from decimal import Decimal
 
 from recipes.application.commands import RecipeInput, ResolvedIngredient
 from recipes.application.errors import (
@@ -10,6 +11,7 @@ from recipes.application.errors import (
 )
 from recipes.application.ports.external_recipe_catalog import ExternalRecipeCatalog
 from recipes.application.ports.household_stock_reader import HouseholdStockReader
+from recipes.application.ports.ingredient_calories import IngredientCalories
 from recipes.application.ports.ingredient_lines import IngredientLines
 from recipes.application.ports.ingredient_resolver import IngredientResolver
 from recipes.application.ports.inventory_consumer import HouseholdInventoryConsumer
@@ -53,6 +55,20 @@ class FakeIngredientResolver(IngredientResolver):
 
     def find_ingredient_ids(self, names: tuple[str, ...]) -> dict[str, int]:
         return {name: self._ingredient_ids[name] for name in names if name in self._ingredient_ids}
+
+
+class FakeIngredientCalories(IngredientCalories):
+    def __init__(self, kcal_per_100g: dict[int, Decimal]) -> None:
+        self._kcal_per_100g = kcal_per_100g
+        self.asked: list[set[int]] = []
+
+    def find_kcal_per_100g(self, ingredient_ids: set[int]) -> dict[int, Decimal]:
+        self.asked.append(ingredient_ids)
+        return {
+            ingredient_id: kcal
+            for ingredient_id, kcal in self._kcal_per_100g.items()
+            if ingredient_id in ingredient_ids
+        }
 
 
 class FakeRecipeRepository(RecipeRepository):

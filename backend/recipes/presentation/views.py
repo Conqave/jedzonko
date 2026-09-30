@@ -12,6 +12,7 @@ from recipes.presentation.serializers import (
     MissingItemsQuerySerializer,
     RecipeCategorySerializer,
     RecipeDetailSerializer,
+    RecipeNutritionSerializer,
     RecipeShortfallSerializer,
     RecipeSuggestionSerializer,
     RecipeSummarySerializer,
@@ -90,6 +91,14 @@ class RecipeDetailView(APIView):
         use_case = container().recipes.delete_recipe
         use_case.execute(recipe_id)
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class RecipeNutritionView(APIView):
+    def get(self, request: Request, recipe_id: int) -> Response:
+        use_case = container().recipes.get_recipe_nutrition
+        nutrition = use_case.execute(recipe_id)
+        serializer = RecipeNutritionSerializer(nutrition)
+        return Response(serializer.data)
 
 
 class RecipeSuggestionListView(APIView):

@@ -8,10 +8,12 @@ from catalog.application.errors import (
     IngredientNotFoundError,
     ProductNotFoundError,
 )
+from catalog.domain.calories import MAX_KCAL_PER_100G
 from catalog.domain.errors import (
     InvalidNameError,
     InvalidProductIngredientTransitionError,
     InvalidProductPackageError,
+    InvalidTagCaloriesError,
     ProductIngredientNotFoundError,
     UnknownMeasurementUnitError,
 )
@@ -50,6 +52,11 @@ API_ERRORS: ApiErrors = {
         ValidationError,
         "A package holds a positive quantity.",
         "invalid_package",
+    ),
+    InvalidTagCaloriesError: (
+        ValidationError,
+        f"Calories per 100 g lie between 0 and {MAX_KCAL_PER_100G} with one decimal place.",
+        "invalid_tag_calories",
     ),
     ProductIngredientNotFoundError: (
         NotFound,

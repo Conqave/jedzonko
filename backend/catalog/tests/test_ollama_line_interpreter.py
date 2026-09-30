@@ -17,7 +17,10 @@ from catalog.infrastructure.providers.ollama.line_interpreter import (
 )
 from shared.infrastructure.ollama_chat import OllamaChat, OllamaSettings
 
-CHOICES = (Ingredient(id=11, name="jajko"), Ingredient(id=22, name="mleko"))
+CHOICES = (
+    Ingredient(id=11, name="jajko", calories=None),
+    Ingredient(id=22, name="mleko", calories=None),
+)
 LINES = ("3 średnie jajka", "szklanka mleka", "szczypta soli")
 
 

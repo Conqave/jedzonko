@@ -46,7 +46,7 @@ class ProposeIngredientsForProducts:
         self._question_limit = question_limit
 
     def execute(self, now: datetime, dry_run: bool) -> ClassificationRun:
-        names = self._ingredients.list_names()
+        all_tags = self._ingredients.list_tags()
         proposals: list[ProductIngredient] = []
         skipped: list[str] = []
         asked = 0
@@ -56,7 +56,7 @@ class ProposeIngredientsForProducts:
             classification = self._classifications.find(product.id)
             if classification is None or classification.confirmed():
                 continue
-            tags = find_undecided_tags(names, classification)
+            tags = find_undecided_tags(all_tags, classification)
             if not tags:
                 continue
             asked += 1

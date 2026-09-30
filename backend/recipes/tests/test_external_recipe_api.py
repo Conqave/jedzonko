@@ -4,11 +4,15 @@ from pathlib import Path
 import httpx
 import pytest
 from django.contrib.auth.models import User
+from django.utils import timezone
 from rest_framework.test import APIClient
 
+from catalog.models import Ingredient, IngredientLine
+from config.composition import container
 from households.models import Household
 from inventory.models import InventoryItem
 from recipes.models import Recipe, RecipeIngredient
+from shared.text import normalize_text
 from tests.factories import confirm_ingredient, make_household, make_ingredient, make_product
 
 pytestmark = [pytest.mark.django_db, pytest.mark.urls("recipes.tests.urls")]
@@ -155,3 +159,38 @@ def test_external_suggestions_require_household_membership(
 
     assert response.status_code == 403
     assert response.data["code"] == "not_a_household_member"
+
+
+def test_external_recipe_nutrition_counts_tagged_mass_lines(
+    api_client: APIClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    install_source(monkeypatch, 200, NALESNIKI)
+    flour = make_ingredient("mąka pszenna")
+    eggs = make_ingredient("jajka")
+    container().catalog.set_tag_calories.execute(flour.pk, Decimal("364"))
+    container().catalog.set_tag_calories.execute(eggs.pk, Decimal("143"))
+    _interpret("1 pełna szklanka i 2 łyżki mąki pszennej - 230 g", flour, "230")
+    _interpret("3 średnie jajka - około 165 g po rozbiciu", eggs, "165")
+
+    response = api_client.get(f"/api/recipes/external/{SLUG}/nutrition/")
+
+    assert response.status_code == 200
+    assert response.data["total_kcal"] == "1073.2"
+    assert response.data["kcal_per_serving"] is None
+    assert response.data["uncounted_ingredients"] == [
+        {"name": "1 szklanka mleka", "reason": "not_by_mass"},
+        {"name": "1 szklanka wody", "reason": "not_by_mass"},
+        {"name": "4 łyżki oleju roślinnego - około 40 ml", "reason": "no_amount"},
+        {"name": "szczypta soli", "reason": "no_amount"},
+    ]
+
+
+def _interpret(text: str, ingredient: Ingredient, grams: str) -> None:
+    IngredientLine.objects.create(
+        normalized_text=normalize_text(text),
+        ingredient=ingredient,
+        quantity=Decimal(grams),
+        unit_code="g",
+        model_name="test",
+        interpreted_at=timezone.now(),
+    )

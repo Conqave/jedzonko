@@ -126,3 +126,16 @@ class RecipeSuggestionSerializer(serializers.Serializer[object]):
     recipe_id = serializers.IntegerField(read_only=True)
     recipe_name = serializers.CharField(read_only=True)
     shortfall = RecipeShortfallSerializer(read_only=True)
+
+
+class UncountedIngredientSerializer(serializers.Serializer[object]):
+    name = serializers.CharField(read_only=True)
+    reason = serializers.CharField(read_only=True)
+
+
+class RecipeNutritionSerializer(serializers.Serializer[object]):
+    total_kcal = serializers.DecimalField(max_digits=12, decimal_places=1, read_only=True)
+    kcal_per_serving = serializers.DecimalField(
+        max_digits=12, decimal_places=1, read_only=True, allow_null=True
+    )
+    uncounted_ingredients = UncountedIngredientSerializer(many=True, read_only=True)

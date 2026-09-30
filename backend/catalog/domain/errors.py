@@ -32,3 +32,7 @@ class UnknownMeasurementUnitError(Exception):
 
 class IngredientMergeError(Exception):
     pass
+
+
+class InvalidTagCaloriesError(Exception):
+    pass

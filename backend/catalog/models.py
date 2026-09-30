@@ -1,6 +1,13 @@
 from django.db import models
 from django.db.models import Case, F, Q, When
 
+from catalog.domain.calories import (
+    KCAL_DECIMAL_PLACES,
+    KCAL_MAX_DIGITS,
+    MAX_KCAL_PER_100G,
+    MAX_REFERENCE_URL_LENGTH,
+    CalorieSource,
+)
 from catalog.domain.candidate import CandidateStatus
 from catalog.domain.ingredient import IngredientNameKind, IngredientNameSource
 from catalog.domain.ingredient_line import MAX_LINE_TEXT_LENGTH
@@ -61,11 +68,46 @@ class Product(models.Model):
 
 class Ingredient(models.Model):
     name = models.CharField(max_length=MAX_NAME_LENGTH)
+    kcal_per_100g = models.DecimalField(
+        max_digits=KCAL_MAX_DIGITS, decimal_places=KCAL_DECIMAL_PLACES, null=True, blank=True
+    )
+    kcal_source = models.CharField(
+        max_length=16, null=True, blank=True, choices=enum_choices(CalorieSource)
+    )
+    kcal_reference_url = models.URLField(max_length=MAX_REFERENCE_URL_LENGTH, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         constraints = [
             models.CheckConstraint(condition=~Q(name=""), name="ingredient_name_not_empty"),
+            models.CheckConstraint(
+                condition=Q(kcal_per_100g__isnull=True)
+                | Q(kcal_per_100g__gte=0, kcal_per_100g__lte=MAX_KCAL_PER_100G),
+                name="ingredient_kcal_in_range",
+            ),
+            models.CheckConstraint(
+                condition=Q(
+                    kcal_per_100g__isnull=True,
+                    kcal_source__isnull=True,
+                    kcal_reference_url__isnull=True,
+                )
+                | Q(
+                    kcal_per_100g__isnull=False,
+                    kcal_source__isnull=False,
+                    kcal_source=CalorieSource.MANUAL.value,
+                    kcal_reference_url__isnull=True,
+                )
+                | (
+                    Q(
+                        kcal_per_100g__isnull=False,
+                        kcal_source__isnull=False,
+                        kcal_source=CalorieSource.REFERENCE.value,
+                        kcal_reference_url__isnull=False,
+                    )
+                    & ~Q(kcal_reference_url="")
+                ),
+                name="ingredient_kcal_provenance",
+            ),
         ]
         ordering = ["name"]
 

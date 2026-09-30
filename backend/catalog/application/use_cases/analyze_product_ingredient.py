@@ -38,8 +38,8 @@ class AnalyzeProductIngredient:
         if product is None or classification is None:
             raise ProductNotFoundError
         require_membership(self._memberships, user_id, classification.household_id)
-        names = self._ingredients.list_names()
-        tags = find_undecided_tags(names, classification)
+        all_tags = self._ingredients.list_tags()
+        tags = find_undecided_tags(all_tags, classification)
         if not tags:
             return ()
         tag_names = tuple(tag.name for tag in tags)

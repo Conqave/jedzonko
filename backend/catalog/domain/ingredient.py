@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from enum import StrEnum
 
+from catalog.domain.calories import TagCalories
+
 
 class IngredientNameKind(StrEnum):
     CANONICAL = "canonical"
@@ -16,6 +18,7 @@ class IngredientNameSource(StrEnum):
 class Ingredient:
     id: int
     name: str
+    calories: TagCalories | None
 
 
 @dataclass(frozen=True, slots=True)

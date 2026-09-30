@@ -24,6 +24,7 @@ from recipes.composition import (
     build_reassign_recipe_ingredient,
     build_recipes,
 )
+from recipes.infrastructure.catalog_ingredient_calories import CatalogIngredientCalories
 from recipes.infrastructure.catalog_ingredient_lines import CatalogIngredientLines
 from recipes.infrastructure.catalog_ingredient_resolver import CatalogIngredientResolver
 from recipes.infrastructure.inventory_consumer import InventoryConsumer
@@ -91,6 +92,7 @@ def container() -> Container:
     recipe_lines = CatalogIngredientLines(
         catalog.find_ingredient_lines, catalog.open_line_interpretation
     )
+    recipe_calories = CatalogIngredientCalories(catalog.get_ingredients)
     consumer = InventoryConsumer(inventory.consume_inventory_quantity)
     recipe_source_settings = RecipeSourceSettings(
         timeout_seconds=settings.RECIPE_SOURCE_HTTP_TIMEOUT_SECONDS,
@@ -102,6 +104,7 @@ def container() -> Container:
         stock,
         resolver,
         recipe_lines,
+        recipe_calories,
         consumer,
         reassign_recipe_ingredient,
         recipe_source_settings,

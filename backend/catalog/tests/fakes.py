@@ -12,6 +12,7 @@ from catalog.application.ports.product_classification_repository import (
     ProductClassificationRepository,
 )
 from catalog.application.ports.product_repository import ProductRepository
+from catalog.domain.calories import TagCalories
 from catalog.domain.candidate import CandidateStatus, IngredientNameCandidate
 from catalog.domain.classification import ProductClassification
 from catalog.domain.ingredient import (
@@ -85,8 +86,17 @@ class FakeIngredientRepository(IngredientRepository):
     def list_names(self) -> list[IngredientName]:
         return list(self.names)
 
+    def list_tags(self) -> list[Ingredient]:
+        canonical = [name for name in self.names if name.kind is IngredientNameKind.CANONICAL]
+        ordered = sorted(canonical, key=lambda name: name.normalized_name)
+        return [self.ingredients[name.ingredient_id] for name in ordered]
+
+    def save_calories(self, ingredient_id: int, calories: TagCalories | None) -> None:
+        ingredient = self.ingredients[ingredient_id]
+        self.ingredients[ingredient_id] = replace(ingredient, calories=calories)
+
     def create(self, name: CatalogName, source: IngredientNameSource) -> Ingredient:
-        ingredient = Ingredient(id=self._next_id, name=name.name)
+        ingredient = Ingredient(id=self._next_id, name=name.name, calories=None)
         self._next_id += 1
         self.ingredients[ingredient.id] = ingredient
         self.add_name(ingredient.id, name, IngredientNameKind.CANONICAL, source)
@@ -124,7 +134,7 @@ class FakeIngredientRepository(IngredientRepository):
     def split_alias(self, normalized_name: str) -> Ingredient | None:
         for position, name in enumerate(self.names):
             if name.normalized_name == normalized_name and name.kind is IngredientNameKind.ALIAS:
-                ingredient = Ingredient(id=max(self.ingredients) + 1, name=name.name)
+                ingredient = Ingredient(id=max(self.ingredients) + 1, name=name.name, calories=None)
                 self.ingredients[ingredient.id] = ingredient
                 self.names[position] = replace(
                     name, ingredient_id=ingredient.id, kind=IngredientNameKind.CANONICAL

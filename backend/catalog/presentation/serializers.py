@@ -2,6 +2,7 @@ from decimal import Decimal
 
 from rest_framework import serializers
 
+from catalog.domain.calories import KCAL_DECIMAL_PLACES, KCAL_MAX_DIGITS
 from catalog.domain.product import ProductPackage
 
 
@@ -37,9 +38,24 @@ class ProductSerializer(serializers.Serializer[object]):
     package = PackageSerializer(read_only=True, allow_null=True)
 
 
+class TagCaloriesSerializer(serializers.Serializer[object]):
+    kcal_per_100g = serializers.DecimalField(
+        max_digits=KCAL_MAX_DIGITS, decimal_places=KCAL_DECIMAL_PLACES, read_only=True
+    )
+    provenance = serializers.CharField(source="source", read_only=True)
+    reference_url = serializers.CharField(read_only=True, allow_null=True)
+
+
 class IngredientSerializer(serializers.Serializer[object]):
     id = serializers.IntegerField(read_only=True)
     name = serializers.CharField(read_only=True)
+    calories = TagCaloriesSerializer(read_only=True, allow_null=True)
+
+
+class SetTagCaloriesSerializer(serializers.Serializer[dict[str, object]]):
+    kcal_per_100g = serializers.DecimalField(
+        max_digits=KCAL_MAX_DIGITS, decimal_places=KCAL_DECIMAL_PLACES, allow_null=True
+    )
 
 
 class ProductTagSerializer(serializers.Serializer[object]):

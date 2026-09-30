@@ -28,10 +28,11 @@ class IngredientNameInline(admin.TabularInline[IngredientName, Ingredient]):
 
 @admin.register(Ingredient)
 class IngredientAdmin(admin.ModelAdmin[Ingredient]):
-    list_display = ["name", "created_at"]
+    list_display = ["name", "kcal_per_100g", "kcal_source", "created_at"]
+    list_filter = ["kcal_source"]
     search_fields = ["names__normalized_name", "name"]
     inlines = [IngredientNameInline]
-    readonly_fields = ["name", "created_at"]
+    readonly_fields = ["name", "kcal_per_100g", "kcal_source", "kcal_reference_url", "created_at"]
 
     def has_add_permission(self, request: HttpRequest) -> bool:
         return False
