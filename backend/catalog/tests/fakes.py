@@ -21,6 +21,7 @@ from catalog.domain.ingredient import (
     IngredientNameSource,
 )
 from catalog.domain.ingredient_line import LineInterpretation
+from catalog.domain.ingredient_search import IngredientNameMatch
 from catalog.domain.names import CatalogName
 from catalog.domain.product import Product, ProductListing, ProductPackage
 from catalog.domain.product_ingredient import ProductIngredient, ProductIngredientStatus
@@ -71,12 +72,15 @@ class FakeIngredientRepository(IngredientRepository):
             if name.normalized_name in normalized_names
         }
 
-    def search(self, normalized_query: str, limit: int) -> list[Ingredient]:
-        found = {
-            name.ingredient_id for name in self.names if normalized_query in name.normalized_name
-        }
-        ordered = sorted((self.ingredients[each] for each in found), key=lambda item: item.name)
-        return ordered[:limit]
+    def find_name_matches(self, normalized_query: str) -> list[IngredientNameMatch]:
+        return [
+            IngredientNameMatch(
+                ingredient=self.ingredients[name.ingredient_id],
+                normalized_name=name.normalized_name,
+            )
+            for name in self.names
+            if normalized_query in name.normalized_name
+        ]
 
     def list_names(self) -> list[IngredientName]:
         return list(self.names)

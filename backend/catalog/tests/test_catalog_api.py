@@ -4,7 +4,9 @@ import pytest
 from django.contrib.auth.models import User
 from rest_framework.test import APIClient
 
+from catalog.domain.ingredient import IngredientNameSource
 from catalog.models import Product
+from config.composition import container
 from households.models import Household
 from inventory.models import InventoryItem
 from tests.factories import confirm_ingredient, make_ingredient, make_product
@@ -213,6 +215,20 @@ def test_ingredients_are_searched_by_any_of_their_names(api_client: APIClient, a
     response = api_client.get("/api/ingredients/?search=JAJ")
 
     assert [entry["name"] for entry in response.data] == ["Jajka"]
+
+
+def test_ingredient_search_ranks_the_exact_name_first(api_client: APIClient, ala: User) -> None:
+    make_ingredient("Komosa ryżowa")
+    orzo = make_ingredient("Makaron orzo")
+    make_ingredient("Ryż")
+    container().catalog.add_ingredient_alias.execute(
+        orzo.pk, "makaron w kształcie ryżu orzo", IngredientNameSource.ANIA_GOTUJE
+    )
+    api_client.force_login(ala)
+
+    response = api_client.get("/api/ingredients/?search=ryż")
+
+    assert [entry["name"] for entry in response.data] == ["Ryż", "Komosa ryżowa", "Makaron orzo"]
 
 
 def test_units_come_from_code_constants(api_client: APIClient, ala: User) -> None:

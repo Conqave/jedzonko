@@ -5,6 +5,7 @@ from catalog.domain.ingredient import (
     IngredientNameKind,
     IngredientNameSource,
 )
+from catalog.domain.ingredient_search import IngredientNameMatch
 from catalog.domain.names import CatalogName
 from catalog.models import Ingredient as IngredientRow
 from catalog.models import IngredientName as IngredientNameRow
@@ -32,13 +33,11 @@ class DjangoIngredientRepository(IngredientRepository):
         ).select_related("ingredient")
         return {row.normalized_name: _to_ingredient(row.ingredient) for row in rows}
 
-    def search(self, normalized_query: str, limit: int) -> list[Ingredient]:
-        rows = (
-            IngredientRow.objects.filter(names__normalized_name__contains=normalized_query)
-            .distinct()
-            .order_by("name")[:limit]
-        )
-        return [_to_ingredient(row) for row in rows]
+    def find_name_matches(self, normalized_query: str) -> list[IngredientNameMatch]:
+        rows = IngredientNameRow.objects.filter(
+            normalized_name__contains=normalized_query
+        ).select_related("ingredient")
+        return [_to_name_match(row) for row in rows]
 
     def list_names(self) -> list[IngredientName]:
         return [_to_name(row) for row in IngredientNameRow.objects.all()]
@@ -93,6 +92,11 @@ class DjangoIngredientRepository(IngredientRepository):
 
 def _to_ingredient(row: IngredientRow) -> Ingredient:
     return Ingredient(id=row.pk, name=row.name)
+
+
+def _to_name_match(row: IngredientNameRow) -> IngredientNameMatch:
+    ingredient = _to_ingredient(row.ingredient)
+    return IngredientNameMatch(ingredient=ingredient, normalized_name=row.normalized_name)
 
 
 def _to_name(row: IngredientNameRow) -> IngredientName:

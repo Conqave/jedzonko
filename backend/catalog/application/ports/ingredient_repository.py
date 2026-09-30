@@ -6,6 +6,7 @@ from catalog.domain.ingredient import (
     IngredientNameKind,
     IngredientNameSource,
 )
+from catalog.domain.ingredient_search import IngredientNameMatch
 from catalog.domain.names import CatalogName
 
 
@@ -27,7 +28,7 @@ class IngredientRepository(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def search(self, normalized_query: str, limit: int) -> list[Ingredient]:
+    def find_name_matches(self, normalized_query: str) -> list[IngredientNameMatch]:
         raise NotImplementedError
 
     @abstractmethod
