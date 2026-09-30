@@ -8,7 +8,7 @@
     bordered
     :rows-per-page-options="[0]"
     :grid="quasar.screen.lt.sm"
-    no-data-label="Brak produktów w zapasach."
+    :no-data-label="isFiltered ? NO_MATCHES_LABEL : 'Brak produktów w zapasach.'"
   >
     <template #item="card">
       <div class="col-12 q-pa-xs">
@@ -208,25 +208,21 @@
 
 <script setup lang="ts">
 import { useQuasar, type QTableColumn } from 'quasar';
+import { NO_MATCHES_LABEL } from '@/shared/listView';
 import { productEmoji } from '@/shared/productEmoji';
 import { isEmpty, type InventoryItem, type QuantityDirection } from '../model';
 
 const COLUMNS: QTableColumn<InventoryItem>[] = [
   { name: 'photo', label: '', field: 'photoUrl', align: 'left' },
-  { name: 'productName', label: 'Produkt', field: 'productName', align: 'left', sortable: true },
+  { name: 'productName', label: 'Produkt', field: 'productName', align: 'left' },
   { name: 'quantity', label: 'Ilość', field: 'quantity', align: 'left' },
-  {
-    name: 'tags',
-    label: 'Tagi',
-    field: 'productId',
-    align: 'left',
-    sortable: true,
-  },
+  { name: 'tags', label: 'Tagi', field: 'productId', align: 'left' },
   { name: 'actions', label: '', field: 'id', align: 'right' },
 ];
 
 defineProps<{
   items: InventoryItem[];
+  isFiltered: boolean;
   findTags: (productId: number) => string[];
   findProposalCount: (productId: number) => number;
   busy: boolean;

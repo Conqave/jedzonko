@@ -20,8 +20,25 @@
     </q-banner>
     <template v-else>
       <LowStockBanner :items="belowMinimumItems" />
+      <ListFilterBar
+        v-model:search="search"
+        v-model:sort="sort"
+        v-model:is-reversed="isReversed"
+        search-label="Szukaj po produkcie lub tagu"
+        :sorts="INVENTORY_SORTS"
+        :sort-labels="INVENTORY_SORT_LABELS"
+      >
+        <ChoiceToggle
+          v-model="tag"
+          :choices="TAG_FILTERS"
+          :labels="TAG_FILTER_LABELS"
+          label="Tag"
+        />
+        <q-toggle v-model="isBelowMinimumOnly" dense label="Poniżej minimum" />
+      </ListFilterBar>
       <InventoryTable
-        :items="items"
+        :items="visibleItems"
+        :is-filtered="isFiltered"
         :find-tags="findTags"
         :find-proposal-count="findProposalCount"
         :busy="busy"
@@ -39,7 +56,7 @@
 <script setup lang="ts">
 import { useQuasar } from 'quasar';
 import { toRef } from 'vue';
-import type { ProductListing } from '@/features/catalog/model';
+import { TAG_FILTER_LABELS, TAG_FILTERS, type ProductListing } from '@/features/catalog/model';
 import { useMeasurementUnits } from '@/features/catalog/useMeasurementUnits';
 import { useProductCatalog } from '@/features/catalog/useProductCatalog';
 import { useHouseholdStore } from '@/features/households/store';
@@ -49,6 +66,8 @@ import InventoryPhotoDialog from '@/features/inventory/components/InventoryPhoto
 import InventoryTable from '@/features/inventory/components/InventoryTable.vue';
 import LowStockBanner from '@/features/inventory/components/LowStockBanner.vue';
 import {
+  INVENTORY_SORT_LABELS,
+  INVENTORY_SORTS,
   stepQuantity,
   type InventoryItem,
   type PantryItemEdit,
@@ -56,6 +75,9 @@ import {
   type QuantityDirection,
 } from '@/features/inventory/model';
 import { useInventory } from '@/features/inventory/useInventory';
+import { useInventoryView } from '@/features/inventory/useInventoryView';
+import ChoiceToggle from '@/shared/components/ChoiceToggle.vue';
+import ListFilterBar from '@/shared/components/ListFilterBar.vue';
 import { useDialogs } from '@/shared/useDialogs';
 
 const quasar = useQuasar();
@@ -105,6 +127,9 @@ function findTags(productId: number): string[] {
   }
   return listing.tags.map((tag) => tag.name);
 }
+
+const { search, tag, isBelowMinimumOnly, sort, isReversed, visibleItems, isFiltered } =
+  useInventoryView(items, findTags, units);
 
 function findProposalCount(productId: number): number {
   const listing = findListing(productId);
