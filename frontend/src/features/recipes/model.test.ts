@@ -34,7 +34,7 @@ describe('recipe model', () => {
 
     expect(draft.steps).toEqual(['Wymieszaj.', 'Usmaż.']);
     expect(draft.categoryId).toBe(2);
-    expect(draft.ingredients).toEqual([{ name: 'Mąka', quantity: '300.000', unitCode: 'g' }]);
+    expect(draft.ingredients).toEqual([{ name: 'Mąka', quantity: '300', unitCode: 'g' }]);
   });
 
   it('moves a step without touching the original list', () => {

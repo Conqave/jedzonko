@@ -64,6 +64,7 @@ import { ref } from 'vue';
 import PackageFields from '@/features/catalog/components/PackageFields.vue';
 import ProductIngredientSection from '@/features/catalog/components/ProductIngredientSection.vue';
 import {
+  formatPackage,
   normalizePackage,
   type MeasurementUnit,
   type Product,
@@ -79,7 +80,7 @@ defineEmits([...useDialogPluginComponent.emits]);
 
 const { dialogRef, onDialogHide, onDialogOK, onDialogCancel } = useDialogPluginComponent();
 const productName = ref(props.product.name);
-const productPackage = ref<ProductPackage | null>(props.product.package);
+const productPackage = ref<ProductPackage | null>(formatPackage(props.product.package));
 const quantity = ref(formatQuantity(props.item.quantity));
 const unitCode = ref(props.item.unitCode);
 const initialMinimum = props.item.minimumQuantity;

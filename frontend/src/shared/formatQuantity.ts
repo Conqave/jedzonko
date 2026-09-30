@@ -9,7 +9,8 @@ export function formatQuantity(value: string): string {
     return trimmed;
   }
   const withoutTrailingZeroes = trimmed.replace(/0+$/, '').replace(/\.$/, '');
-  return withoutTrailingZeroes === '' || withoutTrailingZeroes === '-'
-    ? '0'
-    : withoutTrailingZeroes;
+  if (withoutTrailingZeroes === '' || withoutTrailingZeroes === '-') {
+    return '0';
+  }
+  return withoutTrailingZeroes.replace('.', ',');
 }

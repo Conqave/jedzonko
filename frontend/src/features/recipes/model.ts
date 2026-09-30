@@ -1,3 +1,5 @@
+import { formatQuantity } from '@/shared/formatQuantity';
+
 export const RECIPE_DIFFICULTIES = ['easy', 'medium', 'hard'] as const;
 
 export type RecipeDifficulty = (typeof RECIPE_DIFFICULTIES)[number];
@@ -155,7 +157,7 @@ export function toDraft(recipe: RecipeDetail): RecipeDraft {
     steps: orderedSteps.map((step) => step.text),
     ingredients: recipe.ingredients.map((line) => ({
       name: line.name,
-      quantity: line.quantity,
+      quantity: formatQuantity(line.quantity),
       unitCode: line.unitCode,
     })),
   };

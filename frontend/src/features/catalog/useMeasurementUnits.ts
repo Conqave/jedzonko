@@ -10,9 +10,7 @@ export function useMeasurementUnits() {
   const { run } = useApiAction(CATALOG_ERROR_MESSAGES);
 
   function describeUnitQuantity(quantity: string, unitCode: string): string {
-    const unit = units.value.find((candidate) => candidate.code === unitCode);
-    const unitName = unit === undefined ? unitCode : unit.name;
-    return describeQuantity(quantity, unitCode, unitName);
+    return describeQuantity(quantity, unitCode, units.value);
   }
 
   onMounted(() => {

@@ -1,4 +1,5 @@
-import type { MeasurementUnit, ProductChanges } from '@/features/catalog/model';
+import { isBaseUnit, type MeasurementUnit, type ProductChanges } from '@/features/catalog/model';
+import { fromThousandths, toThousandths } from '@/shared/decimal';
 
 export interface InventoryItem {
   id: number;
@@ -41,30 +42,15 @@ export interface NewInventoryEntry {
 
 export type QuantityDirection = -1 | 1;
 
-const THOUSANDTHS_PER_UNIT = 1000n;
 const COUNT_STEP_THOUSANDTHS = 1000n;
 const BASE_UNIT_STEP_THOUSANDTHS = 50000n;
 const LARGE_UNIT_STEP_THOUSANDTHS = 100n;
-
-function toThousandths(quantity: string): bigint {
-  const [whole = '0', fraction = ''] = quantity.split('.');
-  const paddedFraction = fraction.padEnd(3, '0').slice(0, 3);
-  return BigInt(whole) * THOUSANDTHS_PER_UNIT + BigInt(paddedFraction);
-}
-
-function fromThousandths(thousandths: bigint): string {
-  const whole = thousandths / THOUSANDTHS_PER_UNIT;
-  const fraction = thousandths % THOUSANDTHS_PER_UNIT;
-  const paddedFraction = fraction.toString().padStart(3, '0');
-  return `${whole.toString()}.${paddedFraction}`;
-}
 
 function findStep(unit: MeasurementUnit): bigint {
   if (unit.dimension === 'count') {
     return COUNT_STEP_THOUSANDTHS;
   }
-  const isBaseUnit = toThousandths(unit.factorToBase) === 1000n;
-  return isBaseUnit ? BASE_UNIT_STEP_THOUSANDTHS : LARGE_UNIT_STEP_THOUSANDTHS;
+  return isBaseUnit(unit) ? BASE_UNIT_STEP_THOUSANDTHS : LARGE_UNIT_STEP_THOUSANDTHS;
 }
 
 export function stepQuantity(

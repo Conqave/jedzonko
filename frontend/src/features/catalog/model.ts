@@ -1,4 +1,5 @@
-import { toDecimalText } from '@/shared/decimal';
+import { toDecimalText, toThousandths } from '@/shared/decimal';
+import { formatQuantity } from '@/shared/formatQuantity';
 
 export const MEASUREMENT_DIMENSIONS = ['mass', 'volume', 'count'] as const;
 
@@ -9,6 +10,12 @@ export interface MeasurementUnit {
   name: string;
   dimension: MeasurementDimension;
   factorToBase: string;
+}
+
+const BASE_FACTOR_THOUSANDTHS = 1000n;
+
+export function isBaseUnit(unit: MeasurementUnit): boolean {
+  return toThousandths(unit.factorToBase) === BASE_FACTOR_THOUSANDTHS;
 }
 
 export interface ProductPackage {
@@ -68,4 +75,8 @@ export interface ProductChanges {
 
 export function normalizePackage(value: ProductPackage | null): ProductPackage | null {
   return value === null ? null : { ...value, quantity: toDecimalText(value.quantity) };
+}
+
+export function formatPackage(value: ProductPackage | null): ProductPackage | null {
+  return value === null ? null : { ...value, quantity: formatQuantity(value.quantity) };
 }
