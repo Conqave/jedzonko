@@ -3,13 +3,40 @@ import {
   describeTagCalories,
   describeTagDensity,
   describeTagPieceWeight,
+  groupProductDecisions,
   isDensityInput,
   isKcalInput,
   isPieceWeightInput,
   toOptionalDecimalPayload,
+  type ProductIngredientDecision,
+  type ProductIngredientStatus,
 } from './model';
 
+function makeDecision(id: number, status: ProductIngredientStatus): ProductIngredientDecision {
+  return {
+    ingredient: { id, name: `tag ${String(id)}` },
+    calories: null,
+    pieceWeight: null,
+    density: null,
+    status,
+    provenance: 'model',
+    modelName: 'gpt-oss:20b',
+    proposedAt: new Date('2026-09-30T08:00:00+02:00'),
+    decidedAt: null,
+  };
+}
+
 describe('catalog model', () => {
+  it('keeps confirmed tags, pending proposals and rejections apart', () => {
+    const tag = makeDecision(1, 'confirmed');
+    const proposal = makeDecision(2, 'proposed');
+    const rejection = makeDecision(3, 'rejected');
+
+    const groups = groupProductDecisions([rejection, tag, proposal]);
+
+    expect(groups).toEqual({ tags: [tag], proposals: [proposal], rejections: [rejection] });
+  });
+
   it('describes calories per 100 g of a tag', () => {
     const calories = { kcalPer100g: '52.5', provenance: 'manual' as const, referenceUrl: null };
 

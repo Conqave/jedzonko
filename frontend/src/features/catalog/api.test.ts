@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   createProduct,
+  deleteProductIngredient,
+  deleteRejectedProductIngredients,
   fetchProductDecisions,
   searchProducts,
   setTagCalories,
@@ -8,9 +10,14 @@ import {
   setTagPieceWeight,
 } from './api';
 
-const { get, post, put } = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), put: vi.fn() }));
+const { get, post, put, remove } = vi.hoisted(() => ({
+  get: vi.fn(),
+  post: vi.fn(),
+  put: vi.fn(),
+  remove: vi.fn(),
+}));
 
-vi.mock('@/shared/http', () => ({ http: { get, post, put } }));
+vi.mock('@/shared/http', () => ({ http: { get, post, put, delete: remove } }));
 
 const PRODUCT_DTO = {
   id: 7,
@@ -25,6 +32,7 @@ beforeEach(() => {
   get.mockReset();
   post.mockReset();
   put.mockReset();
+  remove.mockReset();
 });
 
 describe('catalog api', () => {
@@ -139,6 +147,16 @@ describe('catalog api', () => {
       provenance: 'manual',
       referenceUrl: null,
     });
+  });
+
+  it('deletes one proposal or rejection and every rejection of a product', async () => {
+    remove.mockResolvedValue({ data: null });
+
+    await deleteProductIngredient(7, 3);
+    await deleteRejectedProductIngredients(7);
+
+    expect(remove).toHaveBeenNthCalledWith(1, '/products/7/ingredients/3/');
+    expect(remove).toHaveBeenNthCalledWith(2, '/products/7/rejected-ingredients/');
   });
 
   it('sets or clears the calories of a tag', async () => {

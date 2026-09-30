@@ -163,6 +163,22 @@ export interface ProductIngredientDecision {
   decidedAt: Date | null;
 }
 
+export interface ProductDecisionGroups {
+  tags: ProductIngredientDecision[];
+  proposals: ProductIngredientDecision[];
+  rejections: ProductIngredientDecision[];
+}
+
+export function groupProductDecisions(
+  decisions: readonly ProductIngredientDecision[],
+): ProductDecisionGroups {
+  return {
+    tags: decisions.filter((decision) => decision.status === 'confirmed'),
+    proposals: decisions.filter((decision) => decision.status === 'proposed'),
+    rejections: decisions.filter((decision) => decision.status === 'rejected'),
+  };
+}
+
 export interface NewProduct {
   householdId: number;
   name: string;

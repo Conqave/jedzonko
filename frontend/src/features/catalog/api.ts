@@ -195,6 +195,17 @@ export async function rejectProductIngredient(
   await http.post(`/products/${productId}/ingredients/${ingredientId}/rejection/`);
 }
 
+export async function deleteProductIngredient(
+  productId: number,
+  ingredientId: number,
+): Promise<void> {
+  await http.delete(`/products/${productId}/ingredients/${ingredientId}/`);
+}
+
+export async function deleteRejectedProductIngredients(productId: number): Promise<void> {
+  await http.delete(`/products/${productId}/rejected-ingredients/`);
+}
+
 const analysisSchema = z.object({ assigned_count: z.number().int() });
 
 export async function analyzeProductIngredient(productId: number): Promise<number> {

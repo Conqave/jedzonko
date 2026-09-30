@@ -1,8 +1,10 @@
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useApiAction } from '@/shared/useApiAction';
 import {
   analyzeProductIngredient,
   confirmProductIngredient,
+  deleteProductIngredient,
+  deleteRejectedProductIngredients,
   fetchProductDecisions,
   rejectProductIngredient,
   setTagCalories,
@@ -10,10 +12,11 @@ import {
   setTagPieceWeight,
 } from './api';
 import { CATALOG_ERROR_MESSAGES } from './errors';
-import type { ProductIngredientDecision } from './model';
+import { groupProductDecisions, type ProductIngredientDecision } from './model';
 
 export function useProductDecisions(productId: number) {
   const decisions = ref<ProductIngredientDecision[]>([]);
+  const groups = computed(() => groupProductDecisions(decisions.value));
   const isAnalyzing = ref(false);
   const { busy, run } = useApiAction(CATALOG_ERROR_MESSAGES);
 
@@ -31,6 +34,20 @@ export function useProductDecisions(productId: number) {
   function reject(ingredientId: number): Promise<boolean> {
     return run(async () => {
       await rejectProductIngredient(productId, ingredientId);
+      await reload();
+    });
+  }
+
+  function forget(ingredientId: number): Promise<boolean> {
+    return run(async () => {
+      await deleteProductIngredient(productId, ingredientId);
+      await reload();
+    });
+  }
+
+  function forgetRejections(): Promise<boolean> {
+    return run(async () => {
+      await deleteRejectedProductIngredients(productId);
       await reload();
     });
   }
@@ -75,11 +92,13 @@ export function useProductDecisions(productId: number) {
   });
 
   return {
-    decisions,
+    groups,
     busy,
     isAnalyzing,
     confirm,
     reject,
+    forget,
+    forgetRejections,
     setCalories,
     setPieceWeight,
     setDensity,

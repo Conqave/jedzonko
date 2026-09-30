@@ -18,24 +18,15 @@
       />
     </div>
     <q-list separator>
-      <q-item v-for="decision in decisions" :key="decision.ingredient.id">
+      <q-item v-for="tag in groups.tags" :key="tag.ingredient.id">
         <q-item-section>
-          <q-item-label>{{ decision.ingredient.name }}</q-item-label>
-          <q-item-label caption>
-            {{ STATUS_LABELS[decision.status] }}
-            <template v-if="decision.modelName !== null"
-              >· propozycja modelu {{ decision.modelName }}</template
-            >
-          </q-item-label>
+          <q-item-label>{{ tag.ingredient.name }}</q-item-label>
+          <TagFactCaption :text="describeTagCalories(tag.calories)" :source="tag.calories" />
           <TagFactCaption
-            :text="describeTagCalories(decision.calories)"
-            :source="decision.calories"
+            :text="describeTagPieceWeight(tag.pieceWeight)"
+            :source="tag.pieceWeight"
           />
-          <TagFactCaption
-            :text="describeTagPieceWeight(decision.pieceWeight)"
-            :source="decision.pieceWeight"
-          />
-          <TagFactCaption :text="describeTagDensity(decision.density)" :source="decision.density" />
+          <TagFactCaption :text="describeTagDensity(tag.density)" :source="tag.density" />
         </q-item-section>
         <q-item-section side>
           <div class="row no-wrap q-gutter-xs">
@@ -45,9 +36,9 @@
               round
               color="deep-orange"
               icon="local_fire_department"
-              :aria-label="`Kalorie ${decision.ingredient.name}`"
+              :aria-label="`Kalorie ${tag.ingredient.name}`"
               :loading="busy"
-              @click="editCalories(decision)"
+              @click="editCalories(tag)"
             />
             <q-btn
               flat
@@ -55,9 +46,9 @@
               round
               color="brown"
               icon="scale"
-              :aria-label="`Waga sztuki ${decision.ingredient.name}`"
+              :aria-label="`Waga sztuki ${tag.ingredient.name}`"
               :loading="busy"
-              @click="editPieceWeight(decision)"
+              @click="editPieceWeight(tag)"
             />
             <q-btn
               flat
@@ -65,39 +56,114 @@
               round
               color="blue"
               icon="water_drop"
-              :aria-label="`Gęstość ${decision.ingredient.name}`"
+              :aria-label="`Gęstość ${tag.ingredient.name}`"
               :loading="busy"
-              @click="editDensity(decision)"
+              @click="editDensity(tag)"
             />
             <q-btn
-              v-if="decision.status !== 'confirmed'"
-              flat
-              dense
-              round
-              color="positive"
-              icon="check"
-              :aria-label="`Potwierdź ${decision.ingredient.name}`"
-              :loading="busy"
-              @click="confirm(decision.ingredient.id)"
-            />
-            <q-btn
-              v-if="decision.status !== 'rejected'"
               flat
               dense
               round
               color="negative"
               icon="close"
-              :aria-label="`Odrzuć ${decision.ingredient.name}`"
+              :aria-label="`Usuń tag ${tag.ingredient.name}`"
               :loading="busy"
-              @click="reject(decision.ingredient.id)"
+              @click="reject(tag.ingredient.id)"
             />
           </div>
         </q-item-section>
       </q-item>
-      <q-item v-if="decisions.length === 0">
-        <q-item-section class="text-grey">Brak tagów i propozycji.</q-item-section>
+      <q-item v-if="groups.tags.length === 0">
+        <q-item-section class="text-grey">Brak tagów.</q-item-section>
       </q-item>
     </q-list>
+
+    <template v-if="groups.proposals.length > 0">
+      <div class="text-subtitle2 q-px-md q-pt-md">Do decyzji</div>
+      <q-list separator>
+        <q-item v-for="proposal in groups.proposals" :key="proposal.ingredient.id">
+          <q-item-section>
+            <q-item-label>{{ proposal.ingredient.name }}</q-item-label>
+            <q-item-label v-if="proposal.modelName !== null" caption>
+              Propozycja modelu {{ proposal.modelName }}
+            </q-item-label>
+          </q-item-section>
+          <q-item-section side>
+            <div class="row no-wrap q-gutter-xs">
+              <q-btn
+                flat
+                dense
+                round
+                color="positive"
+                icon="check"
+                :aria-label="`Potwierdź ${proposal.ingredient.name}`"
+                :loading="busy"
+                @click="confirm(proposal.ingredient.id)"
+              />
+              <q-btn
+                flat
+                dense
+                round
+                color="negative"
+                icon="close"
+                :aria-label="`Odrzuć ${proposal.ingredient.name}`"
+                :loading="busy"
+                @click="reject(proposal.ingredient.id)"
+              />
+              <q-btn
+                flat
+                dense
+                round
+                color="grey-8"
+                icon="delete_forever"
+                :aria-label="`Usuń na zawsze ${proposal.ingredient.name}`"
+                :loading="busy"
+                @click="forgetProposal(proposal)"
+              />
+            </div>
+          </q-item-section>
+        </q-item>
+      </q-list>
+    </template>
+
+    <q-expansion-item
+      v-if="groups.rejections.length > 0"
+      dense
+      icon="block"
+      :label="`Odrzucone (${groups.rejections.length})`"
+      caption="Model nie zaproponuje ich ponownie."
+    >
+      <q-list separator>
+        <q-item v-for="rejection in groups.rejections" :key="rejection.ingredient.id">
+          <q-item-section>
+            <q-item-label>{{ rejection.ingredient.name }}</q-item-label>
+          </q-item-section>
+          <q-item-section side>
+            <q-btn
+              flat
+              dense
+              no-caps
+              color="negative"
+              icon="delete_forever"
+              label="Usuń na zawsze"
+              :loading="busy"
+              @click="forgetRejection(rejection)"
+            />
+          </q-item-section>
+        </q-item>
+      </q-list>
+      <div class="row justify-end q-pa-sm">
+        <q-btn
+          flat
+          no-caps
+          color="negative"
+          icon="delete_sweep"
+          label="Usuń wszystkie odrzucone"
+          :loading="busy"
+          @click="forgetAllRejections"
+        />
+      </div>
+    </q-expansion-item>
 
     <q-card-section class="row q-col-gutter-sm items-center">
       <div class="col">
@@ -133,28 +199,23 @@ import {
   type Ingredient,
   type Product,
   type ProductIngredientDecision,
-  type ProductIngredientStatus,
 } from '../model';
 import { useProductDecisions } from '../useProductDecisions';
 import IngredientPicker from './IngredientPicker.vue';
 import TagFactCaption from './TagFactCaption.vue';
-
-const STATUS_LABELS: Readonly<Record<ProductIngredientStatus, string>> = {
-  proposed: 'Do decyzji',
-  confirmed: 'Potwierdzony',
-  rejected: 'Odrzucony',
-};
 
 const props = defineProps<{ product: Product }>();
 
 const quasar = useQuasar();
 const dialogs = useDialogs();
 const {
-  decisions,
+  groups,
   busy,
   isAnalyzing,
   confirm,
   reject,
+  forget,
+  forgetRejections,
   setCalories,
   setPieceWeight,
   setDensity,
@@ -170,6 +231,35 @@ async function confirmChosen(): Promise<void> {
   const isConfirmed = await confirm(ingredient.id);
   if (isConfirmed) {
     chosen.value = null;
+  }
+}
+
+const MAY_BE_PROPOSED_AGAIN = 'Ollama może ponownie zaproponować ten tag przy kolejnej analizie.';
+
+async function forgetProposal(proposal: ProductIngredientDecision): Promise<void> {
+  const name = proposal.ingredient.name;
+  const message = `Propozycja tagu „${name}” zniknie bez zapamiętania decyzji. ${MAY_BE_PROPOSED_AGAIN} Aby model jej nie powtarzał, odrzuć ją zamiast usuwać.`;
+  const isConfirmed = await dialogs.confirm('Usunąć propozycję na zawsze?', message);
+  if (isConfirmed) {
+    await forget(proposal.ingredient.id);
+  }
+}
+
+async function forgetRejection(rejection: ProductIngredientDecision): Promise<void> {
+  const name = rejection.ingredient.name;
+  const message = `Odrzucenie tagu „${name}” zostanie usunięte. ${MAY_BE_PROPOSED_AGAIN}`;
+  const isConfirmed = await dialogs.confirm('Usunąć odrzucenie na zawsze?', message);
+  if (isConfirmed) {
+    await forget(rejection.ingredient.id);
+  }
+}
+
+async function forgetAllRejections(): Promise<void> {
+  const count = groups.value.rejections.length;
+  const message = `Odrzucone tagi (${count}) zostaną usunięte. Ollama może ponownie zaproponować każdy z nich przy kolejnej analizie.`;
+  const isConfirmed = await dialogs.confirm('Usunąć wszystkie odrzucone?', message);
+  if (isConfirmed) {
+    await forgetRejections();
   }
 }
 
