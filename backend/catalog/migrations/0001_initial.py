@@ -37,6 +37,37 @@ class Migration(migrations.Migration):
                     ),
                 ),
                 ("kcal_reference_url", models.URLField(blank=True, max_length=500, null=True)),
+                (
+                    "grams_per_piece",
+                    models.DecimalField(blank=True, decimal_places=1, max_digits=6, null=True),
+                ),
+                (
+                    "piece_weight_source",
+                    models.CharField(
+                        blank=True,
+                        choices=[("manual", "manual"), ("reference", "reference")],
+                        max_length=16,
+                        null=True,
+                    ),
+                ),
+                (
+                    "piece_weight_reference_url",
+                    models.URLField(blank=True, max_length=500, null=True),
+                ),
+                (
+                    "grams_per_ml",
+                    models.DecimalField(blank=True, decimal_places=3, max_digits=4, null=True),
+                ),
+                (
+                    "density_source",
+                    models.CharField(
+                        blank=True,
+                        choices=[("manual", "manual"), ("reference", "reference")],
+                        max_length=16,
+                        null=True,
+                    ),
+                ),
+                ("density_reference_url", models.URLField(blank=True, max_length=500, null=True)),
                 ("created_at", models.DateTimeField(auto_now_add=True)),
             ],
             options={
@@ -79,6 +110,73 @@ class Migration(migrations.Migration):
                             _connector="OR",
                         ),
                         name="ingredient_kcal_provenance",
+                    ),
+                    models.CheckConstraint(
+                        condition=models.Q(
+                            ("grams_per_piece__isnull", True),
+                            models.Q(
+                                ("grams_per_piece__gt", 0),
+                                ("grams_per_piece__lte", Decimal("10000")),
+                            ),
+                            _connector="OR",
+                        ),
+                        name="ingredient_piece_weight_in_range",
+                    ),
+                    models.CheckConstraint(
+                        condition=models.Q(
+                            models.Q(
+                                ("grams_per_piece__isnull", True),
+                                ("piece_weight_reference_url__isnull", True),
+                                ("piece_weight_source__isnull", True),
+                            ),
+                            models.Q(
+                                ("grams_per_piece__isnull", False),
+                                ("piece_weight_reference_url__isnull", True),
+                                ("piece_weight_source", "manual"),
+                                ("piece_weight_source__isnull", False),
+                            ),
+                            models.Q(
+                                ("grams_per_piece__isnull", False),
+                                ("piece_weight_reference_url__isnull", False),
+                                ("piece_weight_source", "reference"),
+                                ("piece_weight_source__isnull", False),
+                                models.Q(("piece_weight_reference_url", ""), _negated=True),
+                            ),
+                            _connector="OR",
+                        ),
+                        name="ingredient_piece_weight_provenance",
+                    ),
+                    models.CheckConstraint(
+                        condition=models.Q(
+                            ("grams_per_ml__isnull", True),
+                            models.Q(("grams_per_ml__gt", 0), ("grams_per_ml__lte", Decimal("3"))),
+                            _connector="OR",
+                        ),
+                        name="ingredient_density_in_range",
+                    ),
+                    models.CheckConstraint(
+                        condition=models.Q(
+                            models.Q(
+                                ("density_reference_url__isnull", True),
+                                ("density_source__isnull", True),
+                                ("grams_per_ml__isnull", True),
+                            ),
+                            models.Q(
+                                ("density_reference_url__isnull", True),
+                                ("density_source", "manual"),
+                                ("density_source__isnull", False),
+                                ("grams_per_ml__isnull", False),
+                            ),
+                            models.Q(
+                                ("density_reference_url__isnull", False),
+                                ("density_source", "reference"),
+                                ("density_source__isnull", False),
+                                ("grams_per_ml__isnull", False),
+                                models.Q(("density_reference_url", ""), _negated=True),
+                            ),
+                            _connector="OR",
+                        ),
+                        name="ingredient_density_provenance",
                     ),
                 ],
             },
@@ -257,6 +355,75 @@ class Migration(migrations.Migration):
             ],
             options={
                 "ordering": ["product_id", "ingredient_id"],
+            },
+        ),
+        migrations.CreateModel(
+            name="IngredientLine",
+            fields=[
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
+                ("normalized_text", models.CharField(max_length=255, unique=True)),
+                (
+                    "quantity",
+                    models.DecimalField(blank=True, decimal_places=3, max_digits=12, null=True),
+                ),
+                (
+                    "unit_code",
+                    models.CharField(
+                        blank=True,
+                        choices=[
+                            ("g", "gram"),
+                            ("kg", "kilogram"),
+                            ("ml", "mililitr"),
+                            ("l", "litr"),
+                            ("szt", "sztuka"),
+                            ("opak", "opakowanie"),
+                        ],
+                        max_length=16,
+                        null=True,
+                    ),
+                ),
+                ("model_name", models.CharField(max_length=120)),
+                ("interpreted_at", models.DateTimeField()),
+                (
+                    "ingredient",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.DO_NOTHING,
+                        related_name="lines",
+                        to="catalog.ingredient",
+                    ),
+                ),
+            ],
+            options={
+                "constraints": [
+                    models.CheckConstraint(
+                        condition=models.Q(("normalized_text", ""), _negated=True),
+                        name="ingredient_line_text_not_empty",
+                    ),
+                    models.CheckConstraint(
+                        condition=models.Q(("model_name", ""), _negated=True),
+                        name="ingredient_line_model_not_empty",
+                    ),
+                    models.CheckConstraint(
+                        condition=models.Q(
+                            models.Q(("quantity__isnull", True), ("unit_code__isnull", True)),
+                            models.Q(
+                                ("quantity__gt", 0),
+                                ("quantity__isnull", False),
+                                ("unit_code__in", ("g", "kg", "ml", "l", "szt", "opak")),
+                                ("unit_code__isnull", False),
+                            ),
+                            _connector="OR",
+                        ),
+                        name="ingredient_line_amount_complete",
+                    ),
+                ],
             },
         ),
         migrations.CreateModel(
@@ -441,74 +608,5 @@ class Migration(migrations.Migration):
                 ),
                 name="product_ingredient_decision_time",
             ),
-        ),
-        migrations.CreateModel(
-            name="IngredientLine",
-            fields=[
-                (
-                    "id",
-                    models.BigAutoField(
-                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
-                    ),
-                ),
-                ("normalized_text", models.CharField(max_length=255, unique=True)),
-                (
-                    "quantity",
-                    models.DecimalField(blank=True, decimal_places=3, max_digits=12, null=True),
-                ),
-                (
-                    "unit_code",
-                    models.CharField(
-                        blank=True,
-                        choices=[
-                            ("g", "gram"),
-                            ("kg", "kilogram"),
-                            ("ml", "mililitr"),
-                            ("l", "litr"),
-                            ("szt", "sztuka"),
-                            ("opak", "opakowanie"),
-                        ],
-                        max_length=16,
-                        null=True,
-                    ),
-                ),
-                ("model_name", models.CharField(max_length=120)),
-                ("interpreted_at", models.DateTimeField()),
-                (
-                    "ingredient",
-                    models.ForeignKey(
-                        blank=True,
-                        null=True,
-                        on_delete=django.db.models.deletion.DO_NOTHING,
-                        related_name="lines",
-                        to="catalog.ingredient",
-                    ),
-                ),
-            ],
-            options={
-                "constraints": [
-                    models.CheckConstraint(
-                        condition=models.Q(("normalized_text", ""), _negated=True),
-                        name="ingredient_line_text_not_empty",
-                    ),
-                    models.CheckConstraint(
-                        condition=models.Q(("model_name", ""), _negated=True),
-                        name="ingredient_line_model_not_empty",
-                    ),
-                    models.CheckConstraint(
-                        condition=models.Q(
-                            models.Q(("quantity__isnull", True), ("unit_code__isnull", True)),
-                            models.Q(
-                                ("quantity__gt", 0),
-                                ("quantity__isnull", False),
-                                ("unit_code__in", ("g", "kg", "ml", "l", "szt", "opak")),
-                                ("unit_code__isnull", False),
-                            ),
-                            _connector="OR",
-                        ),
-                        name="ingredient_line_amount_complete",
-                    ),
-                ],
-            },
         ),
     ]

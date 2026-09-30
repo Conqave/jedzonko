@@ -10,7 +10,7 @@ from shopping.application.ports.shopping_list_repository import ShoppingListRepo
 from shopping.domain.promotion_split import split_by_promotions
 from shopping.domain.shopping_list_summary import ShoppingListSummary
 
-SPLIT_LIST_PREFIX = "Zakupy — "
+SPLIT_LIST_PREFIX = "Zakupy - "
 
 
 class SplitShoppingListByPromotions:

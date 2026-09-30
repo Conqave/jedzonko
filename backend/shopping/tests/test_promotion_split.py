@@ -70,9 +70,9 @@ def test_each_item_goes_to_the_first_preferred_shop_that_promotes_it(setup: Setu
     contents = setup.contents(("lidl", "biedronka"))
 
     assert contents == {
-        "Zakupy — Lidl": ["mleko", "chleb"],
-        "Zakupy — Biedronka": ["masło"],
-        "Zakupy — Pozostałe": ["ręczniki"],
+        "Zakupy - Lidl": ["mleko", "chleb"],
+        "Zakupy - Biedronka": ["masło"],
+        "Zakupy - Pozostałe": ["ręczniki"],
     }
 
 
@@ -89,7 +89,7 @@ def test_a_shop_with_nothing_to_buy_gets_no_list(setup: Setup) -> None:
 
     contents = setup.contents(("lidl", "biedronka"))
 
-    assert list(contents) == ["Zakupy — Biedronka"]
+    assert list(contents) == ["Zakupy - Biedronka"]
 
 
 def test_splitting_needs_shops_and_items(setup: Setup) -> None:

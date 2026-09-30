@@ -1,18 +1,21 @@
 from django.db import models
 from django.db.models import Case, F, Q, When
 
-from catalog.domain.calories import (
-    KCAL_DECIMAL_PLACES,
-    KCAL_MAX_DIGITS,
-    MAX_KCAL_PER_100G,
-    MAX_REFERENCE_URL_LENGTH,
-    CalorieSource,
-)
+from catalog.domain.calories import KCAL_DECIMAL_PLACES, KCAL_MAX_DIGITS, MAX_KCAL_PER_100G
 from catalog.domain.candidate import CandidateStatus
+from catalog.domain.conversions import (
+    GRAMS_PER_ML_DECIMAL_PLACES,
+    GRAMS_PER_ML_MAX_DIGITS,
+    GRAMS_PER_PIECE_DECIMAL_PLACES,
+    GRAMS_PER_PIECE_MAX_DIGITS,
+    MAX_GRAMS_PER_ML,
+    MAX_GRAMS_PER_PIECE,
+)
 from catalog.domain.ingredient import IngredientNameKind, IngredientNameSource
 from catalog.domain.ingredient_line import MAX_LINE_TEXT_LENGTH
 from catalog.domain.names import MAX_NAME_LENGTH
 from catalog.domain.product_ingredient import ProductIngredientSource, ProductIngredientStatus
+from catalog.domain.provenance import MAX_REFERENCE_URL_LENGTH, FactSource
 from shared.enums import enum_choices, enum_values
 from shared.measurement_units import MEASUREMENT_UNIT_CHOICES, MEASUREMENT_UNIT_CODES
 
@@ -66,15 +69,64 @@ class Product(models.Model):
         return self.name
 
 
+def _provenance_check(
+    value: str, source: str, reference_url: str, name: str
+) -> models.CheckConstraint:
+    absent = Q(
+        **{f"{value}__isnull": True, f"{source}__isnull": True, f"{reference_url}__isnull": True}
+    )
+    manual = Q(
+        **{
+            f"{value}__isnull": False,
+            f"{source}__isnull": False,
+            source: FactSource.MANUAL.value,
+            f"{reference_url}__isnull": True,
+        }
+    )
+    reference = Q(
+        **{
+            f"{value}__isnull": False,
+            f"{source}__isnull": False,
+            source: FactSource.REFERENCE.value,
+            f"{reference_url}__isnull": False,
+        }
+    ) & ~Q(**{reference_url: ""})
+    return models.CheckConstraint(condition=absent | manual | reference, name=name)
+
+
 class Ingredient(models.Model):
     name = models.CharField(max_length=MAX_NAME_LENGTH)
     kcal_per_100g = models.DecimalField(
         max_digits=KCAL_MAX_DIGITS, decimal_places=KCAL_DECIMAL_PLACES, null=True, blank=True
     )
     kcal_source = models.CharField(
-        max_length=16, null=True, blank=True, choices=enum_choices(CalorieSource)
+        max_length=16, null=True, blank=True, choices=enum_choices(FactSource)
     )
     kcal_reference_url = models.URLField(max_length=MAX_REFERENCE_URL_LENGTH, null=True, blank=True)
+    grams_per_piece = models.DecimalField(
+        max_digits=GRAMS_PER_PIECE_MAX_DIGITS,
+        decimal_places=GRAMS_PER_PIECE_DECIMAL_PLACES,
+        null=True,
+        blank=True,
+    )
+    piece_weight_source = models.CharField(
+        max_length=16, null=True, blank=True, choices=enum_choices(FactSource)
+    )
+    piece_weight_reference_url = models.URLField(
+        max_length=MAX_REFERENCE_URL_LENGTH, null=True, blank=True
+    )
+    grams_per_ml = models.DecimalField(
+        max_digits=GRAMS_PER_ML_MAX_DIGITS,
+        decimal_places=GRAMS_PER_ML_DECIMAL_PLACES,
+        null=True,
+        blank=True,
+    )
+    density_source = models.CharField(
+        max_length=16, null=True, blank=True, choices=enum_choices(FactSource)
+    )
+    density_reference_url = models.URLField(
+        max_length=MAX_REFERENCE_URL_LENGTH, null=True, blank=True
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -85,28 +137,30 @@ class Ingredient(models.Model):
                 | Q(kcal_per_100g__gte=0, kcal_per_100g__lte=MAX_KCAL_PER_100G),
                 name="ingredient_kcal_in_range",
             ),
+            _provenance_check(
+                "kcal_per_100g", "kcal_source", "kcal_reference_url", "ingredient_kcal_provenance"
+            ),
             models.CheckConstraint(
-                condition=Q(
-                    kcal_per_100g__isnull=True,
-                    kcal_source__isnull=True,
-                    kcal_reference_url__isnull=True,
-                )
-                | Q(
-                    kcal_per_100g__isnull=False,
-                    kcal_source__isnull=False,
-                    kcal_source=CalorieSource.MANUAL.value,
-                    kcal_reference_url__isnull=True,
-                )
-                | (
-                    Q(
-                        kcal_per_100g__isnull=False,
-                        kcal_source__isnull=False,
-                        kcal_source=CalorieSource.REFERENCE.value,
-                        kcal_reference_url__isnull=False,
-                    )
-                    & ~Q(kcal_reference_url="")
-                ),
-                name="ingredient_kcal_provenance",
+                condition=Q(grams_per_piece__isnull=True)
+                | Q(grams_per_piece__gt=0, grams_per_piece__lte=MAX_GRAMS_PER_PIECE),
+                name="ingredient_piece_weight_in_range",
+            ),
+            _provenance_check(
+                "grams_per_piece",
+                "piece_weight_source",
+                "piece_weight_reference_url",
+                "ingredient_piece_weight_provenance",
+            ),
+            models.CheckConstraint(
+                condition=Q(grams_per_ml__isnull=True)
+                | Q(grams_per_ml__gt=0, grams_per_ml__lte=MAX_GRAMS_PER_ML),
+                name="ingredient_density_in_range",
+            ),
+            _provenance_check(
+                "grams_per_ml",
+                "density_source",
+                "density_reference_url",
+                "ingredient_density_provenance",
             ),
         ]
         ordering = ["name"]

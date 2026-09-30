@@ -22,7 +22,7 @@ class InventoryListView(APIView):
         user_id = current_user_id(request)
         query = HouseholdQuerySerializer(data=request.query_params)
         query.is_valid(raise_exception=True)
-        use_case = container().inventory.get_household_inventory
+        use_case = container().inventory.list_inventory_listings
         items = use_case.execute(user_id, query.validated_data["household_id"])
         serializer = InventoryItemSerializer(items, many=True)
         return Response(serializer.data)

@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
 
-from recipes.domain.external import ExternalRecipeIngredient, ImportedExternalRecipe, RecipeImage
+from recipes.domain.external import ExternalRecipeContent, ImportedExternalRecipe, RecipeImage
 
 
 class ExternalRecipeCatalog(ABC):
@@ -14,7 +14,7 @@ class ExternalRecipeCatalog(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def find_ingredients(self, reference: str) -> tuple[ExternalRecipeIngredient, ...] | None:
+    def find_content(self, reference: str) -> ExternalRecipeContent | None:
         raise NotImplementedError
 
     @abstractmethod

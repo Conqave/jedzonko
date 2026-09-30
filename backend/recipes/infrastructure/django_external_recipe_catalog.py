@@ -4,7 +4,12 @@ from django.core.files.base import ContentFile
 from django.db.models import Q
 
 from recipes.application.ports.external_recipe_catalog import ExternalRecipeCatalog
-from recipes.domain.external import ExternalRecipeIngredient, ImportedExternalRecipe, RecipeImage
+from recipes.domain.external import (
+    ExternalRecipeContent,
+    ExternalRecipeIngredient,
+    ImportedExternalRecipe,
+    RecipeImage,
+)
 from recipes.models import ExternalRecipe, ExternalRecipeLine
 
 _WITHOUT_IMAGE = Q(image__isnull=True) | Q(image="")
@@ -25,12 +30,13 @@ class DjangoExternalRecipeCatalog(ExternalRecipeCatalog):
         )
         return {row.reference: row.image_source_url for row in rows if row.image_source_url}
 
-    def find_ingredients(self, reference: str) -> tuple[ExternalRecipeIngredient, ...] | None:
+    def find_content(self, reference: str) -> ExternalRecipeContent | None:
         recipe = self._find_row(reference)
         if recipe is None:
             return None
         rows = ExternalRecipeLine.objects.filter(recipe=recipe).order_by("position")
-        return tuple(_to_ingredient(row) for row in rows)
+        ingredients = tuple(_to_ingredient(row) for row in rows)
+        return ExternalRecipeContent(yield_label=recipe.yield_label, ingredients=ingredients)
 
     def find_image_urls(self, references: tuple[str, ...]) -> dict[str, str]:
         rows = ExternalRecipe.objects.filter(

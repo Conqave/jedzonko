@@ -4,10 +4,8 @@ from decimal import Decimal
 import pytest
 
 from catalog.domain.calories import CalorieReference, TagCalories
-from catalog.presentation.calorie_reference_file import (
-    InvalidCalorieReferenceFileError,
-    read_calorie_references,
-)
+from catalog.presentation.calorie_reference_file import read_calorie_references
+from catalog.presentation.reference_file import InvalidReferenceFileError
 
 HEADER = "tag,kcal_per_100g,source_url\n"
 
@@ -52,5 +50,5 @@ def test_rows_become_reference_calories() -> None:
     ],
 )
 def test_a_malformed_file_is_refused_whole(text: str) -> None:
-    with pytest.raises(InvalidCalorieReferenceFileError):
+    with pytest.raises(InvalidReferenceFileError):
         _read(text)

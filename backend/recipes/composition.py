@@ -7,8 +7,9 @@ import httpx
 
 from recipes.application.ports.external_recipe_catalog import ExternalRecipeCatalog
 from recipes.application.ports.household_stock_reader import HouseholdStockReader
-from recipes.application.ports.ingredient_calories import IngredientCalories
 from recipes.application.ports.ingredient_lines import IngredientLines
+from recipes.application.ports.ingredient_names import IngredientNames
+from recipes.application.ports.ingredient_nutrition_facts import IngredientNutritionFacts
 from recipes.application.ports.ingredient_resolver import IngredientResolver
 from recipes.application.ports.inventory_consumer import HouseholdInventoryConsumer
 from recipes.application.use_cases.calculate_external_recipe_shortfall import (
@@ -79,7 +80,7 @@ class RecipesModule:
     stock: HouseholdStockReader
     resolver: IngredientResolver
     lines: IngredientLines
-    calories: IngredientCalories
+    nutrition_facts: IngredientNutritionFacts
     memberships: HouseholdMembershipReader
     source_settings: RecipeSourceSettings
     transactions: TransactionManager
@@ -137,7 +138,7 @@ class RecipesModule:
                     self.memberships,
                 ),
                 get_nutrition=GetExternalRecipeNutrition(
-                    self.external_catalog, source, self.resolver, self.lines, self.calories
+                    self.external_catalog, source, self.resolver, self.lines, self.nutrition_facts
                 ),
             )
 
@@ -151,7 +152,8 @@ def build_recipes(
     stock: HouseholdStockReader,
     resolver: IngredientResolver,
     lines: IngredientLines,
-    calories: IngredientCalories,
+    nutrition_facts: IngredientNutritionFacts,
+    ingredient_names: IngredientNames,
     consumer: HouseholdInventoryConsumer,
     reassign_recipe_ingredient: ReassignRecipeIngredient,
     source_settings: RecipeSourceSettings,
@@ -160,10 +162,10 @@ def build_recipes(
     recipes = DjangoRecipeRepository()
     external_catalog = DjangoExternalRecipeCatalog(SOURCE_NAME)
     return RecipesModule(
-        list_recipes=ListRecipes(recipes),
+        list_recipes=ListRecipes(recipes, nutrition_facts, ingredient_names),
         list_recipe_categories=ListRecipeCategories(recipes),
         get_recipe=GetRecipe(recipes),
-        get_recipe_nutrition=GetRecipeNutrition(recipes, calories),
+        get_recipe_nutrition=GetRecipeNutrition(recipes, nutrition_facts),
         create_recipe=CreateRecipe(recipes, resolver, transactions),
         update_recipe=UpdateRecipe(recipes, resolver, transactions),
         delete_recipe=DeleteRecipe(recipes),
@@ -179,7 +181,7 @@ def build_recipes(
         stock=stock,
         resolver=resolver,
         lines=lines,
-        calories=calories,
+        nutrition_facts=nutrition_facts,
         memberships=memberships,
         source_settings=source_settings,
         transactions=transactions,

@@ -14,6 +14,7 @@ from config.transactions import DjangoTransactionManager
 from households.composition import HouseholdsModule, build_households, build_membership_reader
 from households.infrastructure.shopping_household_provisioner import ShoppingHouseholdProvisioner
 from inventory.composition import InventoryModule, build_inventory
+from inventory.infrastructure.catalog_product_nutrition import CatalogProductNutrition
 from inventory.infrastructure.catalog_products import (
     CatalogProductDirectory,
 )
@@ -24,8 +25,11 @@ from recipes.composition import (
     build_reassign_recipe_ingredient,
     build_recipes,
 )
-from recipes.infrastructure.catalog_ingredient_calories import CatalogIngredientCalories
 from recipes.infrastructure.catalog_ingredient_lines import CatalogIngredientLines
+from recipes.infrastructure.catalog_ingredient_names import CatalogIngredientNames
+from recipes.infrastructure.catalog_ingredient_nutrition_facts import (
+    CatalogIngredientNutritionFacts,
+)
 from recipes.infrastructure.catalog_ingredient_resolver import CatalogIngredientResolver
 from recipes.infrastructure.inventory_consumer import InventoryConsumer
 from recipes.infrastructure.pantry_stock_reader import PantryStockReader
@@ -38,6 +42,7 @@ from shopping.composition import (
 )
 from shopping.infrastructure.catalog_directory import CatalogDirectory
 from shopping.infrastructure.catalog_line_interpreter import CatalogLineInterpreter
+from shopping.infrastructure.catalog_subject_nutrition import CatalogSubjectNutrition
 from shopping.infrastructure.catalog_tagged_product_creator import CatalogTaggedProductCreator
 from shopping.infrastructure.inventory_stock_gateway import InventoryStockGateway
 from shopping.infrastructure.inventory_writer_gateway import InventoryWriterGateway
@@ -83,7 +88,8 @@ def container() -> Container:
     catalog = build_catalog(memberships, ingredient_references, ollama_settings, transactions)
 
     product_directory = CatalogProductDirectory(catalog.find_household_product)
-    inventory = build_inventory(memberships, product_directory, transactions)
+    product_nutrition = CatalogProductNutrition(catalog.get_product_nutrition)
+    inventory = build_inventory(memberships, product_directory, product_nutrition, transactions)
 
     stock = PantryStockReader(
         inventory.get_household_inventory, catalog.describe_household_products
@@ -92,7 +98,8 @@ def container() -> Container:
     recipe_lines = CatalogIngredientLines(
         catalog.find_ingredient_lines, catalog.open_line_interpretation
     )
-    recipe_calories = CatalogIngredientCalories(catalog.get_ingredients)
+    recipe_nutrition_facts = CatalogIngredientNutritionFacts(catalog.get_ingredients)
+    recipe_ingredient_names = CatalogIngredientNames(catalog.get_ingredients)
     consumer = InventoryConsumer(inventory.consume_inventory_quantity)
     recipe_source_settings = RecipeSourceSettings(
         timeout_seconds=settings.RECIPE_SOURCE_HTTP_TIMEOUT_SECONDS,
@@ -104,7 +111,8 @@ def container() -> Container:
         stock,
         resolver,
         recipe_lines,
-        recipe_calories,
+        recipe_nutrition_facts,
+        recipe_ingredient_names,
         consumer,
         reassign_recipe_ingredient,
         recipe_source_settings,
@@ -142,6 +150,7 @@ def container() -> Container:
         recipe_requirements,
         promotion_coverage,
         CatalogLineInterpreter(catalog.open_line_interpretation),
+        CatalogSubjectNutrition(catalog.get_product_nutrition, catalog.get_ingredients),
         transactions,
     )
 

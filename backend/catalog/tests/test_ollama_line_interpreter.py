@@ -9,17 +9,17 @@ from catalog.application.errors import (
     IngredientClassifierContractError,
     IngredientClassifierUnavailableError,
 )
-from catalog.domain.ingredient import Ingredient
 from catalog.domain.ingredient_line import LineInterpretation
 from catalog.infrastructure.providers.ollama.line_interpreter import (
     INTERPRETATION_OUTPUT_TOKENS,
     OllamaIngredientLineInterpreter,
 )
+from catalog.tests.fakes import make_bare_ingredient
 from shared.infrastructure.ollama_chat import OllamaChat, OllamaSettings
 
 CHOICES = (
-    Ingredient(id=11, name="jajko", calories=None),
-    Ingredient(id=22, name="mleko", calories=None),
+    make_bare_ingredient(11, "jajko"),
+    make_bare_ingredient(22, "mleko"),
 )
 LINES = ("3 średnie jajka", "szklanka mleka", "szczypta soli")
 

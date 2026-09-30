@@ -36,3 +36,19 @@ class IngredientMergeError(Exception):
 
 class InvalidTagCaloriesError(Exception):
     pass
+
+
+class InvalidFactProvenanceError(Exception):
+    pass
+
+
+class InvalidPieceWeightError(Exception):
+    pass
+
+
+class InvalidDensityError(Exception):
+    pass
+
+
+class InvalidConversionReferenceError(Exception):
+    pass

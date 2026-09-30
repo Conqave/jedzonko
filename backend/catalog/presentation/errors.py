@@ -9,8 +9,11 @@ from catalog.application.errors import (
     ProductNotFoundError,
 )
 from catalog.domain.calories import MAX_KCAL_PER_100G
+from catalog.domain.conversions import MAX_GRAMS_PER_ML, MAX_GRAMS_PER_PIECE
 from catalog.domain.errors import (
+    InvalidDensityError,
     InvalidNameError,
+    InvalidPieceWeightError,
     InvalidProductIngredientTransitionError,
     InvalidProductPackageError,
     InvalidTagCaloriesError,
@@ -57,6 +60,18 @@ API_ERRORS: ApiErrors = {
         ValidationError,
         f"Calories per 100 g lie between 0 and {MAX_KCAL_PER_100G} with one decimal place.",
         "invalid_tag_calories",
+    ),
+    InvalidPieceWeightError: (
+        ValidationError,
+        f"A piece weighs more than 0 g and at most {MAX_GRAMS_PER_PIECE} g, "
+        "with at most one decimal place.",
+        "invalid_piece_weight",
+    ),
+    InvalidDensityError: (
+        ValidationError,
+        f"A density lies above 0 and at most {MAX_GRAMS_PER_ML} g/ml, "
+        "with at most three decimal places.",
+        "invalid_density",
     ),
     ProductIngredientNotFoundError: (
         NotFound,

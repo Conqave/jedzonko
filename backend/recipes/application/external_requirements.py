@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from recipes.application.external_ingredients import read_external_ingredients
+from recipes.application.external_content import read_external_content
 from recipes.application.ports.external_recipe_catalog import ExternalRecipeCatalog
 from recipes.application.ports.ingredient_lines import IngredientLines
 from recipes.application.ports.ingredient_resolver import IngredientResolver
@@ -19,7 +19,15 @@ def read_external_requirements(
     lines: IngredientLines,
     reference: str,
 ) -> list[RecipeRequirement]:
-    ingredients = read_external_ingredients(catalog, source, reference)
+    content = read_external_content(catalog, source, reference)
+    return resolve_external_requirements(content.ingredients, resolver, lines)
+
+
+def resolve_external_requirements(
+    ingredients: tuple[ExternalRecipeIngredient, ...],
+    resolver: IngredientResolver,
+    lines: IngredientLines,
+) -> list[RecipeRequirement]:
     names = tuple(line.name for line in ingredients)
     ingredient_ids = resolver.find_ingredient_ids(names)
     texts = tuple(line.source_text for line in ingredients)

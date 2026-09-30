@@ -2,11 +2,10 @@ from pathlib import Path
 
 from django.core.management.base import BaseCommand, CommandError, CommandParser
 
-from catalog.application.errors import DuplicateCalorieReferenceError
-from catalog.presentation.calorie_reference_file import (
-    InvalidCalorieReferenceFileError,
-    read_calorie_references,
-)
+from catalog.application.errors import DuplicateTagReferenceError
+from catalog.presentation.calorie_reference_file import read_calorie_references
+from catalog.presentation.reference_file import InvalidReferenceFileError
+from catalog.presentation.reference_report import write_reference_report
 from config.composition import container
 
 
@@ -25,20 +24,11 @@ class Command(BaseCommand):
                 references = read_calorie_references(stream)
         except OSError as error:
             raise CommandError(f"Cannot read {path}: {error}") from error
-        except InvalidCalorieReferenceFileError as error:
+        except InvalidReferenceFileError as error:
             raise CommandError(f"{path}: {error}") from error
         use_case = container().catalog.import_tag_calories
         try:
             run = use_case.execute(references)
-        except DuplicateCalorieReferenceError as error:
+        except DuplicateTagReferenceError as error:
             raise CommandError(f"Nothing imported: {error}") from error
-        self.stdout.write(
-            f"Updated {len(run.updated)}, unchanged {len(run.unchanged)}, "
-            f"skipped manual {len(run.skipped_manual)}, unknown {len(run.unknown)}."
-        )
-        for name in run.updated:
-            self.stdout.write(f"  + {name}")
-        for name in run.skipped_manual:
-            self.stdout.write(f"  = {name} (manual value kept)")
-        for name in run.unknown:
-            self.stdout.write(f"  ? {name}")
+        write_reference_report(run, self.stdout)

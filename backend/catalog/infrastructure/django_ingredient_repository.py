@@ -1,5 +1,6 @@
 from catalog.application.ports.ingredient_repository import IngredientRepository
-from catalog.domain.calories import CalorieSource, TagCalories
+from catalog.domain.calories import TagCalories
+from catalog.domain.conversions import Density, PieceWeight
 from catalog.domain.ingredient import (
     Ingredient,
     IngredientName,
@@ -8,6 +9,7 @@ from catalog.domain.ingredient import (
 )
 from catalog.domain.ingredient_search import IngredientNameMatch
 from catalog.domain.names import CatalogName
+from catalog.domain.provenance import FactSource, Provenance
 from catalog.models import Ingredient as IngredientRow
 from catalog.models import IngredientName as IngredientNameRow
 
@@ -55,8 +57,32 @@ class DjangoIngredientRepository(IngredientRepository):
             return
         rows.update(
             kcal_per_100g=calories.kcal_per_100g,
-            kcal_source=calories.source.value,
-            kcal_reference_url=calories.reference_url,
+            kcal_source=calories.provenance.source.value,
+            kcal_reference_url=calories.provenance.reference_url,
+        )
+
+    def save_piece_weight(self, ingredient_id: int, piece_weight: PieceWeight | None) -> None:
+        rows = IngredientRow.objects.filter(pk=ingredient_id)
+        if piece_weight is None:
+            rows.update(
+                grams_per_piece=None, piece_weight_source=None, piece_weight_reference_url=None
+            )
+            return
+        rows.update(
+            grams_per_piece=piece_weight.grams_per_piece,
+            piece_weight_source=piece_weight.provenance.source.value,
+            piece_weight_reference_url=piece_weight.provenance.reference_url,
+        )
+
+    def save_density(self, ingredient_id: int, density: Density | None) -> None:
+        rows = IngredientRow.objects.filter(pk=ingredient_id)
+        if density is None:
+            rows.update(grams_per_ml=None, density_source=None, density_reference_url=None)
+            return
+        rows.update(
+            grams_per_ml=density.grams_per_ml,
+            density_source=density.provenance.source.value,
+            density_reference_url=density.provenance.reference_url,
         )
 
     def create(self, name: CatalogName, source: IngredientNameSource) -> Ingredient:
@@ -109,18 +135,39 @@ class DjangoIngredientRepository(IngredientRepository):
 
 def _to_ingredient(row: IngredientRow) -> Ingredient:
     calories = _to_calories(row)
-    return Ingredient(id=row.pk, name=row.name, calories=calories)
+    piece_weight = _to_piece_weight(row)
+    density = _to_density(row)
+    return Ingredient(
+        id=row.pk, name=row.name, calories=calories, piece_weight=piece_weight, density=density
+    )
 
 
 def _to_calories(row: IngredientRow) -> TagCalories | None:
     if row.kcal_per_100g is None:
         return None
-    if row.kcal_source is None:
-        raise AssertionError(f"Ingredient {row.pk} has calories without a source.")
-    source = CalorieSource(row.kcal_source)
-    return TagCalories(
-        kcal_per_100g=row.kcal_per_100g, source=source, reference_url=row.kcal_reference_url
-    )
+    provenance = _to_provenance(row.pk, row.kcal_source, row.kcal_reference_url)
+    return TagCalories(kcal_per_100g=row.kcal_per_100g, provenance=provenance)
+
+
+def _to_piece_weight(row: IngredientRow) -> PieceWeight | None:
+    if row.grams_per_piece is None:
+        return None
+    provenance = _to_provenance(row.pk, row.piece_weight_source, row.piece_weight_reference_url)
+    return PieceWeight(grams_per_piece=row.grams_per_piece, provenance=provenance)
+
+
+def _to_density(row: IngredientRow) -> Density | None:
+    if row.grams_per_ml is None:
+        return None
+    provenance = _to_provenance(row.pk, row.density_source, row.density_reference_url)
+    return Density(grams_per_ml=row.grams_per_ml, provenance=provenance)
+
+
+def _to_provenance(ingredient_id: int, source: str | None, reference_url: str | None) -> Provenance:
+    if source is None:
+        raise AssertionError(f"Ingredient {ingredient_id} has a value without a source.")
+    fact_source = FactSource(source)
+    return Provenance(source=fact_source, reference_url=reference_url)
 
 
 def _to_name_match(row: IngredientNameRow) -> IngredientNameMatch:

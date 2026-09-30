@@ -2,6 +2,8 @@ from decimal import Decimal
 
 from rest_framework import serializers
 
+from shared.presentation.serializers import ItemCaloriesSerializer
+
 
 class HouseholdQuerySerializer(serializers.Serializer[dict[str, int]]):
     household_id = serializers.IntegerField(min_value=1)
@@ -44,16 +46,21 @@ class ShoppingListSerializer(serializers.Serializer[object]):
 
 
 class ShoppingItemSerializer(serializers.Serializer[object]):
-    id = serializers.IntegerField(read_only=True)
-    list_id = serializers.IntegerField(read_only=True)
-    product_id = serializers.IntegerField(source="subject.product_id", read_only=True)
-    ingredient_id = serializers.IntegerField(source="subject.ingredient_id", read_only=True)
-    free_text = serializers.CharField(source="subject.free_text", read_only=True)
-    name = serializers.CharField(read_only=True)
-    quantity = serializers.DecimalField(max_digits=12, decimal_places=3, read_only=True)
-    unit_code = serializers.CharField(source="unit.code", read_only=True, allow_null=True)
-    status = serializers.CharField(read_only=True)
-    purchased_at = serializers.DateTimeField(read_only=True, allow_null=True)
+    id = serializers.IntegerField(source="item.id", read_only=True)
+    list_id = serializers.IntegerField(source="item.list_id", read_only=True)
+    product_id = serializers.IntegerField(source="item.subject.product_id", read_only=True)
+    ingredient_id = serializers.IntegerField(source="item.subject.ingredient_id", read_only=True)
+    free_text = serializers.CharField(source="item.subject.free_text", read_only=True)
+    name = serializers.CharField(source="item.name", read_only=True)
+    quantity = serializers.DecimalField(
+        source="item.quantity", max_digits=12, decimal_places=3, read_only=True
+    )
+    unit_code = serializers.CharField(source="item.unit.code", read_only=True, allow_null=True)
+    status = serializers.CharField(source="item.status", read_only=True)
+    purchased_at = serializers.DateTimeField(
+        source="item.purchased_at", read_only=True, allow_null=True
+    )
+    calories = ItemCaloriesSerializer(read_only=True)
 
 
 class SplitByPromotionsSerializer(serializers.Serializer[dict[str, list[str]]]):

@@ -52,20 +52,6 @@ class RecipeCategorySerializer(serializers.Serializer[object]):
     name = serializers.CharField(read_only=True)
 
 
-class RecipeSummarySerializer(serializers.Serializer[object]):
-    id = serializers.IntegerField(read_only=True)
-    name = serializers.CharField(read_only=True)
-    description = serializers.CharField(read_only=True)
-    servings = serializers.IntegerField(read_only=True)
-    preparation_time_minutes = serializers.IntegerField(read_only=True)
-    cooking_time_minutes = serializers.IntegerField(read_only=True)
-    difficulty = serializers.CharField(read_only=True)
-    category = RecipeCategorySerializer(read_only=True, allow_null=True)
-    tags = serializers.ListField(source="tag_names", child=serializers.CharField(), read_only=True)
-    image_url = serializers.CharField(read_only=True, allow_null=True)
-    author_username = serializers.CharField(read_only=True, allow_null=True)
-
-
 class RecipeStepDetailSerializer(serializers.Serializer[object]):
     position = serializers.IntegerField(read_only=True)
     text = serializers.CharField(read_only=True)
@@ -138,4 +124,29 @@ class RecipeNutritionSerializer(serializers.Serializer[object]):
     kcal_per_serving = serializers.DecimalField(
         max_digits=12, decimal_places=1, read_only=True, allow_null=True
     )
+    has_estimates = serializers.BooleanField(read_only=True)
     uncounted_ingredients = UncountedIngredientSerializer(many=True, read_only=True)
+
+
+class RecipeListingSerializer(serializers.Serializer[object]):
+    id = serializers.IntegerField(source="summary.id", read_only=True)
+    name = serializers.CharField(source="summary.name", read_only=True)
+    description = serializers.CharField(source="summary.description", read_only=True)
+    servings = serializers.IntegerField(source="summary.servings", read_only=True)
+    preparation_time_minutes = serializers.IntegerField(
+        source="summary.preparation_time_minutes", read_only=True
+    )
+    cooking_time_minutes = serializers.IntegerField(
+        source="summary.cooking_time_minutes", read_only=True
+    )
+    difficulty = serializers.CharField(source="summary.difficulty", read_only=True)
+    category = RecipeCategorySerializer(source="summary.category", read_only=True, allow_null=True)
+    tags = serializers.ListField(
+        source="summary.tag_names", child=serializers.CharField(), read_only=True
+    )
+    image_url = serializers.CharField(source="summary.image_url", read_only=True, allow_null=True)
+    author_username = serializers.CharField(
+        source="summary.author_username", read_only=True, allow_null=True
+    )
+    nutrition = RecipeNutritionSerializer(read_only=True)
+    ingredient_names = serializers.ListField(child=serializers.CharField(), read_only=True)

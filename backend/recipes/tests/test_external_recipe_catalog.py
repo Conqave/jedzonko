@@ -45,10 +45,12 @@ def test_saved_recipe_keeps_its_lines_in_order_and_its_image_as_a_file(media_roo
 
     catalog.save_recipe(_recipe(("2 jajka", "mleko")), IMAGE, NOW)
 
-    ingredients = catalog.find_ingredients("omlet")
-    assert ingredients is not None
+    content = catalog.find_content("omlet")
+    assert content is not None
+    ingredients = content.ingredients
     assert [line.source_text for line in ingredients] == ["2 jajka", "mleko", "mąka - 200 g"]
     assert ingredients[2].quantity == Decimal("200")
+    assert content.yield_label == "2 porcje"
     assert catalog.list_references() == frozenset({"omlet"})
     assert catalog.list_missing_images() == {}
     urls = catalog.find_image_urls(("omlet", "zupa"))
@@ -65,9 +67,9 @@ def test_refresh_replaces_lines_and_keeps_an_image_that_failed_to_download_again
 
     catalog.save_recipe(_recipe(("3 jajka",)), None, NOW)
 
-    ingredients = catalog.find_ingredients("omlet")
-    assert ingredients is not None
-    assert [line.source_text for line in ingredients] == ["3 jajka", "mąka - 200 g"]
+    content = catalog.find_content("omlet")
+    assert content is not None
+    assert [line.source_text for line in content.ingredients] == ["3 jajka", "mąka - 200 g"]
     assert list(catalog.find_image_urls(("omlet",))) == ["omlet"]
 
 
@@ -91,4 +93,4 @@ def test_distinct_line_texts_are_listed_for_interpretation() -> None:
 
 
 def test_unknown_recipe_has_no_stored_ingredients() -> None:
-    assert DjangoExternalRecipeCatalog("Ania Gotuje").find_ingredients("zupa") is None
+    assert DjangoExternalRecipeCatalog("Ania Gotuje").find_content("zupa") is None

@@ -11,6 +11,9 @@ from catalog.models import Ingredient, IngredientLine
 from config.composition import container
 from households.models import Household
 from inventory.models import InventoryItem
+from recipes.domain.external import ExternalRecipeIngredient, ImportedExternalRecipe
+from recipes.infrastructure.django_external_recipe_catalog import DjangoExternalRecipeCatalog
+from recipes.infrastructure.providers.ania_gotuje.mapper import SOURCE_NAME
 from recipes.models import Recipe, RecipeIngredient
 from shared.text import normalize_text
 from tests.factories import confirm_ingredient, make_household, make_ingredient, make_product
@@ -177,12 +180,44 @@ def test_external_recipe_nutrition_counts_tagged_mass_lines(
     assert response.status_code == 200
     assert response.data["total_kcal"] == "1073.2"
     assert response.data["kcal_per_serving"] is None
+    assert response.data["has_estimates"] is False
     assert response.data["uncounted_ingredients"] == [
-        {"name": "1 szklanka mleka", "reason": "not_by_mass"},
-        {"name": "1 szklanka wody", "reason": "not_by_mass"},
+        {"name": "1 szklanka mleka", "reason": "no_calories"},
+        {"name": "1 szklanka wody", "reason": "no_calories"},
         {"name": "4 łyżki oleju roślinnego - około 40 ml", "reason": "no_amount"},
         {"name": "szczypta soli", "reason": "no_amount"},
     ]
+
+
+def test_stored_external_recipe_nutrition_estimates_pieces_per_stated_serving(
+    api_client: APIClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    install_source(monkeypatch, 500, "")
+    eggs = make_ingredient("jajka")
+    container().catalog.set_tag_calories.execute(eggs.pk, Decimal("143"))
+    container().catalog.set_tag_piece_weight.execute(eggs.pk, Decimal("50"))
+    stored = ImportedExternalRecipe(
+        reference=SLUG,
+        name="Naleśniki",
+        source_url=f"https://aniagotuje.pl/przepis/{SLUG}",
+        image_source_url=None,
+        yield_label="około 1200 g - 4 małe porcje",
+        ingredients=(
+            ExternalRecipeIngredient("4 jajka", "jajka", Decimal("4"), "szt"),
+            ExternalRecipeIngredient("1 szklanka mleka", "mleko", Decimal("250"), "ml"),
+        ),
+    )
+    DjangoExternalRecipeCatalog(SOURCE_NAME).save_recipe(stored, None, timezone.now())
+
+    response = api_client.get(f"/api/recipes/external/{SLUG}/nutrition/")
+
+    assert response.status_code == 200
+    assert response.data == {
+        "total_kcal": "286.0",
+        "kcal_per_serving": "71.5",
+        "has_estimates": True,
+        "uncounted_ingredients": [{"name": "mleko", "reason": "no_calories"}],
+    }
 
 
 def _interpret(text: str, ingredient: Ingredient, grams: str) -> None:

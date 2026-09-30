@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from decimal import Decimal
 
+from shared.item_calories import ItemCalories
 from shared.measurement import MeasurementUnit, Quantity
 
 
@@ -28,3 +29,9 @@ class InventoryItemSnapshot:
             return Decimal("0")
         shortfall = self.minimum_quantity - self.quantity
         return shortfall if shortfall > 0 else Decimal("0")
+
+
+@dataclass(frozen=True, slots=True)
+class InventoryItemListing:
+    item: InventoryItemSnapshot
+    calories: ItemCalories

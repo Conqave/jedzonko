@@ -3,10 +3,11 @@ from decimal import Decimal
 from shared.household_membership import HouseholdMembershipReader, require_membership
 from shared.transactions import TransactionManager
 from shopping.application.errors import PrimaryShoppingListNotFoundError
+from shopping.application.item_calories import ShoppingCalorieCounter
 from shopping.application.ports.household_inventory_reader import HouseholdInventoryReader
 from shopping.application.ports.shopping_list_repository import ShoppingListRepository
 from shopping.domain.replenishment import calculate_replenishment_targets
-from shopping.domain.shopping_item_snapshot import ShoppingItemSnapshot
+from shopping.domain.shopping_item_listing import ShoppingItemListing
 from shopping.domain.shopping_subject import ShoppingSubject
 
 
@@ -16,15 +17,17 @@ class SynchronizeMinimumStock:
         self,
         repository: ShoppingListRepository,
         inventory: HouseholdInventoryReader,
+        calories: ShoppingCalorieCounter,
         memberships: HouseholdMembershipReader,
         transactions: TransactionManager,
     ) -> None:
         self._repository = repository
         self._inventory = inventory
+        self._calories = calories
         self._memberships = memberships
         self._transactions = transactions
 
-    def execute(self, user_id: int, household_id: int) -> list[ShoppingItemSnapshot]:
+    def execute(self, user_id: int, household_id: int) -> list[ShoppingItemListing]:
         require_membership(self._memberships, user_id, household_id)
         primary = self._repository.find_primary_list(household_id)
         if primary is None:
@@ -45,4 +48,5 @@ class SynchronizeMinimumStock:
                 self._repository.set_item_quantity(
                     target.existing_item_id, amount, target.unit_code
                 )
-        return self._repository.list_items(primary.id)
+        items = self._repository.list_items(primary.id)
+        return self._calories.count_many(household_id, items)

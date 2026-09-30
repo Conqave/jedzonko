@@ -16,7 +16,7 @@ UNIFICATION_OUTPUT_TOKENS = 32768
 
 _INSTRUCTIONS = (
     "To są tagi składników kulinarnych z serwisu Ania Gotuje. Lista może zawierać "
-    "duplikaty: ten sam składnik zapisany inaczej — inna liczba lub odmiana gramatyczna, inny "
+    "duplikaty: ten sam składnik zapisany inaczej - inna liczba lub odmiana gramatyczna, inny "
     "szyk słów, zdrobnienie, synonim albo literówka („cebula czerwona” i „czerwona cebula”, "
     "„ogórek” i „ogórki”, „listek laurowy” i „liść laurowy”, „skrobia ziemniaczana” i „mąka "
     "ziemniaczana”).\n"

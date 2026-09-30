@@ -1,13 +1,15 @@
 from recipes.application.ports.external_recipe_catalog import ExternalRecipeCatalog
 from recipes.application.ports.recipe_source import RecipeSource
-from recipes.domain.external import ExternalRecipeIngredient
+from recipes.domain.external import ExternalRecipeContent
 
 
-def read_external_ingredients(
+def read_external_content(
     catalog: ExternalRecipeCatalog, source: RecipeSource, reference: str
-) -> tuple[ExternalRecipeIngredient, ...]:
-    stored = catalog.find_ingredients(reference)
+) -> ExternalRecipeContent:
+    stored = catalog.find_content(reference)
     if stored is not None:
         return stored
     recipe = source.get_recipe(reference)
-    return recipe.ingredients
+    return ExternalRecipeContent(
+        yield_label=recipe.summary.yield_label, ingredients=recipe.ingredients
+    )

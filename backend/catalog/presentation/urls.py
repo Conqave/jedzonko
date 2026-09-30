@@ -2,7 +2,9 @@ from django.urls import URLPattern, path
 
 from catalog.presentation.views import (
     IngredientCaloriesView,
+    IngredientDensityView,
     IngredientListView,
+    IngredientPieceWeightView,
     MeasurementUnitListView,
     ProductDetailView,
     ProductIngredientAnalysisView,
@@ -29,5 +31,7 @@ product_urlpatterns: list[URLPattern] = [
 ingredient_urlpatterns: list[URLPattern] = [
     path("", IngredientListView.as_view()),
     path("<int:ingredient_id>/calories/", IngredientCaloriesView.as_view()),
+    path("<int:ingredient_id>/piece-weight/", IngredientPieceWeightView.as_view()),
+    path("<int:ingredient_id>/density/", IngredientDensityView.as_view()),
 ]
 unit_urlpatterns: list[URLPattern] = [path("", MeasurementUnitListView.as_view())]

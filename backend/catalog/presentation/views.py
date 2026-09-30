@@ -14,6 +14,8 @@ from catalog.presentation.serializers import (
     ProductQuerySerializer,
     ProductSerializer,
     SetTagCaloriesSerializer,
+    SetTagDensitySerializer,
+    SetTagPieceWeightSerializer,
     UpdateProductSerializer,
     to_package,
 )
@@ -122,6 +124,26 @@ class IngredientCaloriesView(APIView):
         payload.is_valid(raise_exception=True)
         use_case = container().catalog.set_tag_calories
         ingredient = use_case.execute(ingredient_id, payload.validated_data["kcal_per_100g"])
+        serializer = IngredientSerializer(ingredient)
+        return Response(serializer.data)
+
+
+class IngredientPieceWeightView(APIView):
+    def put(self, request: Request, ingredient_id: int) -> Response:
+        payload = SetTagPieceWeightSerializer(data=request.data)
+        payload.is_valid(raise_exception=True)
+        use_case = container().catalog.set_tag_piece_weight
+        ingredient = use_case.execute(ingredient_id, payload.validated_data["grams_per_piece"])
+        serializer = IngredientSerializer(ingredient)
+        return Response(serializer.data)
+
+
+class IngredientDensityView(APIView):
+    def put(self, request: Request, ingredient_id: int) -> Response:
+        payload = SetTagDensitySerializer(data=request.data)
+        payload.is_valid(raise_exception=True)
+        use_case = container().catalog.set_tag_density
+        ingredient = use_case.execute(ingredient_id, payload.validated_data["grams_per_ml"])
         serializer = IngredientSerializer(ingredient)
         return Response(serializer.data)
 

@@ -1,5 +1,7 @@
 from rest_framework import serializers
 
+from shared.presentation.serializers import ItemCaloriesSerializer
+
 
 class AddInventoryItemSerializer(serializers.Serializer[dict[str, object]]):
     household_id = serializers.IntegerField(min_value=1)
@@ -36,13 +38,20 @@ class SetInventoryItemMinimumSerializer(serializers.Serializer[dict[str, object]
 
 
 class InventoryItemSerializer(serializers.Serializer[object]):
-    id = serializers.IntegerField(read_only=True)
-    product_id = serializers.IntegerField(read_only=True)
-    product_name = serializers.CharField(read_only=True)
-    quantity = serializers.DecimalField(max_digits=12, decimal_places=3, read_only=True)
-    unit_code = serializers.CharField(source="unit.code", read_only=True)
-    minimum_quantity = serializers.DecimalField(
-        max_digits=12, decimal_places=3, read_only=True, allow_null=True
+    id = serializers.IntegerField(source="item.id", read_only=True)
+    product_id = serializers.IntegerField(source="item.product_id", read_only=True)
+    product_name = serializers.CharField(source="item.product_name", read_only=True)
+    quantity = serializers.DecimalField(
+        source="item.quantity", max_digits=12, decimal_places=3, read_only=True
     )
-    photo_url = serializers.CharField(read_only=True, allow_null=True)
-    below_minimum = serializers.BooleanField(source="is_below_minimum", read_only=True)
+    unit_code = serializers.CharField(source="item.unit.code", read_only=True)
+    minimum_quantity = serializers.DecimalField(
+        source="item.minimum_quantity",
+        max_digits=12,
+        decimal_places=3,
+        read_only=True,
+        allow_null=True,
+    )
+    photo_url = serializers.CharField(source="item.photo_url", read_only=True, allow_null=True)
+    below_minimum = serializers.BooleanField(source="item.is_below_minimum", read_only=True)
+    calories = ItemCaloriesSerializer(read_only=True)

@@ -358,11 +358,35 @@ def test_recipe_nutrition_counts_tagged_mass_lines_per_serving(
     assert response.data == {
         "total_kcal": "143.0",
         "kcal_per_serving": "71.5",
+        "has_estimates": False,
         "uncounted_ingredients": [
-            {"name": "mleko", "reason": "not_by_mass"},
+            {"name": "mleko", "reason": "no_calories"},
             {"name": "szczypiorek", "reason": "no_calories"},
         ],
     }
+
+
+def test_recipe_nutrition_estimates_pieces_through_the_tag_piece_weight(
+    api_client: APIClient, member: User, eggs: Ingredient
+) -> None:
+    container().catalog.set_tag_calories.execute(eggs.pk, Decimal("143"))
+    body = _recipe_body()
+    body["ingredients"] = [
+        {"name": "jajko", "quantity": "2", "unit_code": "szt"},
+    ]
+    api_client.force_authenticate(member)
+    created = api_client.post("/api/recipes/", body, format="json")
+    recipe_id = created.data["id"]
+    without_weight = api_client.get(f"/api/recipes/{recipe_id}/nutrition/")
+    container().catalog.set_tag_piece_weight.execute(eggs.pk, Decimal("50"))
+
+    response = api_client.get(f"/api/recipes/{recipe_id}/nutrition/")
+
+    assert without_weight.data["uncounted_ingredients"] == [
+        {"name": "jajko", "reason": "no_piece_weight"}
+    ]
+    assert response.data["total_kcal"] == "143.0"
+    assert response.data["has_estimates"] is True
 
 
 def test_nutrition_of_an_unknown_recipe_is_not_found(api_client: APIClient, member: User) -> None:

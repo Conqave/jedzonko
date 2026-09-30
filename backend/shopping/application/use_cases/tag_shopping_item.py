@@ -3,6 +3,7 @@ from decimal import Decimal
 from shared.household_membership import HouseholdMembershipReader, require_membership
 from shared.transactions import TransactionManager
 from shopping.application.errors import ShoppingListItemNotFoundError, ShoppingListNotFoundError
+from shopping.application.item_calories import ShoppingCalorieCounter
 from shopping.application.ports.catalog_directory import CatalogDirectory
 from shopping.application.ports.shopping_list_repository import ShoppingListRepository
 from shopping.application.shopping_list_rules import (
@@ -10,7 +11,7 @@ from shopping.application.shopping_list_rules import (
     require_known_subject,
     require_valid_amount,
 )
-from shopping.domain.shopping_item_snapshot import ShoppingItemSnapshot
+from shopping.domain.shopping_item_listing import ShoppingItemListing
 from shopping.domain.shopping_subject import ShoppingSubject
 
 
@@ -19,17 +20,19 @@ class TagShoppingItem:
         self,
         repository: ShoppingListRepository,
         catalog: CatalogDirectory,
+        calories: ShoppingCalorieCounter,
         memberships: HouseholdMembershipReader,
         transactions: TransactionManager,
     ) -> None:
         self._repository = repository
         self._catalog = catalog
+        self._calories = calories
         self._memberships = memberships
         self._transactions = transactions
 
     def execute(
         self, user_id: int, item_id: int, ingredient_id: int, quantity: Decimal, unit_code: str
-    ) -> ShoppingItemSnapshot:
+    ) -> ShoppingItemListing:
         item = self._repository.find_item(item_id)
         if item is None or item.is_purchased:
             raise ShoppingListItemNotFoundError
@@ -41,4 +44,5 @@ class TagShoppingItem:
         require_known_subject(self._catalog, shopping_list.household_id, subject)
         require_valid_amount(subject, quantity, unit_code)
         with self._transactions.atomic():
-            return put_tag_on_item(self._repository, item, ingredient_id, quantity, unit_code)
+            tagged = put_tag_on_item(self._repository, item, ingredient_id, quantity, unit_code)
+        return self._calories.count(shopping_list.household_id, tagged)

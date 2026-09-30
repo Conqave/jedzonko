@@ -22,8 +22,10 @@ from catalog.application.use_cases.find_ingredient_lines import FindIngredientLi
 from catalog.application.use_cases.find_ingredients_by_names import FindIngredientsByNames
 from catalog.application.use_cases.get_ingredients import GetIngredients
 from catalog.application.use_cases.get_product_classification import GetProductClassification
+from catalog.application.use_cases.get_product_nutrition import GetProductNutrition
 from catalog.application.use_cases.import_ingredient_names import ImportIngredientNames
 from catalog.application.use_cases.import_tag_calories import ImportTagCalories
+from catalog.application.use_cases.import_tag_conversions import ImportTagConversions
 from catalog.application.use_cases.interpret_ingredient_lines import InterpretIngredientLines
 from catalog.application.use_cases.list_household_products import ListHouseholdProducts
 from catalog.application.use_cases.list_measurement_units import ListMeasurementUnits
@@ -36,6 +38,8 @@ from catalog.application.use_cases.propose_product_ingredient import ProposeProd
 from catalog.application.use_cases.reject_product_ingredient import RejectProductIngredient
 from catalog.application.use_cases.search_ingredients import SearchIngredients
 from catalog.application.use_cases.set_tag_calories import SetTagCalories
+from catalog.application.use_cases.set_tag_density import SetTagDensity
+from catalog.application.use_cases.set_tag_piece_weight import SetTagPieceWeight
 from catalog.application.use_cases.split_alias import SplitAlias
 from catalog.application.use_cases.unify_tags import UnifyTags
 from catalog.application.use_cases.update_product import UpdateProduct
@@ -67,6 +71,7 @@ class CatalogModule:
     delete_product: DeleteProduct
     find_household_product: FindHouseholdProduct
     describe_household_products: DescribeHouseholdProducts
+    get_product_nutrition: GetProductNutrition
     list_measurement_units: ListMeasurementUnits
     create_ingredient: CreateIngredient
     add_ingredient_alias: AddIngredientAlias
@@ -77,6 +82,9 @@ class CatalogModule:
     list_tags: ListTags
     set_tag_calories: SetTagCalories
     import_tag_calories: ImportTagCalories
+    set_tag_piece_weight: SetTagPieceWeight
+    set_tag_density: SetTagDensity
+    import_tag_conversions: ImportTagConversions
     merge_ingredients: MergeIngredients
     split_alias: SplitAlias
     find_ingredient_lines: FindIngredientLines
@@ -155,15 +163,15 @@ def build_catalog(
     ingredients = DjangoIngredientRepository()
     classifications = DjangoProductClassificationRepository()
     candidates = DjangoCandidateRepository()
+    describe_products = DescribeHouseholdProducts(products, classifications, ingredients)
     return CatalogModule(
         list_household_products=ListHouseholdProducts(products, memberships),
         create_product=CreateProduct(products, memberships, transactions),
         update_product=UpdateProduct(products, memberships, transactions),
         delete_product=DeleteProduct(products, memberships),
         find_household_product=FindHouseholdProduct(products),
-        describe_household_products=DescribeHouseholdProducts(
-            products, classifications, ingredients
-        ),
+        describe_household_products=describe_products,
+        get_product_nutrition=GetProductNutrition(describe_products, ingredients),
         list_measurement_units=ListMeasurementUnits(),
         create_ingredient=CreateIngredient(ingredients, transactions),
         add_ingredient_alias=AddIngredientAlias(ingredients, transactions),
@@ -174,6 +182,9 @@ def build_catalog(
         list_tags=ListTags(ingredients),
         set_tag_calories=SetTagCalories(ingredients, transactions),
         import_tag_calories=ImportTagCalories(ingredients, transactions),
+        set_tag_piece_weight=SetTagPieceWeight(ingredients, transactions),
+        set_tag_density=SetTagDensity(ingredients, transactions),
+        import_tag_conversions=ImportTagConversions(ingredients, transactions),
         merge_ingredients=MergeIngredients(
             ingredients, classifications, references, lines, transactions
         ),

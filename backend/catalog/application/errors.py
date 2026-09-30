@@ -34,5 +34,5 @@ class IngredientClassifierContractError(IngredientClassifierError):
     pass
 
 
-class DuplicateCalorieReferenceError(Exception):
+class DuplicateTagReferenceError(Exception):
     pass

@@ -2,12 +2,14 @@ from dataclasses import dataclass
 
 from shared.household_membership import HouseholdMembershipReader
 from shared.transactions import TransactionManager
+from shopping.application.item_calories import ShoppingCalorieCounter
 from shopping.application.ports.catalog_directory import CatalogDirectory
 from shopping.application.ports.household_inventory_reader import HouseholdInventoryReader
 from shopping.application.ports.inventory_writer import InventoryWriter
 from shopping.application.ports.line_interpreter import LineInterpreter
 from shopping.application.ports.promotion_coverage_reader import PromotionCoverageReader
 from shopping.application.ports.recipe_requirement_reader import RecipeRequirementReader
+from shopping.application.ports.subject_nutrition_reader import SubjectNutritionReader
 from shopping.application.ports.tagged_product_creator import TaggedProductCreator
 from shopping.application.use_cases.add_missing_external_recipe_items_to_shopping_list import (
     AddMissingExternalRecipeItemsToShoppingList,
@@ -83,42 +85,46 @@ def build_shopping(
     recipes: RecipeRequirementReader,
     promotions: PromotionCoverageReader,
     line_interpreter: LineInterpreter,
+    nutrition: SubjectNutritionReader,
     transactions: TransactionManager,
 ) -> ShoppingModule:
     lists = DjangoShoppingListRepository()
-    tag_list = TagShoppingList(lists, line_interpreter, memberships, transactions)
+    calories = ShoppingCalorieCounter(nutrition)
+    tag_list = TagShoppingList(lists, line_interpreter, calories, memberships, transactions)
     buy_item = BuyShoppingItem(
         lists, inventory_writer, catalog, tagged_products, memberships, transactions
     )
     delete_item = DeleteShoppingListItem(lists, memberships)
     add_missing = AddMissingRecipeItemsToShoppingList(
-        lists, recipes, catalog, memberships, transactions
+        lists, recipes, catalog, calories, memberships, transactions
     )
     return ShoppingModule(
         list_shopping_lists=ListShoppingLists(lists, memberships),
         create_shopping_list=CreateShoppingList(lists, memberships),
         rename_shopping_list=RenameShoppingList(lists, memberships),
         delete_shopping_list=DeleteShoppingList(lists, memberships),
-        get_shopping_list_items=GetShoppingListItems(lists, memberships),
-        add_shopping_list_item=AddShoppingListItem(lists, catalog, memberships, transactions),
+        get_shopping_list_items=GetShoppingListItems(lists, calories, memberships),
+        add_shopping_list_item=AddShoppingListItem(
+            lists, catalog, calories, memberships, transactions
+        ),
         add_missing_recipe_items_to_shopping_list=add_missing,
         add_missing_external_recipe_items_to_shopping_list=(
             AddMissingExternalRecipeItemsToShoppingList(
-                lists, recipes, catalog, memberships, transactions
+                lists, recipes, catalog, calories, memberships, transactions
             )
         ),
         synchronize_minimum_stock=SynchronizeMinimumStock(
-            lists, inventory_reader, memberships, transactions
+            lists, inventory_reader, calories, memberships, transactions
         ),
         buy_shopping_item=buy_item,
         buy_shopping_items=BuyShoppingItems(lists, buy_item, transactions),
-        restore_shopping_item=RestoreShoppingItem(lists, memberships, transactions),
+        restore_shopping_item=RestoreShoppingItem(lists, calories, memberships, transactions),
         delete_shopping_list_item=delete_item,
         delete_shopping_list_items=DeleteShoppingListItems(lists, delete_item, transactions),
         choose_shopping_item_product=ChooseShoppingItemProduct(
-            lists, catalog, memberships, transactions
+            lists, catalog, calories, memberships, transactions
         ),
-        tag_shopping_item=TagShoppingItem(lists, catalog, memberships, transactions),
+        tag_shopping_item=TagShoppingItem(lists, catalog, calories, memberships, transactions),
         interpret_shopping_item=InterpretShoppingItem(
             lists, line_interpreter, catalog, memberships
         ),

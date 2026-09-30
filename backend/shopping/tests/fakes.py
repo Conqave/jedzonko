@@ -5,6 +5,7 @@ from datetime import datetime
 from decimal import Decimal
 
 from shared.household_membership import HouseholdMembershipReader
+from shared.item_calories import SubjectNutrition
 from shared.measurement import MeasurementDimension, MeasurementUnit
 from shared.transactions import TransactionManager
 from shopping.application.errors import ShoppingListItemNotFoundError, ShoppingListNotFoundError
@@ -14,6 +15,7 @@ from shopping.application.ports.inventory_writer import InventoryWriter
 from shopping.application.ports.line_interpreter import LineInterpreter
 from shopping.application.ports.recipe_requirement_reader import RecipeRequirementReader
 from shopping.application.ports.shopping_list_repository import ShoppingListRepository
+from shopping.application.ports.subject_nutrition_reader import SubjectNutritionReader
 from shopping.application.ports.tagged_product_creator import TaggedProductCreator
 from shopping.domain.inventory_stock_level import InventoryStockLevel
 from shopping.domain.line_meaning import LineMeaning
@@ -299,3 +301,29 @@ class FakeLineInterpreter(LineInterpreter):
     def interpret(self, texts: tuple[str, ...], now: datetime) -> dict[str, LineMeaning]:
         self.calls.append(texts)
         return {text: self._meanings[text] for text in texts if text in self._meanings}
+
+
+class FakeSubjectNutritionReader(SubjectNutritionReader):
+    def __init__(
+        self,
+        products: dict[int, SubjectNutrition] | None = None,
+        ingredients: dict[int, SubjectNutrition] | None = None,
+    ) -> None:
+        self._products = {} if products is None else products
+        self._ingredients = {} if ingredients is None else ingredients
+        self.product_lookups: list[tuple[int, frozenset[int]]] = []
+
+    def find_product_nutrition(
+        self, household_id: int, product_ids: set[int]
+    ) -> dict[int, SubjectNutrition]:
+        self.product_lookups.append((household_id, frozenset(product_ids)))
+        return {
+            product_id: self._products.get(product_id, SubjectNutrition.untagged())
+            for product_id in product_ids
+        }
+
+    def find_ingredient_nutrition(self, ingredient_ids: set[int]) -> dict[int, SubjectNutrition]:
+        return {
+            ingredient_id: self._ingredients.get(ingredient_id, SubjectNutrition.untagged())
+            for ingredient_id in ingredient_ids
+        }

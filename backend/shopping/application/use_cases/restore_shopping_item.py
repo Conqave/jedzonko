@@ -5,8 +5,9 @@ from shopping.application.errors import (
     ShoppingListItemNotFoundError,
     ShoppingListNotFoundError,
 )
+from shopping.application.item_calories import ShoppingCalorieCounter
 from shopping.application.ports.shopping_list_repository import ShoppingListRepository
-from shopping.domain.shopping_item_snapshot import ShoppingItemSnapshot
+from shopping.domain.shopping_item_listing import ShoppingItemListing
 
 
 class RestoreShoppingItem:
@@ -14,14 +15,16 @@ class RestoreShoppingItem:
     def __init__(
         self,
         repository: ShoppingListRepository,
+        calories: ShoppingCalorieCounter,
         memberships: HouseholdMembershipReader,
         transactions: TransactionManager,
     ) -> None:
         self._repository = repository
+        self._calories = calories
         self._memberships = memberships
         self._transactions = transactions
 
-    def execute(self, user_id: int, item_id: int) -> ShoppingItemSnapshot:
+    def execute(self, user_id: int, item_id: int) -> ShoppingItemListing:
         item = self._repository.find_item(item_id)
         if item is None or not item.is_purchased:
             raise ShoppingListItemNotFoundError
@@ -32,4 +35,5 @@ class RestoreShoppingItem:
         with self._transactions.atomic():
             if self._repository.find_pending_item(item.list_id, item.subject) is not None:
                 raise ShoppingItemAlreadyPendingError
-            return self._repository.mark_pending(item_id)
+            restored = self._repository.mark_pending(item_id)
+        return self._calories.count(shopping_list.household_id, restored)

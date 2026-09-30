@@ -4,6 +4,8 @@ from decimal import Decimal
 import pytest
 
 from shared.household_membership import NotAHouseholdMemberError
+from shared.item_calories import SubjectNutrition, TagGap
+from shared.nutrition import NutritionFacts
 from shopping.application.errors import (
     ChosenProductNotTaggedError,
     IngredientNotFoundError,
@@ -16,6 +18,7 @@ from shopping.application.errors import (
     ShoppingListItemNotFoundError,
     ShoppingListNotFoundError,
 )
+from shopping.application.item_calories import ShoppingCalorieCounter
 from shopping.application.use_cases.add_missing_external_recipe_items_to_shopping_list import (
     AddMissingExternalRecipeItemsToShoppingList,
 )
@@ -53,6 +56,7 @@ from shopping.tests.fakes import (
     FakeLineInterpreter,
     FakeRecipeRequirementReader,
     FakeShoppingListRepository,
+    FakeSubjectNutritionReader,
     FakeTaggedProductCreator,
     FakeTransactionManager,
 )
@@ -77,18 +81,26 @@ class Shopping:
         self.transactions = FakeTransactionManager()
         self.writer = FakeInventoryWriter()
         self.products = FakeTaggedProductCreator(NEW_PRODUCT)
+        self.nutrition = FakeSubjectNutritionReader()
+        self.calories = ShoppingCalorieCounter(self.nutrition)
         self.primary = CreatePrimaryShoppingList(self.repository).execute(HOME).id
 
     def add(self, subject: ShoppingSubject, quantity: str, unit_code: str | None) -> int:
         use_case = AddShoppingListItem(
-            self.repository, self.catalog, self.memberships, self.transactions
+            self.repository, self.catalog, self.calories, self.memberships, self.transactions
         )
-        return use_case.execute(ALA, self.primary, subject, Decimal(quantity), unit_code).id
+        listing = use_case.execute(ALA, self.primary, subject, Decimal(quantity), unit_code)
+        return listing.item.id
 
     def add_missing(self, missing: list[MissingRecipeItem]) -> None:
         recipes = FakeRecipeRequirementReader(missing)
         add_missing = AddMissingRecipeItemsToShoppingList(
-            self.repository, recipes, self.catalog, self.memberships, self.transactions
+            self.repository,
+            recipes,
+            self.catalog,
+            self.calories,
+            self.memberships,
+            self.transactions,
         )
         add_missing.execute(ALA, self.primary, 1, 4)
 
@@ -140,7 +152,9 @@ def test_the_primary_list_cannot_be_deleted(shopping: Shopping) -> None:
 
 def test_items_of_an_unknown_list_are_not_found(shopping: Shopping) -> None:
     with pytest.raises(ShoppingListNotFoundError):
-        GetShoppingListItems(shopping.repository, shopping.memberships).execute(ALA, 404)
+        GetShoppingListItems(shopping.repository, shopping.calories, shopping.memberships).execute(
+            ALA, 404
+        )
 
 
 def test_an_item_is_not_about_two_things() -> None:
@@ -233,6 +247,7 @@ def test_external_recipe_items_go_to_the_list_with_unmeasured_ones_as_text(
         shopping.repository,
         FakeRecipeRequirementReader(missing),
         shopping.catalog,
+        shopping.calories,
         shopping.memberships,
         shopping.transactions,
     )
@@ -251,6 +266,7 @@ def test_minimum_stock_fills_the_primary_list_once(shopping: Shopping) -> None:
     use_case = SynchronizeMinimumStock(
         shopping.repository,
         FakeInventoryReader([level]),
+        shopping.calories,
         shopping.memberships,
         shopping.transactions,
     )
@@ -322,14 +338,16 @@ def test_only_a_tagged_item_takes_a_chosen_product(shopping: Shopping) -> None:
 
 def test_a_bought_item_can_be_put_back_unless_it_is_listed_again(shopping: Shopping) -> None:
     first = shopping.add(ShoppingSubject(product_id=FLOUR), "1", "kg")
-    restore = RestoreShoppingItem(shopping.repository, shopping.memberships, shopping.transactions)
+    restore = RestoreShoppingItem(
+        shopping.repository, shopping.calories, shopping.memberships, shopping.transactions
+    )
     shopping.buy(first, None)
 
     restored = restore.execute(ALA, first)
     shopping.buy(first, None)
     shopping.add(ShoppingSubject(product_id=FLOUR), "1", "kg")
 
-    assert restored.is_purchased is False
+    assert restored.item.is_purchased is False
     with pytest.raises(ShoppingItemAlreadyPendingError):
         restore.execute(ALA, first)
 
@@ -366,7 +384,11 @@ def test_only_members_delete_ticked_items(shopping: Shopping) -> None:
 
 def choose_product(shopping: Shopping, item_id: int, product_id: int) -> None:
     use_case = ChooseShoppingItemProduct(
-        shopping.repository, shopping.catalog, shopping.memberships, shopping.transactions
+        shopping.repository,
+        shopping.catalog,
+        shopping.calories,
+        shopping.memberships,
+        shopping.transactions,
     )
     use_case.execute(ALA, item_id, product_id)
 
@@ -446,6 +468,7 @@ def tag(shopping: Shopping, meanings: dict[str, LineMeaning]) -> None:
     use_case = TagShoppingList(
         shopping.repository,
         FakeLineInterpreter(meanings),
+        shopping.calories,
         shopping.memberships,
         shopping.transactions,
     )
@@ -496,6 +519,7 @@ def test_every_list_with_free_text_is_tagged_in_one_run() -> None:
         FakeLineInterpreter(
             {"jajka": LineMeaning(ingredient_id=EGGS, quantity=None, unit_code=None)}
         ),
+        shopping.calories,
         shopping.memberships,
         shopping.transactions,
     )
@@ -522,7 +546,11 @@ def test_buying_an_ingredient_item_stocks_the_households_only_product_of_it(
 
 def tag_item(shopping: Shopping, item_id: int, quantity: str, unit_code: str) -> None:
     use_case = TagShoppingItem(
-        shopping.repository, shopping.catalog, shopping.memberships, shopping.transactions
+        shopping.repository,
+        shopping.catalog,
+        shopping.calories,
+        shopping.memberships,
+        shopping.transactions,
     )
     use_case.execute(ALA, item_id, EGGS, Decimal(quantity), unit_code)
 
@@ -575,7 +603,11 @@ def test_a_hand_tag_in_another_unit_than_the_pending_item_is_rejected(
 def test_a_hand_tag_must_be_a_known_ingredient_with_a_valid_amount(shopping: Shopping) -> None:
     item_id = shopping.add(ShoppingSubject(free_text="jajka"), "1", None)
     use_case = TagShoppingItem(
-        shopping.repository, shopping.catalog, shopping.memberships, shopping.transactions
+        shopping.repository,
+        shopping.catalog,
+        shopping.calories,
+        shopping.memberships,
+        shopping.transactions,
     )
 
     with pytest.raises(IngredientNotFoundError):
@@ -587,7 +619,11 @@ def test_a_hand_tag_must_be_a_known_ingredient_with_a_valid_amount(shopping: Sho
 def test_only_members_tag_pending_items(shopping: Shopping) -> None:
     item_id = shopping.add(ShoppingSubject(free_text="jajka"), "1", None)
     use_case = TagShoppingItem(
-        shopping.repository, shopping.catalog, shopping.memberships, shopping.transactions
+        shopping.repository,
+        shopping.catalog,
+        shopping.calories,
+        shopping.memberships,
+        shopping.transactions,
     )
 
     with pytest.raises(NotAHouseholdMemberError):
@@ -628,3 +664,29 @@ def test_a_proposed_tag_outside_the_catalog_is_dropped(shopping: Shopping) -> No
     proposal = interpret(shopping, item_id, {"6 jajek": meaning})
 
     assert proposal == ShoppingItemInterpretation(None, None, Decimal("6"), "szt")
+
+
+def test_listed_items_carry_calories_by_what_they_are_about(shopping: Shopping) -> None:
+    flour_facts = NutritionFacts(
+        kcal_per_100g=Decimal("364"), grams_per_piece=None, grams_per_ml=None
+    )
+    egg_facts = NutritionFacts(
+        kcal_per_100g=Decimal("143"), grams_per_piece=Decimal("60"), grams_per_ml=None
+    )
+    shopping.nutrition = FakeSubjectNutritionReader(
+        {FLOUR: SubjectNutrition(facts=flour_facts, package=None)},
+        {EGGS: SubjectNutrition(facts=egg_facts, package=None)},
+    )
+    shopping.calories = ShoppingCalorieCounter(shopping.nutrition)
+    shopping.add(ShoppingSubject(product_id=FLOUR), "1", "kg")
+    shopping.add(ShoppingSubject(ingredient_id=EGGS), "10", "szt")
+    shopping.add(ShoppingSubject(free_text="ręczniki"), "1", None)
+    get_items = GetShoppingListItems(shopping.repository, shopping.calories, shopping.memberships)
+
+    listings = get_items.execute(ALA, shopping.primary)
+
+    calories = [listing.calories for listing in listings]
+    assert [entry.kcal for entry in calories] == [Decimal("3640"), Decimal("858"), None]
+    assert [entry.is_estimate for entry in calories] == [False, True, False]
+    assert calories[2].uncounted_reason is TagGap.NO_TAG
+    assert shopping.nutrition.product_lookups[-1] == (HOME, frozenset({FLOUR}))

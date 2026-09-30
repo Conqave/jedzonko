@@ -15,6 +15,7 @@ from catalog.application.ports.product_repository import ProductRepository
 from catalog.domain.calories import TagCalories
 from catalog.domain.candidate import CandidateStatus, IngredientNameCandidate
 from catalog.domain.classification import ProductClassification
+from catalog.domain.conversions import Density, PieceWeight
 from catalog.domain.ingredient import (
     Ingredient,
     IngredientName,
@@ -28,6 +29,10 @@ from catalog.domain.product import Product, ProductListing, ProductPackage
 from catalog.domain.product_ingredient import ProductIngredient, ProductIngredientStatus
 from shared.household_membership import HouseholdMembershipReader
 from shared.transactions import TransactionManager
+
+
+def make_bare_ingredient(ingredient_id: int, name: str) -> Ingredient:
+    return Ingredient(id=ingredient_id, name=name, calories=None, piece_weight=None, density=None)
 
 
 class FakeTransactionManager(TransactionManager):
@@ -95,8 +100,16 @@ class FakeIngredientRepository(IngredientRepository):
         ingredient = self.ingredients[ingredient_id]
         self.ingredients[ingredient_id] = replace(ingredient, calories=calories)
 
+    def save_piece_weight(self, ingredient_id: int, piece_weight: PieceWeight | None) -> None:
+        ingredient = self.ingredients[ingredient_id]
+        self.ingredients[ingredient_id] = replace(ingredient, piece_weight=piece_weight)
+
+    def save_density(self, ingredient_id: int, density: Density | None) -> None:
+        ingredient = self.ingredients[ingredient_id]
+        self.ingredients[ingredient_id] = replace(ingredient, density=density)
+
     def create(self, name: CatalogName, source: IngredientNameSource) -> Ingredient:
-        ingredient = Ingredient(id=self._next_id, name=name.name, calories=None)
+        ingredient = make_bare_ingredient(self._next_id, name.name)
         self._next_id += 1
         self.ingredients[ingredient.id] = ingredient
         self.add_name(ingredient.id, name, IngredientNameKind.CANONICAL, source)
@@ -134,7 +147,7 @@ class FakeIngredientRepository(IngredientRepository):
     def split_alias(self, normalized_name: str) -> Ingredient | None:
         for position, name in enumerate(self.names):
             if name.normalized_name == normalized_name and name.kind is IngredientNameKind.ALIAS:
-                ingredient = Ingredient(id=max(self.ingredients) + 1, name=name.name, calories=None)
+                ingredient = make_bare_ingredient(max(self.ingredients) + 1, name.name)
                 self.ingredients[ingredient.id] = ingredient
                 self.names[position] = replace(
                     name, ingredient_id=ingredient.id, kind=IngredientNameKind.CANONICAL

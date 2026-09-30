@@ -12,10 +12,10 @@ from recipes.presentation.serializers import (
     MissingItemsQuerySerializer,
     RecipeCategorySerializer,
     RecipeDetailSerializer,
+    RecipeListingSerializer,
     RecipeNutritionSerializer,
     RecipeShortfallSerializer,
     RecipeSuggestionSerializer,
-    RecipeSummarySerializer,
     RecipeWriteSerializer,
     SuggestionQuerySerializer,
 )
@@ -53,7 +53,7 @@ class RecipeListView(APIView):
     def get(self, request: Request) -> Response:
         use_case = container().recipes.list_recipes
         recipes = use_case.execute()
-        serializer = RecipeSummarySerializer(recipes, many=True)
+        serializer = RecipeListingSerializer(recipes, many=True)
         return Response(serializer.data)
 
     def post(self, request: Request) -> Response:

@@ -565,3 +565,32 @@ def test_an_unavailable_model_is_reported(
 
     assert response.status_code == 503
     assert response.data["code"] == "tagging_unavailable"
+
+
+def test_listed_items_show_their_calories(
+    member_client: APIClient, ala: User, home: Household, flour: Product
+) -> None:
+    flour_tag = make_ingredient("Mąka pszenna")
+    eggs = make_ingredient("Jajka")
+    container().catalog.set_tag_calories.execute(flour_tag.pk, Decimal("364"))
+    container().catalog.set_tag_calories.execute(eggs.pk, Decimal("143"))
+    confirm_ingredient(ala, flour, flour_tag)
+    list_id = _primary_list_id(member_client, home)
+    added = _add(
+        member_client, list_id, {"product_id": flour.pk, "quantity": "500", "unit_code": "g"}
+    )
+    _add(member_client, list_id, {"ingredient_id": eggs.pk, "quantity": "6", "unit_code": "szt"})
+    _add(member_client, list_id, {"free_text": "ręczniki", "quantity": "1"})
+
+    response = member_client.get(f"/api/shopping/lists/{list_id}/items/")
+
+    calories = {item["name"]: item["calories"] for item in response.data}
+    assert added["calories"] == calories["Mąka"]
+    assert calories["Mąka"] == {
+        "kcal": "1820.0",
+        "kcal_per_100g": "364.0",
+        "is_estimate": False,
+        "uncounted_reason": None,
+    }
+    assert calories["Jajka"]["uncounted_reason"] == "no_piece_weight"
+    assert calories["ręczniki"]["uncounted_reason"] == "no_tag"

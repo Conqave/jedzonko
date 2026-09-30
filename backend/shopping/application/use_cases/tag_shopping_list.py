@@ -6,10 +6,12 @@ from shared.measurement import MeasurementDimension
 from shared.measurement_units import BASE_UNIT_CODES
 from shared.transactions import TransactionManager
 from shopping.application.errors import ShoppingItemMergeConflictError, ShoppingListNotFoundError
+from shopping.application.item_calories import ShoppingCalorieCounter
 from shopping.application.ports.line_interpreter import LineInterpreter
 from shopping.application.ports.shopping_list_repository import ShoppingListRepository
 from shopping.application.shopping_list_rules import put_tag_on_item
 from shopping.domain.line_meaning import LineMeaning
+from shopping.domain.shopping_item_listing import ShoppingItemListing
 from shopping.domain.shopping_item_snapshot import ShoppingItemSnapshot
 
 
@@ -18,36 +20,39 @@ class TagShoppingList:
         self,
         repository: ShoppingListRepository,
         interpreter: LineInterpreter,
+        calories: ShoppingCalorieCounter,
         memberships: HouseholdMembershipReader,
         transactions: TransactionManager,
     ) -> None:
         self._repository = repository
         self._interpreter = interpreter
+        self._calories = calories
         self._memberships = memberships
         self._transactions = transactions
 
-    def execute(self, user_id: int, list_id: int, now: datetime) -> list[ShoppingItemSnapshot]:
+    def execute(self, user_id: int, list_id: int, now: datetime) -> list[ShoppingItemListing]:
         shopping_list = self._repository.find_list(list_id)
         if shopping_list is None:
             raise ShoppingListNotFoundError
         require_membership(self._memberships, user_id, shopping_list.household_id)
-        return self.tag(list_id, now)
+        self.tag(list_id, now)
+        items = self._repository.list_items(list_id)
+        return self._calories.count_many(shopping_list.household_id, items)
 
-    def tag(self, list_id: int, now: datetime) -> list[ShoppingItemSnapshot]:
+    def tag(self, list_id: int, now: datetime) -> None:
         texts = [
             item
             for item in self._repository.list_pending_items(list_id)
             if item.subject.free_text is not None
         ]
         if not texts:
-            return self._repository.list_items(list_id)
+            return
         meanings = self._interpreter.interpret(tuple(item.name for item in texts), now)
         with self._transactions.atomic():
             for item in texts:
                 meaning = meanings.get(item.name)
                 if meaning is not None and meaning.ingredient_id is not None:
                     self._retag(item, meaning.ingredient_id, meaning)
-        return self._repository.list_items(list_id)
 
     def _retag(self, item: ShoppingItemSnapshot, ingredient_id: int, meaning: LineMeaning) -> None:
         quantity, unit_code = _amount(item, meaning)

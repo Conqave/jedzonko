@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 
 from catalog.domain.calories import TagCalories
+from catalog.domain.conversions import Density, PieceWeight
 from catalog.domain.ingredient import (
     Ingredient,
     IngredientName,
@@ -38,6 +39,14 @@ class IngredientRepository(ABC):
 
     @abstractmethod
     def save_calories(self, ingredient_id: int, calories: TagCalories | None) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def save_piece_weight(self, ingredient_id: int, piece_weight: PieceWeight | None) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def save_density(self, ingredient_id: int, density: Density | None) -> None:
         raise NotImplementedError
 
     @abstractmethod

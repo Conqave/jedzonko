@@ -3,6 +3,12 @@ from decimal import Decimal
 from rest_framework import serializers
 
 from catalog.domain.calories import KCAL_DECIMAL_PLACES, KCAL_MAX_DIGITS
+from catalog.domain.conversions import (
+    GRAMS_PER_ML_DECIMAL_PLACES,
+    GRAMS_PER_ML_MAX_DIGITS,
+    GRAMS_PER_PIECE_DECIMAL_PLACES,
+    GRAMS_PER_PIECE_MAX_DIGITS,
+)
 from catalog.domain.product import ProductPackage
 
 
@@ -42,19 +48,63 @@ class TagCaloriesSerializer(serializers.Serializer[object]):
     kcal_per_100g = serializers.DecimalField(
         max_digits=KCAL_MAX_DIGITS, decimal_places=KCAL_DECIMAL_PLACES, read_only=True
     )
-    provenance = serializers.CharField(source="source", read_only=True)
-    reference_url = serializers.CharField(read_only=True, allow_null=True)
+    provenance = serializers.CharField(source="provenance.source", read_only=True)
+    reference_url = serializers.CharField(
+        source="provenance.reference_url", read_only=True, allow_null=True
+    )
+
+
+class PieceWeightSerializer(serializers.Serializer[object]):
+    grams_per_piece = serializers.DecimalField(
+        max_digits=GRAMS_PER_PIECE_MAX_DIGITS,
+        decimal_places=GRAMS_PER_PIECE_DECIMAL_PLACES,
+        read_only=True,
+    )
+    provenance = serializers.CharField(source="provenance.source", read_only=True)
+    reference_url = serializers.CharField(
+        source="provenance.reference_url", read_only=True, allow_null=True
+    )
+
+
+class DensitySerializer(serializers.Serializer[object]):
+    grams_per_ml = serializers.DecimalField(
+        max_digits=GRAMS_PER_ML_MAX_DIGITS,
+        decimal_places=GRAMS_PER_ML_DECIMAL_PLACES,
+        read_only=True,
+    )
+    provenance = serializers.CharField(source="provenance.source", read_only=True)
+    reference_url = serializers.CharField(
+        source="provenance.reference_url", read_only=True, allow_null=True
+    )
 
 
 class IngredientSerializer(serializers.Serializer[object]):
     id = serializers.IntegerField(read_only=True)
     name = serializers.CharField(read_only=True)
     calories = TagCaloriesSerializer(read_only=True, allow_null=True)
+    piece_weight = PieceWeightSerializer(read_only=True, allow_null=True)
+    density = DensitySerializer(read_only=True, allow_null=True)
 
 
 class SetTagCaloriesSerializer(serializers.Serializer[dict[str, object]]):
     kcal_per_100g = serializers.DecimalField(
         max_digits=KCAL_MAX_DIGITS, decimal_places=KCAL_DECIMAL_PLACES, allow_null=True
+    )
+
+
+class SetTagPieceWeightSerializer(serializers.Serializer[dict[str, object]]):
+    grams_per_piece = serializers.DecimalField(
+        max_digits=GRAMS_PER_PIECE_MAX_DIGITS,
+        decimal_places=GRAMS_PER_PIECE_DECIMAL_PLACES,
+        allow_null=True,
+    )
+
+
+class SetTagDensitySerializer(serializers.Serializer[dict[str, object]]):
+    grams_per_ml = serializers.DecimalField(
+        max_digits=GRAMS_PER_ML_MAX_DIGITS,
+        decimal_places=GRAMS_PER_ML_DECIMAL_PLACES,
+        allow_null=True,
     )
 
 

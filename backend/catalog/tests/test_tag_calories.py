@@ -2,13 +2,15 @@ from decimal import Decimal
 
 import pytest
 
-from catalog.application.errors import DuplicateCalorieReferenceError, IngredientNotFoundError
+from catalog.application.errors import DuplicateTagReferenceError, IngredientNotFoundError
+from catalog.application.reference_import import ImportedFact, TagFact
 from catalog.application.use_cases.import_tag_calories import ImportTagCalories
 from catalog.application.use_cases.set_tag_calories import SetTagCalories
-from catalog.domain.calories import CalorieReference, CalorieSource, TagCalories
-from catalog.domain.errors import InvalidTagCaloriesError
+from catalog.domain.calories import CalorieReference, TagCalories
+from catalog.domain.errors import InvalidFactProvenanceError, InvalidTagCaloriesError
 from catalog.domain.ingredient import IngredientNameKind, IngredientNameSource
 from catalog.domain.names import CatalogName
+from catalog.domain.provenance import FactSource, Provenance
 from catalog.tests.fakes import FakeIngredientRepository, FakeTransactionManager
 
 SOURCE_URL = "https://example.org/nutrition/apple"
@@ -18,6 +20,10 @@ def _tag(repository: FakeIngredientRepository, name: str) -> int:
     catalog_name = CatalogName.parse(name)
     ingredient = repository.create(catalog_name, IngredientNameSource.MANUAL)
     return ingredient.id
+
+
+def _facts(*tag_names: str) -> tuple[ImportedFact, ...]:
+    return tuple(ImportedFact(tag_name=name, fact=TagFact.CALORIES) for name in tag_names)
 
 
 def _reference(tag_name: str, kcal: str) -> CalorieReference:
@@ -47,12 +53,14 @@ def test_calories_at_the_bounds_are_accepted() -> None:
 
 
 def test_only_reference_values_carry_a_source_url() -> None:
-    with pytest.raises(InvalidTagCaloriesError):
-        TagCalories(kcal_per_100g=Decimal("52"), source=CalorieSource.MANUAL, reference_url="x")
-    with pytest.raises(InvalidTagCaloriesError):
-        TagCalories(kcal_per_100g=Decimal("52"), source=CalorieSource.REFERENCE, reference_url=None)
-    with pytest.raises(InvalidTagCaloriesError):
+    with pytest.raises(InvalidFactProvenanceError):
+        Provenance(source=FactSource.MANUAL, reference_url="x")
+    with pytest.raises(InvalidFactProvenanceError):
+        Provenance(source=FactSource.REFERENCE, reference_url=None)
+    with pytest.raises(InvalidFactProvenanceError):
         TagCalories.from_reference(Decimal("52"), "  ")
+    with pytest.raises(InvalidFactProvenanceError):
+        Provenance.from_reference("https://example.org/" + "x" * 500)
 
 
 def test_an_imported_value_must_come_from_a_reference() -> None:
@@ -133,7 +141,7 @@ def test_import_fills_tags_by_canonical_name_or_alias(
 
     run = ImportTagCalories(repository, transactions).execute(references)
 
-    assert run.updated == ("Jabłko", "Jajka")
+    assert run.updated == _facts("Jabłko", "Jajka")
     assert run.unknown == ("kawior",)
     assert run.unchanged == ()
     assert run.skipped_manual == ()
@@ -151,7 +159,7 @@ def test_import_never_overwrites_a_manual_value(
 
     run = ImportTagCalories(repository, transactions).execute((_reference("jabłko", "52"),))
 
-    assert run.skipped_manual == ("Jabłko",)
+    assert run.skipped_manual == _facts("Jabłko")
     assert run.updated == ()
     assert repository.ingredients[apple_id].calories == manual
 
@@ -166,8 +174,8 @@ def test_a_later_import_refreshes_reference_values(
     same = use_case.execute((_reference("jabłko", "52"),))
     refreshed = use_case.execute((_reference("jabłko", "54.5"),))
 
-    assert same.unchanged == ("Jabłko",)
-    assert refreshed.updated == ("Jabłko",)
+    assert same.unchanged == _facts("Jabłko")
+    assert refreshed.updated == _facts("Jabłko")
     assert repository.ingredients[apple_id].calories == _reference("x", "54.5").calories
 
 
@@ -179,5 +187,5 @@ def test_a_file_naming_one_tag_twice_is_refused(
     repository.add_name(egg_id, alias, IngredientNameKind.ALIAS, IngredientNameSource.MANUAL)
     references = (_reference("jajka", "143"), _reference("jajko", "150"))
 
-    with pytest.raises(DuplicateCalorieReferenceError):
+    with pytest.raises(DuplicateTagReferenceError):
         ImportTagCalories(repository, transactions).execute(references)

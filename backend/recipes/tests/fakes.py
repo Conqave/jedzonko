@@ -1,7 +1,6 @@
 from collections.abc import Iterator
 from contextlib import AbstractContextManager, contextmanager
 from datetime import datetime
-from decimal import Decimal
 
 from recipes.application.commands import RecipeInput, ResolvedIngredient
 from recipes.application.errors import (
@@ -11,16 +10,17 @@ from recipes.application.errors import (
 )
 from recipes.application.ports.external_recipe_catalog import ExternalRecipeCatalog
 from recipes.application.ports.household_stock_reader import HouseholdStockReader
-from recipes.application.ports.ingredient_calories import IngredientCalories
 from recipes.application.ports.ingredient_lines import IngredientLines
+from recipes.application.ports.ingredient_names import IngredientNames
+from recipes.application.ports.ingredient_nutrition_facts import IngredientNutritionFacts
 from recipes.application.ports.ingredient_resolver import IngredientResolver
 from recipes.application.ports.inventory_consumer import HouseholdInventoryConsumer
 from recipes.application.ports.recipe_repository import RecipeRepository
 from recipes.application.ports.recipe_site import RecipeSite
 from recipes.application.ports.recipe_source import RecipeSource
 from recipes.domain.external import (
+    ExternalRecipeContent,
     ExternalRecipeDetail,
-    ExternalRecipeIngredient,
     ExternalRecipePage,
     ImportedExternalRecipe,
     RecipeImage,
@@ -30,6 +30,7 @@ from recipes.domain.models import RecipeCategory, RecipeDetail, RecipeRequiremen
 from recipes.domain.stock import StockedProduct
 from shared.household_membership import HouseholdMembershipReader
 from shared.measurement import Quantity
+from shared.nutrition import NutritionFacts
 from shared.transactions import TransactionManager
 
 
@@ -57,16 +58,30 @@ class FakeIngredientResolver(IngredientResolver):
         return {name: self._ingredient_ids[name] for name in names if name in self._ingredient_ids}
 
 
-class FakeIngredientCalories(IngredientCalories):
-    def __init__(self, kcal_per_100g: dict[int, Decimal]) -> None:
-        self._kcal_per_100g = kcal_per_100g
+class FakeIngredientNutritionFacts(IngredientNutritionFacts):
+    def __init__(self, facts: dict[int, NutritionFacts]) -> None:
+        self._facts = facts
         self.asked: list[set[int]] = []
 
-    def find_kcal_per_100g(self, ingredient_ids: set[int]) -> dict[int, Decimal]:
+    def find_nutrition_facts(self, ingredient_ids: set[int]) -> dict[int, NutritionFacts]:
         self.asked.append(ingredient_ids)
         return {
-            ingredient_id: kcal
-            for ingredient_id, kcal in self._kcal_per_100g.items()
+            ingredient_id: facts
+            for ingredient_id, facts in self._facts.items()
+            if ingredient_id in ingredient_ids
+        }
+
+
+class FakeIngredientNames(IngredientNames):
+    def __init__(self, names: dict[int, str]) -> None:
+        self._names = names
+        self.asked: list[set[int]] = []
+
+    def find_names(self, ingredient_ids: set[int]) -> dict[int, str]:
+        self.asked.append(ingredient_ids)
+        return {
+            ingredient_id: name
+            for ingredient_id, name in self._names.items()
             if ingredient_id in ingredient_ids
         }
 
@@ -217,9 +232,11 @@ class FakeExternalRecipeCatalog(ExternalRecipeCatalog):
             if recipe.image_source_url is not None and reference not in self.images
         }
 
-    def find_ingredients(self, reference: str) -> tuple[ExternalRecipeIngredient, ...] | None:
+    def find_content(self, reference: str) -> ExternalRecipeContent | None:
         recipe = self.recipes.get(reference)
-        return None if recipe is None else recipe.ingredients
+        if recipe is None:
+            return None
+        return ExternalRecipeContent(yield_label=recipe.yield_label, ingredients=recipe.ingredients)
 
     def find_image_urls(self, references: tuple[str, ...]) -> dict[str, str]:
         return {

@@ -1,5 +1,5 @@
 from recipes.application.errors import RecipeNotFoundError
-from recipes.application.ports.ingredient_calories import IngredientCalories
+from recipes.application.ports.ingredient_nutrition_facts import IngredientNutritionFacts
 from recipes.application.ports.recipe_repository import RecipeRepository
 from recipes.domain.nutrition import (
     RecipeNutrition,
@@ -9,9 +9,11 @@ from recipes.domain.nutrition import (
 
 
 class GetRecipeNutrition:
-    def __init__(self, repository: RecipeRepository, calories: IngredientCalories) -> None:
+    def __init__(
+        self, repository: RecipeRepository, nutrition_facts: IngredientNutritionFacts
+    ) -> None:
         self._repository = repository
-        self._calories = calories
+        self._nutrition_facts = nutrition_facts
 
     def execute(self, recipe_id: int) -> RecipeNutrition:
         recipe = self._repository.find_recipe(recipe_id)
@@ -19,5 +21,5 @@ class GetRecipeNutrition:
             raise RecipeNotFoundError
         requirements = self._repository.list_requirements(recipe_id)
         ingredient_ids = list_tagged_ingredient_ids(requirements)
-        kcal_per_100g = self._calories.find_kcal_per_100g(ingredient_ids)
-        return summarize_nutrition(requirements, kcal_per_100g, recipe.summary.servings)
+        facts = self._nutrition_facts.find_nutrition_facts(ingredient_ids)
+        return summarize_nutrition(requirements, facts, recipe.summary.servings)

@@ -11,6 +11,12 @@ class ExternalRecipeIngredient:
 
 
 @dataclass(frozen=True, slots=True)
+class ExternalRecipeContent:
+    yield_label: str | None
+    ingredients: tuple[ExternalRecipeIngredient, ...]
+
+
+@dataclass(frozen=True, slots=True)
 class ExternalRecipeSummary:
     source_name: str
     source_url: str
