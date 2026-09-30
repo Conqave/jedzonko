@@ -19,7 +19,7 @@
             >
               <template #loading>
                 <q-spinner class="q-mr-sm" />
-                Pytam Ollamę…
+                Pytam Ollamę...
               </template>
             </q-btn>
             <span v-if="isAsking" class="text-caption text-grey-7">

@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { http } from '@/shared/http';
 import {
-  CALORIE_PROVENANCES,
+  FACT_PROVENANCES,
   PRODUCT_INGREDIENT_PROVENANCES,
   PRODUCT_INGREDIENT_STATUSES,
   MEASUREMENT_DIMENSIONS,
@@ -14,6 +14,8 @@ import {
   type ProductListing,
   type ProductPackage,
   type TagCalories,
+  type TagDensity,
+  type TagPieceWeight,
 } from './model';
 
 const packageSchema = z
@@ -43,7 +45,7 @@ const ingredientSchema = z.object({ id: z.number().int(), name: z.string() });
 const caloriesSchema = z
   .object({
     kcal_per_100g: z.string(),
-    provenance: z.enum(CALORIE_PROVENANCES),
+    provenance: z.enum(FACT_PROVENANCES),
     reference_url: z.string().nullable(),
   })
   .transform((value): TagCalories => ({
@@ -52,10 +54,36 @@ const caloriesSchema = z
     referenceUrl: value.reference_url,
   }));
 
+const pieceWeightSchema = z
+  .object({
+    grams_per_piece: z.string(),
+    provenance: z.enum(FACT_PROVENANCES),
+    reference_url: z.string().nullable(),
+  })
+  .transform((value): TagPieceWeight => ({
+    gramsPerPiece: value.grams_per_piece,
+    provenance: value.provenance,
+    referenceUrl: value.reference_url,
+  }));
+
+const densitySchema = z
+  .object({
+    grams_per_ml: z.string(),
+    provenance: z.enum(FACT_PROVENANCES),
+    reference_url: z.string().nullable(),
+  })
+  .transform((value): TagDensity => ({
+    gramsPerMl: value.grams_per_ml,
+    provenance: value.provenance,
+    referenceUrl: value.reference_url,
+  }));
+
 const tagSchema = z.object({
   id: z.number().int(),
   name: z.string(),
   calories: caloriesSchema.nullable(),
+  piece_weight: pieceWeightSchema.nullable(),
+  density: densitySchema.nullable(),
 });
 
 const listingSchema = z
@@ -87,6 +115,8 @@ const decisionSchema = z
   .transform((value): ProductIngredientDecision => ({
     ingredient: { id: value.ingredient.id, name: value.ingredient.name },
     calories: value.ingredient.calories,
+    pieceWeight: value.ingredient.piece_weight,
+    density: value.ingredient.density,
     status: value.status,
     provenance: value.provenance,
     modelName: value.model_name,
@@ -186,6 +216,26 @@ export async function setTagCalories(
   const response = await http.put(`/ingredients/${ingredientId}/calories/`, payload);
   const tag = tagSchema.parse(response.data);
   return tag.calories;
+}
+
+export async function setTagPieceWeight(
+  ingredientId: number,
+  gramsPerPiece: string | null,
+): Promise<TagPieceWeight | null> {
+  const payload = { grams_per_piece: gramsPerPiece };
+  const response = await http.put(`/ingredients/${ingredientId}/piece-weight/`, payload);
+  const tag = tagSchema.parse(response.data);
+  return tag.piece_weight;
+}
+
+export async function setTagDensity(
+  ingredientId: number,
+  gramsPerMl: string | null,
+): Promise<TagDensity | null> {
+  const payload = { grams_per_ml: gramsPerMl };
+  const response = await http.put(`/ingredients/${ingredientId}/density/`, payload);
+  const tag = tagSchema.parse(response.data);
+  return tag.density;
 }
 
 export async function fetchMeasurementUnits(): Promise<MeasurementUnit[]> {

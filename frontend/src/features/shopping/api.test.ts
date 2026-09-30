@@ -24,6 +24,12 @@ const ITEM_DTO = {
   unit_code: 'szt',
   status: 'pending',
   purchased_at: null,
+  calories: {
+    kcal: null,
+    kcal_per_100g: '143.0',
+    is_estimate: false,
+    uncounted_reason: 'no_piece_weight',
+  },
 };
 
 beforeEach(() => {
@@ -40,6 +46,11 @@ describe('shopping api', () => {
 
     expect(item?.subject).toEqual({ kind: 'ingredient', ingredientId: 9 });
     expect(item?.unitCode).toBe('szt');
+    expect(item?.calories).toEqual({
+      kind: 'uncounted',
+      reason: 'no_piece_weight',
+      kcalPer100g: '143.0',
+    });
   });
 
   it('rejects an item about two things', async () => {

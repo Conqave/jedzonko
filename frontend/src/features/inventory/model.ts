@@ -5,6 +5,7 @@ import {
   type ProductChanges,
   type TagFilter,
 } from '@/features/catalog/model';
+import { toKcalSortKey, type ItemCalories } from '@/shared/calories';
 import { fromThousandths, toThousandths } from '@/shared/decimal';
 import { sortByKeys, type SortKey } from '@/shared/listView';
 import { matchesSearch } from '@/shared/textSearch';
@@ -18,6 +19,7 @@ export interface InventoryItem {
   minimumQuantity: string | null;
   photoUrl: string | null;
   isBelowMinimum: boolean;
+  calories: ItemCalories;
 }
 
 export interface NewInventoryItem {
@@ -77,13 +79,14 @@ export function isEmpty(quantity: string): boolean {
   return toThousandths(quantity) === 0n;
 }
 
-export const INVENTORY_SORTS = ['name', 'quantity', 'tag', 'belowMinimum'] as const;
+export const INVENTORY_SORTS = ['name', 'quantity', 'calories', 'tag', 'belowMinimum'] as const;
 
 export type InventorySort = (typeof INVENTORY_SORTS)[number];
 
 export const INVENTORY_SORT_LABELS: Readonly<Record<InventorySort, string>> = {
   name: 'Nazwa',
   quantity: 'Ilość',
+  calories: 'Kalorie',
   tag: 'Tag',
   belowMinimum: 'Poniżej min.',
 };
@@ -128,6 +131,9 @@ function toInventorySortKeys(
   }
   if (sort === 'quantity') {
     return [...toBaseQuantityKeys(entry.item, units), name];
+  }
+  if (sort === 'calories') {
+    return [toKcalSortKey(entry.item.calories), name];
   }
   if (sort === 'tag') {
     const tagKey = entry.tagNames.length === 0 ? null : entry.tagNames.join(', ');

@@ -28,7 +28,7 @@
       v-model:search="search"
       v-model:sort="sort"
       v-model:is-reversed="isReversed"
-      search-label="Szukaj po nazwie, tagu lub kategorii"
+      search-label="Szukaj po nazwie, składniku, tagu lub kategorii"
       :sorts="RECIPE_SORTS"
       :sort-labels="RECIPE_SORT_LABELS"
     >

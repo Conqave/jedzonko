@@ -1,8 +1,8 @@
 import { z } from 'zod';
+import { UNCOUNTED_REASONS } from '@/shared/calories';
 import { http } from '@/shared/http';
 import {
   RECIPE_DIFFICULTIES,
-  UNCOUNTED_REASONS,
   type ExternalRecipe,
   type ExternalRecipeMatch,
   type ExternalRecipePage,
@@ -11,6 +11,7 @@ import {
   type RecipeCategory,
   type RecipeDetail,
   type RecipeDraft,
+  type RecipeListing,
   type RecipeNutrition,
   type RecipeShortfall,
   type RecipeSuggestion,
@@ -52,8 +53,6 @@ function toSummary(value: SummaryDto): RecipeSummary {
     authorUsername: value.author_username,
   };
 }
-
-const summarySchema = z.object(summaryFields).transform(toSummary);
 
 const detailSchema = z
   .object({
@@ -109,6 +108,7 @@ const nutritionSchema = z
   .object({
     total_kcal: z.string(),
     kcal_per_serving: z.string().nullable(),
+    has_estimates: z.boolean(),
     uncounted_ingredients: z.array(
       z.object({ name: z.string(), reason: z.enum(UNCOUNTED_REASONS) }),
     ),
@@ -116,7 +116,20 @@ const nutritionSchema = z
   .transform((value): RecipeNutrition => ({
     totalKcal: value.total_kcal,
     kcalPerServing: value.kcal_per_serving,
+    hasEstimates: value.has_estimates,
     uncountedIngredients: value.uncounted_ingredients,
+  }));
+
+const listingSchema = z
+  .object({
+    ...summaryFields,
+    nutrition: nutritionSchema,
+    ingredient_names: z.array(z.string()),
+  })
+  .transform((value): RecipeListing => ({
+    ...toSummary(value),
+    nutrition: value.nutrition,
+    ingredientNames: value.ingredient_names,
   }));
 
 const suggestionSchema = z
@@ -236,9 +249,9 @@ function toDraftPayload(draft: RecipeDraft) {
   };
 }
 
-export async function fetchRecipes(): Promise<RecipeSummary[]> {
+export async function fetchRecipes(): Promise<RecipeListing[]> {
   const response = await http.get('/recipes/');
-  return summarySchema.array().parse(response.data);
+  return listingSchema.array().parse(response.data);
 }
 
 export async function fetchRecipeCategories(): Promise<RecipeCategory[]> {

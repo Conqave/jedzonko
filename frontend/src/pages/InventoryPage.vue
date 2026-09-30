@@ -148,7 +148,7 @@ function openEditDialog(item: InventoryItem): void {
       void savePantryItem(item, pantryEdit);
     })
     .onCancel(() => {
-      void loadProducts();
+      void reloadCatalogAndItems();
     });
 }
 
@@ -157,6 +157,10 @@ async function savePantryItem(item: InventoryItem, pantryEdit: PantryItemEdit): 
   if (isProductSaved) {
     await edit(item, pantryEdit.item);
   }
+  await reloadCatalogAndItems();
+}
+
+async function reloadCatalogAndItems(): Promise<void> {
   await loadProducts();
   await reloadItems();
 }

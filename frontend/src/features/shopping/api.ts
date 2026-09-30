@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ITEM_UNCOUNTED_REASONS, toItemCalories } from '@/shared/calories';
 import { http } from '@/shared/http';
 import {
   SHOPPING_ITEM_STATUSES,
@@ -44,6 +45,15 @@ function toSubject(fields: z.infer<typeof subjectFields>): ShoppingSubject {
   return { kind: 'text', text: fields.free_text };
 }
 
+const caloriesSchema = z
+  .object({
+    kcal: z.string().nullable(),
+    kcal_per_100g: z.string().nullable(),
+    is_estimate: z.boolean(),
+    uncounted_reason: z.enum(ITEM_UNCOUNTED_REASONS).nullable(),
+  })
+  .transform(toItemCalories);
+
 const itemSchema = z
   .object({
     id: z.number().int(),
@@ -53,6 +63,7 @@ const itemSchema = z
     unit_code: z.string().nullable(),
     status: z.enum(SHOPPING_ITEM_STATUSES),
     purchased_at: z.iso.datetime({ offset: true }).nullable(),
+    calories: caloriesSchema,
   })
   .and(subjectFields)
   .transform((value): ShoppingItem => ({
@@ -64,6 +75,7 @@ const itemSchema = z
     unitCode: value.unit_code,
     status: value.status,
     purchasedAt: value.purchased_at === null ? null : new Date(value.purchased_at),
+    calories: value.calories,
   }));
 
 const interpretationSchema = z

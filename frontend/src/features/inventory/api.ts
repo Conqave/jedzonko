@@ -1,6 +1,16 @@
 import { z } from 'zod';
+import { ITEM_UNCOUNTED_REASONS, toItemCalories } from '@/shared/calories';
 import { http } from '@/shared/http';
 import type { InventoryItem, InventoryItemChanges, NewInventoryItem } from './model';
+
+const caloriesSchema = z
+  .object({
+    kcal: z.string().nullable(),
+    kcal_per_100g: z.string().nullable(),
+    is_estimate: z.boolean(),
+    uncounted_reason: z.enum(ITEM_UNCOUNTED_REASONS).nullable(),
+  })
+  .transform(toItemCalories);
 
 const itemSchema = z
   .object({
@@ -12,6 +22,7 @@ const itemSchema = z
     minimum_quantity: z.string().nullable(),
     photo_url: z.string().nullable(),
     below_minimum: z.boolean(),
+    calories: caloriesSchema,
   })
   .transform((item): InventoryItem => ({
     id: item.id,
@@ -22,6 +33,7 @@ const itemSchema = z
     minimumQuantity: item.minimum_quantity,
     photoUrl: item.photo_url,
     isBelowMinimum: item.below_minimum,
+    calories: item.calories,
   }));
 
 export async function fetchInventory(householdId: number): Promise<InventoryItem[]> {

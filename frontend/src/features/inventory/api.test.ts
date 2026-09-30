@@ -24,6 +24,7 @@ const ITEM_DTO = {
   minimum_quantity: '1.000',
   photo_url: null,
   below_minimum: false,
+  calories: { kcal: '960.0', kcal_per_100g: '64.0', is_estimate: true, uncounted_reason: null },
 };
 
 beforeEach(() => {
@@ -43,7 +44,38 @@ describe('inventory api', () => {
       productName: 'Mleko',
       minimumQuantity: '1.000',
       isBelowMinimum: false,
+      calories: { kind: 'counted', kcal: '960.0', kcalPer100g: '64.0', isEstimate: true },
     });
+  });
+
+  it('maps calories that could not be counted to their reason', async () => {
+    const calories = {
+      kcal: null,
+      kcal_per_100g: null,
+      is_estimate: false,
+      uncounted_reason: 'several_tags',
+    };
+    get.mockResolvedValue({ data: [{ ...ITEM_DTO, calories }] });
+
+    const [item] = await fetchInventory(1);
+
+    expect(item?.calories).toEqual({
+      kind: 'uncounted',
+      reason: 'several_tags',
+      kcalPer100g: null,
+    });
+  });
+
+  it('rejects calories that are both counted and explained', async () => {
+    const calories = {
+      kcal: '1.0',
+      kcal_per_100g: null,
+      is_estimate: false,
+      uncounted_reason: 'no_tag',
+    };
+    get.mockResolvedValue({ data: [{ ...ITEM_DTO, calories }] });
+
+    await expect(fetchInventory(1)).rejects.toThrow();
   });
 
   it('sends a new item in the API shape', async () => {

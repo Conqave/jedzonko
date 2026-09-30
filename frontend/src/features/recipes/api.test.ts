@@ -4,6 +4,7 @@ import {
   fetchExternalRecipeNutrition,
   fetchExternalShortfall,
   fetchRecipeNutrition,
+  fetchRecipes,
   fetchSuggestions,
 } from './api';
 import { createEmptyDraft } from './model';
@@ -43,6 +44,38 @@ describe('recipes api', () => {
     });
   });
 
+  it('lists recipes with their calories and ingredient names', async () => {
+    get.mockResolvedValue({
+      data: [
+        {
+          id: 1,
+          name: 'Omlet',
+          description: '',
+          servings: 2,
+          preparation_time_minutes: 5,
+          cooking_time_minutes: 5,
+          difficulty: 'easy',
+          category: null,
+          tags: [],
+          image_url: null,
+          author_username: null,
+          nutrition: {
+            total_kcal: '286.0',
+            kcal_per_serving: '143.0',
+            has_estimates: false,
+            uncounted_ingredients: [],
+          },
+          ingredient_names: ['jajko'],
+        },
+      ],
+    });
+
+    const [recipe] = await fetchRecipes();
+
+    expect(recipe?.nutrition.kcalPerServing).toBe('143.0');
+    expect(recipe?.ingredientNames).toEqual(['jajko']);
+  });
+
   it('asks for the shortfall of an external recipe in a household', async () => {
     get.mockResolvedValue({ data: SHORTFALL_DTO });
 
@@ -71,7 +104,8 @@ describe('recipes api', () => {
       data: {
         total_kcal: '1310.0',
         kcal_per_serving: '327.5',
-        uncounted_ingredients: [{ name: 'mleko', reason: 'not_by_mass' }],
+        has_estimates: true,
+        uncounted_ingredients: [{ name: 'mleko', reason: 'no_density' }],
       },
     });
 
@@ -81,7 +115,8 @@ describe('recipes api', () => {
     expect(nutrition).toEqual({
       totalKcal: '1310.0',
       kcalPerServing: '327.5',
-      uncountedIngredients: [{ name: 'mleko', reason: 'not_by_mass' }],
+      hasEstimates: true,
+      uncountedIngredients: [{ name: 'mleko', reason: 'no_density' }],
     });
   });
 
@@ -90,7 +125,8 @@ describe('recipes api', () => {
       data: {
         total_kcal: '0.0',
         kcal_per_serving: null,
-        uncounted_ingredients: [{ name: 'mleko', reason: 'too_tasty' }],
+        has_estimates: false,
+        uncounted_ingredients: [{ name: 'mleko', reason: 'not_by_mass' }],
       },
     });
 

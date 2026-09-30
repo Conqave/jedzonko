@@ -37,6 +37,7 @@ const ITEM: ShoppingItem = {
   unitCode: 'szt',
   status: 'pending',
   purchasedAt: null,
+  calories: { kind: 'counted', kcal: '429.0', kcalPer100g: '143.0', isEstimate: true },
 };
 
 const TEXT_ITEM: ShoppingItem = {

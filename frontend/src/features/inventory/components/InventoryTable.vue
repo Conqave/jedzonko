@@ -42,6 +42,9 @@
               </q-item-label>
             </q-item-section>
             <q-item-section side>
+              <KcalValue :display="describeItemCalories(card.row.calories)" />
+            </q-item-section>
+            <q-item-section side>
               <q-btn
                 flat
                 dense
@@ -146,6 +149,11 @@
         </div>
       </q-td>
     </template>
+    <template #body-cell-calories="cell">
+      <q-td :props="cell">
+        <KcalValue :display="describeItemCalories(cell.row.calories)" />
+      </q-td>
+    </template>
     <template #body-cell-tags="cell">
       <q-td :props="cell">
         <q-chip
@@ -208,6 +216,8 @@
 
 <script setup lang="ts">
 import { useQuasar, type QTableColumn } from 'quasar';
+import { describeItemCalories } from '@/shared/calories';
+import KcalValue from '@/shared/components/KcalValue.vue';
 import { NO_MATCHES_LABEL } from '@/shared/listView';
 import { productEmoji } from '@/shared/productEmoji';
 import { isEmpty, type InventoryItem, type QuantityDirection } from '../model';
@@ -216,6 +226,7 @@ const COLUMNS: QTableColumn<InventoryItem>[] = [
   { name: 'photo', label: '', field: 'photoUrl', align: 'left' },
   { name: 'productName', label: 'Produkt', field: 'productName', align: 'left' },
   { name: 'quantity', label: 'Ilość', field: 'quantity', align: 'left' },
+  { name: 'calories', label: 'Kalorie', field: 'calories', align: 'left' },
   { name: 'tags', label: 'Tagi', field: 'productId', align: 'left' },
   { name: 'actions', label: '', field: 'id', align: 'right' },
 ];

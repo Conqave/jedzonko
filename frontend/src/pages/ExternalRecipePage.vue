@@ -49,7 +49,7 @@
 
       <q-banner v-if="isMatching" class="bg-blue-1 q-mb-md">
         <template #avatar><q-spinner color="primary" size="24px" /></template>
-        Dopasowuję składniki przepisu do Twoich zapasów…
+        Dopasowuję składniki przepisu do Twoich zapasów...
       </q-banner>
       <template v-if="households.selectedId !== null && shortfall !== null">
         <div class="row items-center q-mb-sm">

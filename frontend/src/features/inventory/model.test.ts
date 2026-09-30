@@ -65,6 +65,7 @@ const FLOUR: InventoryItem = {
   minimumQuantity: '1.000',
   photoUrl: null,
   isBelowMinimum: false,
+  calories: { kind: 'counted', kcal: '5460.0', kcalPer100g: '364.0', isEstimate: false },
 };
 const SUGAR: InventoryItem = {
   ...FLOUR,
@@ -74,6 +75,7 @@ const SUGAR: InventoryItem = {
   quantity: '800.000',
   unitCode: 'g',
   isBelowMinimum: true,
+  calories: { kind: 'counted', kcal: '3200.0', kcalPer100g: '400.0', isEstimate: false },
 };
 const EGGS: InventoryItem = {
   ...FLOUR,
@@ -83,6 +85,7 @@ const EGGS: InventoryItem = {
   quantity: '4.000',
   unitCode: 'szt',
   minimumQuantity: null,
+  calories: { kind: 'uncounted', reason: 'no_tag', kcalPer100g: null },
 };
 const JUICE: InventoryItem = {
   ...FLOUR,
@@ -92,6 +95,7 @@ const JUICE: InventoryItem = {
   quantity: '1.000',
   unitCode: 'l',
   isBelowMinimum: true,
+  calories: { kind: 'counted', kcal: '450.0', kcalPer100g: '45.0', isEstimate: true },
 };
 const PANTRY = [FLOUR, SUGAR, EGGS, JUICE];
 const UNITS = [PIECE, GRAM, KILOGRAM, LITRE];
@@ -122,6 +126,16 @@ describe('arrangeInventoryItems', () => {
   it('sorts by product name', () => {
     expect(arrangedNames({})).toEqual(['Cukier', 'Jajka', 'Mąka tortowa', 'Sok']);
     expect(arrangedNames({ isReversed: true })).toEqual(['Sok', 'Mąka tortowa', 'Jajka', 'Cukier']);
+  });
+
+  it('sorts by calories with the uncounted ones last either way', () => {
+    expect(arrangedNames({ sort: 'calories' })).toEqual(['Sok', 'Cukier', 'Mąka tortowa', 'Jajka']);
+    expect(arrangedNames({ sort: 'calories', isReversed: true })).toEqual([
+      'Mąka tortowa',
+      'Cukier',
+      'Sok',
+      'Jajka',
+    ]);
   });
 
   it('sorts by quantity in base units, grouped by dimension', () => {

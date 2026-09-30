@@ -1,3 +1,11 @@
+import {
+  ESTIMATE_TOOLTIP,
+  UNCOUNTED_REASON_LABELS,
+  UNKNOWN_KCAL_TEXT,
+  roundKcal,
+  type KcalDisplay,
+  type UncountedReason,
+} from '@/shared/calories';
 import { formatQuantity } from '@/shared/formatQuantity';
 import { sortByKeys, type SortKey } from '@/shared/listView';
 import { matchesSearch } from '@/shared/textSearch';
@@ -68,16 +76,6 @@ export interface RecipeSuggestion {
   shortfall: RecipeShortfall;
 }
 
-export const UNCOUNTED_REASONS = ['no_amount', 'not_by_mass', 'no_calories'] as const;
-
-export type UncountedReason = (typeof UNCOUNTED_REASONS)[number];
-
-export const UNCOUNTED_REASON_LABELS: Readonly<Record<UncountedReason, string>> = {
-  no_amount: 'brak ilości',
-  not_by_mass: 'ilość nie w gramach',
-  no_calories: 'tag bez kalorii',
-};
-
 export interface UncountedIngredient {
   name: string;
   reason: UncountedReason;
@@ -86,15 +84,16 @@ export interface UncountedIngredient {
 export interface RecipeNutrition {
   totalKcal: string;
   kcalPerServing: string | null;
+  hasEstimates: boolean;
   uncountedIngredients: UncountedIngredient[];
 }
 
-function roundKcal(value: string): string {
-  return Math.round(Number(value)).toString();
+export function isNutritionUnknown(nutrition: RecipeNutrition): boolean {
+  return Number(nutrition.totalKcal) === 0 && nutrition.uncountedIngredients.length > 0;
 }
 
 export function describeNutrition(nutrition: RecipeNutrition): string {
-  if (Number(nutrition.totalKcal) === 0 && nutrition.uncountedIngredients.length > 0) {
+  if (isNutritionUnknown(nutrition)) {
     return 'Kalorie nieznane';
   }
   const total = `ok. ${roundKcal(nutrition.totalKcal)} kcal`;
@@ -214,14 +213,61 @@ export function moveItem<T>(items: T[], index: number, offset: number): T[] {
   return reordered;
 }
 
+export interface RecipeListing extends RecipeSummary {
+  nutrition: RecipeNutrition;
+  ingredientNames: string[];
+}
+
+function findRecipeKcal(nutrition: RecipeNutrition): string | null {
+  if (isNutritionUnknown(nutrition)) {
+    return null;
+  }
+  return nutrition.kcalPerServing ?? nutrition.totalKcal;
+}
+
+function describeUncountedIngredients(nutrition: RecipeNutrition): string | null {
+  if (nutrition.uncountedIngredients.length === 0) {
+    return null;
+  }
+  const lines = nutrition.uncountedIngredients.map(
+    (line) => `${line.name} (${UNCOUNTED_REASON_LABELS[line.reason]})`,
+  );
+  return `Nie wliczono: ${lines.join(', ')}.`;
+}
+
+export function describeRecipeCalories(nutrition: RecipeNutrition): KcalDisplay {
+  const kcal = findRecipeKcal(nutrition);
+  const uncounted = describeUncountedIngredients(nutrition);
+  if (kcal === null) {
+    return {
+      text: UNKNOWN_KCAL_TEXT,
+      isKnown: false,
+      isEstimate: false,
+      tooltip: uncounted,
+      caption: null,
+    };
+  }
+  const unit = nutrition.kcalPerServing === null ? 'kcal' : 'kcal/porcję';
+  const notes = [nutrition.hasEstimates ? ESTIMATE_TOOLTIP : null, uncounted].filter(
+    (note) => note !== null,
+  );
+  return {
+    text: `${roundKcal(kcal)} ${unit}`,
+    isKnown: true,
+    isEstimate: nutrition.hasEstimates,
+    tooltip: notes.length === 0 ? null : notes.join(' '),
+    caption: null,
+  };
+}
+
 export interface CookableSuggestion {
   suggestion: RecipeSuggestion;
-  recipe: RecipeSummary;
+  recipe: RecipeListing;
 }
 
 export function attachRecipes(
   suggestions: RecipeSuggestion[],
-  recipes: RecipeSummary[],
+  recipes: RecipeListing[],
 ): CookableSuggestion[] {
   const recipesById = new Map(recipes.map((recipe) => [recipe.id, recipe]));
   const cookable: CookableSuggestion[] = [];
@@ -242,13 +288,14 @@ export const RECIPE_LIST_TABS = ['suggestions', 'all', 'external'] as const;
 
 export type RecipeListTab = (typeof RECIPE_LIST_TABS)[number];
 
-export const RECIPE_SORTS = ['name', 'time'] as const;
+export const RECIPE_SORTS = ['name', 'time', 'calories'] as const;
 
 export type RecipeSort = (typeof RECIPE_SORTS)[number];
 
 export const RECIPE_SORT_LABELS: Readonly<Record<RecipeSort, string>> = {
   name: 'Nazwa',
   time: 'Czas',
+  calories: 'Kalorie',
 };
 
 export interface RecipeView {
@@ -257,19 +304,28 @@ export interface RecipeView {
   isReversed: boolean;
 }
 
-function matchesRecipeSearch(recipe: RecipeSummary, search: string): boolean {
+function matchesRecipeSearch(recipe: RecipeListing, search: string): boolean {
   const categoryNames = recipe.category === null ? [] : [recipe.category.name];
-  return matchesSearch(search, [recipe.name, ...recipe.tags, ...categoryNames]);
+  const texts = [recipe.name, ...recipe.tags, ...categoryNames, ...recipe.ingredientNames];
+  return matchesSearch(search, texts);
 }
 
-function toRecipeSortKeys(recipe: RecipeSummary, sort: RecipeSort): SortKey[] {
+function toKcalKey(nutrition: RecipeNutrition): number | null {
+  const kcal = findRecipeKcal(nutrition);
+  return kcal === null ? null : Number(kcal);
+}
+
+function toRecipeSortKeys(recipe: RecipeListing, sort: RecipeSort): SortKey[] {
   if (sort === 'name') {
     return [recipe.name];
+  }
+  if (sort === 'calories') {
+    return [toKcalKey(recipe.nutrition), recipe.name];
   }
   return [totalTimeMinutes(recipe), recipe.name];
 }
 
-export function arrangeRecipes(recipes: RecipeSummary[], view: RecipeView): RecipeSummary[] {
+export function arrangeRecipes(recipes: RecipeListing[], view: RecipeView): RecipeListing[] {
   const visible = recipes.filter((recipe) => matchesRecipeSearch(recipe, view.search));
   return sortByKeys(visible, (recipe) => toRecipeSortKeys(recipe, view.sort), view.isReversed);
 }

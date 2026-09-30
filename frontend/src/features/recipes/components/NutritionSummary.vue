@@ -4,6 +4,15 @@
       <q-icon name="local_fire_department" color="deep-orange" class="q-mr-xs" />{{
         describeNutrition(nutrition)
       }}
+      <q-badge
+        v-if="nutrition.hasEstimates"
+        outline
+        color="deep-orange"
+        :label="ESTIMATE_LABEL"
+        class="q-ml-xs"
+      >
+        <q-tooltip>Część składników przeliczono z wagi sztuki lub gęstości.</q-tooltip>
+      </q-badge>
     </div>
     <q-expansion-item
       v-if="nutrition.uncountedIngredients.length > 0"
@@ -24,7 +33,8 @@
 </template>
 
 <script setup lang="ts">
-import { UNCOUNTED_REASON_LABELS, describeNutrition, type RecipeNutrition } from '../model';
+import { ESTIMATE_LABEL, UNCOUNTED_REASON_LABELS } from '@/shared/calories';
+import { describeNutrition, type RecipeNutrition } from '../model';
 
 defineProps<{ nutrition: RecipeNutrition }>();
 </script>

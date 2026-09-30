@@ -4,6 +4,7 @@ import {
   type Product,
   type TagFilter,
 } from '@/features/catalog/model';
+import type { ItemCalories } from '@/shared/calories';
 import { sortByKeys, type SortKey } from '@/shared/listView';
 import { matchesSearch } from '@/shared/textSearch';
 
@@ -33,6 +34,7 @@ export interface ShoppingItem {
   unitCode: string | null;
   status: ShoppingItemStatus;
   purchasedAt: Date | null;
+  calories: ItemCalories;
 }
 
 export interface NewShoppingItem {

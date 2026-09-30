@@ -1,5 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { createProduct, fetchProductDecisions, searchProducts, setTagCalories } from './api';
+import {
+  createProduct,
+  fetchProductDecisions,
+  searchProducts,
+  setTagCalories,
+  setTagDensity,
+  setTagPieceWeight,
+} from './api';
 
 const { get, post, put } = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), put: vi.fn() }));
 
@@ -70,7 +77,7 @@ describe('catalog api', () => {
     });
   });
 
-  it('reads the calories of each decided tag', async () => {
+  it('reads the calories and conversions of each decided tag', async () => {
     const decision = {
       status: 'confirmed',
       provenance: 'manual',
@@ -90,9 +97,24 @@ describe('catalog api', () => {
               provenance: 'reference',
               reference_url: 'https://example.org/apple',
             },
+            piece_weight: {
+              grams_per_piece: '180.0',
+              provenance: 'manual',
+              reference_url: null,
+            },
+            density: null,
           },
         },
-        { ...decision, ingredient: { id: 4, name: 'woda', calories: null } },
+        {
+          ...decision,
+          ingredient: {
+            id: 4,
+            name: 'woda',
+            calories: null,
+            piece_weight: null,
+            density: { grams_per_ml: '1.000', provenance: 'manual', reference_url: null },
+          },
+        },
       ],
     });
 
@@ -104,15 +126,54 @@ describe('catalog api', () => {
       provenance: 'reference',
       referenceUrl: 'https://example.org/apple',
     });
+    expect(apple?.pieceWeight).toEqual({
+      gramsPerPiece: '180.0',
+      provenance: 'manual',
+      referenceUrl: null,
+    });
+    expect(apple?.density).toBeNull();
     expect(water?.calories).toBeNull();
+    expect(water?.pieceWeight).toBeNull();
+    expect(water?.density).toEqual({
+      gramsPerMl: '1.000',
+      provenance: 'manual',
+      referenceUrl: null,
+    });
   });
 
   it('sets or clears the calories of a tag', async () => {
-    put.mockResolvedValue({ data: { id: 3, name: 'jabłko', calories: null } });
+    put.mockResolvedValue({
+      data: { id: 3, name: 'jabłko', calories: null, piece_weight: null, density: null },
+    });
 
     const calories = await setTagCalories(3, null);
 
     expect(put).toHaveBeenCalledWith('/ingredients/3/calories/', { kcal_per_100g: null });
     expect(calories).toBeNull();
+  });
+
+  it('sets the piece weight and the density of a tag', async () => {
+    const tag = {
+      id: 3,
+      name: 'jajka',
+      calories: null,
+      piece_weight: { grams_per_piece: '55.0', provenance: 'manual', reference_url: null },
+      density: { grams_per_ml: '1.030', provenance: 'manual', reference_url: null },
+    };
+    put.mockResolvedValue({ data: tag });
+
+    const pieceWeight = await setTagPieceWeight(3, '55');
+    const density = await setTagDensity(3, '1.03');
+
+    expect(put).toHaveBeenCalledWith('/ingredients/3/piece-weight/', { grams_per_piece: '55' });
+    expect(put).toHaveBeenCalledWith('/ingredients/3/density/', { grams_per_ml: '1.03' });
+    expect(pieceWeight?.gramsPerPiece).toBe('55.0');
+    expect(density?.gramsPerMl).toBe('1.030');
+  });
+
+  it('rejects a tag without its conversions', async () => {
+    put.mockResolvedValue({ data: { id: 3, name: 'jajka', calories: null } });
+
+    await expect(setTagPieceWeight(3, null)).rejects.toThrow();
   });
 });

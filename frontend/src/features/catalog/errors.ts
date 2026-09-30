@@ -16,4 +16,8 @@ export const CATALOG_ERROR_MESSAGES: ErrorMessages = {
   invalid_product_ingredient_transition: 'Ten składnik został już odrzucony.',
   invalid_tag_calories:
     'Kalorie na 100 g to liczba od 0 do 900 z najwyżej jednym miejscem po przecinku.',
+  invalid_piece_weight:
+    'Waga sztuki to liczba większa od 0 i najwyżej 10000 g z najwyżej jednym miejscem po przecinku.',
+  invalid_density:
+    'Gęstość to liczba większa od 0 i najwyżej 3 g/ml z najwyżej trzema miejscami po przecinku.',
 };

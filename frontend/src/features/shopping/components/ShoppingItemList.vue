@@ -57,6 +57,9 @@
       <q-item-section side class="shopping-quantity">
         {{ hasAmount(item) ? describeQuantity(item) : '' }}
       </q-item-section>
+      <q-item-section side class="shopping-calories">
+        <KcalValue :display="describeItemCalories(item.calories)" />
+      </q-item-section>
       <q-item-section side>
         <q-btn flat dense round icon="more_vert" :aria-label="`Więcej: ${item.name}`">
           <q-menu>
@@ -113,6 +116,8 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue';
+import { describeItemCalories } from '@/shared/calories';
+import KcalValue from '@/shared/components/KcalValue.vue';
 import { formatQuantity } from '@/shared/formatQuantity';
 import { NO_MATCHES_LABEL } from '@/shared/listView';
 import {
@@ -170,6 +175,11 @@ function describeQuantity(item: ShoppingItem): string {
 <style scoped>
 .shopping-quantity {
   min-width: 5.5rem;
+  align-items: flex-end;
+}
+
+.shopping-calories {
+  min-width: 4.5rem;
   align-items: flex-end;
 }
 

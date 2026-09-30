@@ -2,10 +2,10 @@ import { ref, watch, type Ref } from 'vue';
 import { useApiAction } from '@/shared/useApiAction';
 import { fetchRecipes, fetchSuggestions } from './api';
 import { RECIPE_ERROR_MESSAGES } from './errors';
-import type { RecipeSuggestion, RecipeSummary } from './model';
+import type { RecipeListing, RecipeSuggestion } from './model';
 
 export function useRecipeCatalog(householdId: Ref<number | null>) {
-  const recipes = ref<RecipeSummary[]>([]);
+  const recipes = ref<RecipeListing[]>([]);
   const suggestions = ref<RecipeSuggestion[]>([]);
   const { busy, run } = useApiAction(RECIPE_ERROR_MESSAGES);
 

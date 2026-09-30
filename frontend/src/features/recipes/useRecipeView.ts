@@ -6,12 +6,12 @@ import {
   arrangeRecipes,
   arrangeSuggestions,
   attachRecipes,
+  type RecipeListing,
   type RecipeSuggestion,
-  type RecipeSummary,
   type RecipeView,
 } from './model';
 
-export function useRecipeView(recipes: Ref<RecipeSummary[]>, suggestions: Ref<RecipeSuggestion[]>) {
+export function useRecipeView(recipes: Ref<RecipeListing[]>, suggestions: Ref<RecipeSuggestion[]>) {
   const { query, search, sort, isReversed } = useListQuery(RECIPE_SORTS, 'name');
   const tab = query.choiceParam('tab', RECIPE_LIST_TABS, 'suggestions');
   const isReadyOnly = query.flagParam('ready');

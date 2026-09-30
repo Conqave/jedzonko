@@ -14,6 +14,9 @@
           </q-item-label>
         </q-item-section>
         <q-item-section side>
+          <KcalValue :display="describeRecipeCalories(entry.recipe.nutrition)" />
+        </q-item-section>
+        <q-item-section side>
           <q-badge v-if="entry.suggestion.shortfall.isReady" color="positive"
             >Ugotujesz teraz</q-badge
           >
@@ -49,8 +52,9 @@
 
 <script setup lang="ts">
 import RecipeShoppingButton from '@/features/shopping/components/RecipeShoppingButton.vue';
+import KcalValue from '@/shared/components/KcalValue.vue';
 import { NO_MATCHES_LABEL } from '@/shared/listView';
-import { totalTimeMinutes, type CookableSuggestion } from '../model';
+import { describeRecipeCalories, totalTimeMinutes, type CookableSuggestion } from '../model';
 import ShortfallView from './ShortfallView.vue';
 
 defineProps<{

@@ -27,14 +27,15 @@
               >· propozycja modelu {{ decision.modelName }}</template
             >
           </q-item-label>
-          <q-item-label caption>
-            {{ describeTagCalories(decision.calories) }}
-            <template v-if="decision.calories !== null && decision.calories.referenceUrl !== null">
-              ·
-              <a :href="decision.calories.referenceUrl" target="_blank" rel="noopener">źródło</a>
-            </template>
-            <template v-else-if="decision.calories !== null">· wpisane ręcznie</template>
-          </q-item-label>
+          <TagFactCaption
+            :text="describeTagCalories(decision.calories)"
+            :source="decision.calories"
+          />
+          <TagFactCaption
+            :text="describeTagPieceWeight(decision.pieceWeight)"
+            :source="decision.pieceWeight"
+          />
+          <TagFactCaption :text="describeTagDensity(decision.density)" :source="decision.density" />
         </q-item-section>
         <q-item-section side>
           <div class="row no-wrap q-gutter-xs">
@@ -47,6 +48,26 @@
               :aria-label="`Kalorie ${decision.ingredient.name}`"
               :loading="busy"
               @click="editCalories(decision)"
+            />
+            <q-btn
+              flat
+              dense
+              round
+              color="brown"
+              icon="scale"
+              :aria-label="`Waga sztuki ${decision.ingredient.name}`"
+              :loading="busy"
+              @click="editPieceWeight(decision)"
+            />
+            <q-btn
+              flat
+              dense
+              round
+              color="blue"
+              icon="water_drop"
+              :aria-label="`Gęstość ${decision.ingredient.name}`"
+              :loading="busy"
+              @click="editDensity(decision)"
             />
             <q-btn
               v-if="decision.status !== 'confirmed'"
@@ -103,8 +124,12 @@ import { formatQuantity } from '@/shared/formatQuantity';
 import { useDialogs } from '@/shared/useDialogs';
 import {
   describeTagCalories,
+  describeTagDensity,
+  describeTagPieceWeight,
+  isDensityInput,
   isKcalInput,
-  toKcalPayload,
+  isPieceWeightInput,
+  toOptionalDecimalPayload,
   type Ingredient,
   type Product,
   type ProductIngredientDecision,
@@ -112,6 +137,7 @@ import {
 } from '../model';
 import { useProductDecisions } from '../useProductDecisions';
 import IngredientPicker from './IngredientPicker.vue';
+import TagFactCaption from './TagFactCaption.vue';
 
 const STATUS_LABELS: Readonly<Record<ProductIngredientStatus, string>> = {
   proposed: 'Do decyzji',
@@ -123,9 +149,17 @@ const props = defineProps<{ product: Product }>();
 
 const quasar = useQuasar();
 const dialogs = useDialogs();
-const { decisions, busy, isAnalyzing, confirm, reject, setCalories, analyze } = useProductDecisions(
-  props.product.id,
-);
+const {
+  decisions,
+  busy,
+  isAnalyzing,
+  confirm,
+  reject,
+  setCalories,
+  setPieceWeight,
+  setDensity,
+  analyze,
+} = useProductDecisions(props.product.id);
 const chosen = ref<Ingredient | null>(null);
 
 async function confirmChosen(): Promise<void> {
@@ -150,8 +184,38 @@ async function editCalories(decision: ProductIngredientDecision): Promise<void> 
   if (entered === null) {
     return;
   }
-  const kcalPer100g = toKcalPayload(entered);
+  const kcalPer100g = toOptionalDecimalPayload(entered);
   await setCalories(decision.ingredient.id, kcalPer100g);
+}
+
+async function editPieceWeight(decision: ProductIngredientDecision): Promise<void> {
+  const pieceWeight = decision.pieceWeight;
+  const prompt = {
+    title: `Waga sztuki: ${decision.ingredient.name}`,
+    label: 'gramy na sztukę (puste pole usuwa wartość)',
+    initial: pieceWeight === null ? '' : formatQuantity(pieceWeight.gramsPerPiece),
+  };
+  const entered = await dialogs.promptOptionalText(prompt, isPieceWeightInput);
+  if (entered === null) {
+    return;
+  }
+  const gramsPerPiece = toOptionalDecimalPayload(entered);
+  await setPieceWeight(decision.ingredient.id, gramsPerPiece);
+}
+
+async function editDensity(decision: ProductIngredientDecision): Promise<void> {
+  const density = decision.density;
+  const prompt = {
+    title: `Gęstość: ${decision.ingredient.name}`,
+    label: 'gramy na mililitr (puste pole usuwa wartość)',
+    initial: density === null ? '' : formatQuantity(density.gramsPerMl),
+  };
+  const entered = await dialogs.promptOptionalText(prompt, isDensityInput);
+  if (entered === null) {
+    return;
+  }
+  const gramsPerMl = toOptionalDecimalPayload(entered);
+  await setDensity(decision.ingredient.id, gramsPerMl);
 }
 
 async function analyzeAgain(): Promise<void> {

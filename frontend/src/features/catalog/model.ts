@@ -1,3 +1,4 @@
+import { describeKcalPer100g } from '@/shared/calories';
 import { toDecimalText, toThousandths } from '@/shared/decimal';
 import { formatQuantity } from '@/shared/formatQuantity';
 
@@ -37,30 +38,83 @@ export interface Ingredient {
   name: string;
 }
 
-export const CALORIE_PROVENANCES = ['manual', 'reference'] as const;
+export const FACT_PROVENANCES = ['manual', 'reference'] as const;
 
-export type CalorieProvenance = (typeof CALORIE_PROVENANCES)[number];
+export type FactProvenance = (typeof FACT_PROVENANCES)[number];
 
-export interface TagCalories {
-  kcalPer100g: string;
-  provenance: CalorieProvenance;
+export interface TagFactSource {
+  provenance: FactProvenance;
   referenceUrl: string | null;
+}
+
+export interface TagCalories extends TagFactSource {
+  kcalPer100g: string;
+}
+
+export interface TagPieceWeight extends TagFactSource {
+  gramsPerPiece: string;
+}
+
+export interface TagDensity extends TagFactSource {
+  gramsPerMl: string;
 }
 
 export function describeTagCalories(calories: TagCalories | null): string {
   if (calories === null) {
     return 'brak kcal';
   }
-  return `${formatQuantity(calories.kcalPer100g)} kcal/100 g`;
+  return describeKcalPer100g(calories.kcalPer100g);
+}
+
+export function describeTagPieceWeight(pieceWeight: TagPieceWeight | null): string {
+  if (pieceWeight === null) {
+    return 'brak wagi sztuki';
+  }
+  return `${formatQuantity(pieceWeight.gramsPerPiece)} g/szt.`;
+}
+
+export function describeTagDensity(density: TagDensity | null): string {
+  if (density === null) {
+    return 'brak gęstości';
+  }
+  return `${formatQuantity(density.gramsPerMl)} g/ml`;
 }
 
 const KCAL_INPUT = /^\d{1,3}([.,]\d)?$/;
+const PIECE_WEIGHT_INPUT = /^\d{1,5}([.,]\d)?$/;
+const DENSITY_INPUT = /^\d([.,]\d{1,3})?$/;
+const MAX_KCAL_PER_100G = 900;
+const MAX_GRAMS_PER_PIECE = 10000;
+const MAX_GRAMS_PER_ML = 3;
 
-export function isKcalInput(value: string): boolean {
-  return KCAL_INPUT.test(value.trim());
+function isDecimalWithin(
+  value: string,
+  pattern: RegExp,
+  isPositive: boolean,
+  max: number,
+): boolean {
+  const trimmed = value.trim();
+  if (!pattern.test(trimmed)) {
+    return false;
+  }
+  const amount = Number(toDecimalText(trimmed));
+  const isAboveMinimum = isPositive ? amount > 0 : amount >= 0;
+  return isAboveMinimum && amount <= max;
 }
 
-export function toKcalPayload(value: string): string | null {
+export function isKcalInput(value: string): boolean {
+  return isDecimalWithin(value, KCAL_INPUT, false, MAX_KCAL_PER_100G);
+}
+
+export function isPieceWeightInput(value: string): boolean {
+  return isDecimalWithin(value, PIECE_WEIGHT_INPUT, true, MAX_GRAMS_PER_PIECE);
+}
+
+export function isDensityInput(value: string): boolean {
+  return isDecimalWithin(value, DENSITY_INPUT, true, MAX_GRAMS_PER_ML);
+}
+
+export function toOptionalDecimalPayload(value: string): string | null {
   const trimmed = value.trim();
   return trimmed === '' ? null : toDecimalText(trimmed);
 }
@@ -100,6 +154,8 @@ export type ProductIngredientProvenance = (typeof PRODUCT_INGREDIENT_PROVENANCES
 export interface ProductIngredientDecision {
   ingredient: Ingredient;
   calories: TagCalories | null;
+  pieceWeight: TagPieceWeight | null;
+  density: TagDensity | null;
   status: ProductIngredientStatus;
   provenance: ProductIngredientProvenance;
   modelName: string | null;

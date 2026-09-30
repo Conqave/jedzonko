@@ -23,13 +23,22 @@
           {{ recipe.authorUsername ?? 'nieznany' }}
         </q-item-label>
       </q-item-section>
+      <q-item-section side>
+        <KcalValue :display="describeRecipeCalories(recipe.nutrition)" />
+      </q-item-section>
     </q-item>
   </q-list>
 </template>
 
 <script setup lang="ts">
+import KcalValue from '@/shared/components/KcalValue.vue';
 import { NO_MATCHES_LABEL } from '@/shared/listView';
-import { DIFFICULTY_LABELS, totalTimeMinutes, type RecipeSummary } from '../model';
+import {
+  DIFFICULTY_LABELS,
+  describeRecipeCalories,
+  totalTimeMinutes,
+  type RecipeListing,
+} from '../model';
 
-defineProps<{ recipes: RecipeSummary[]; isFiltered: boolean }>();
+defineProps<{ recipes: RecipeListing[]; isFiltered: boolean }>();
 </script>
