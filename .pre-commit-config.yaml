@@ -16,6 +16,12 @@ repos:
         entry: "Version control is the history; remove:"
         files: (^|/)(legacy|old|backup|deprecated)/
 
+      - id: no-typographic-dashes
+        name: no dash or ellipsis characters other than - and ...
+        language: pygrep
+        entry: '\xe2\x80[\x92\x93\x94\xa6]|\xe2\x88\x92'
+        exclude: /tests/fixtures/
+
       - id: commit-message
         name: commit message follows the classic git convention
         language: python

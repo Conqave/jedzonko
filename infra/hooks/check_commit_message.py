@@ -7,6 +7,7 @@ MAX_BODY_LINE_LENGTH = 72
 SUBJECT = re.compile(r"^(?P<first_word>[A-Z][a-z]*)(?: [^\n]*)?[^.\s]$")
 PREFIX = re.compile(r"^[a-z]+(\([^)]*\))?!?: ")
 NON_IMPERATIVE = re.compile(r"(ed|ing|[^s]s)$")
+TYPOGRAPHIC_DASH = re.compile("[\u2012\u2013\u2014\u2212\u2026]")
 FORBIDDEN_TRAILER = re.compile(r"^(co-authored-by: .*(claude|anthropic)|claude-session:)", re.I)
 
 
@@ -31,6 +32,8 @@ def find_problems(message: str) -> list[str]:
         problems.append(f"body lines wrap at {MAX_BODY_LINE_LENGTH} characters")
     if any(FORBIDDEN_TRAILER.match(line) for line in lines):
         problems.append("the message carries no assistant attribution")
+    if any(TYPOGRAPHIC_DASH.search(line) for line in lines):
+        problems.append("the message writes dashes as - and ellipses as ...")
     return problems
 
 
