@@ -23,6 +23,7 @@ from shopping.application.use_cases.create_primary_shopping_list import CreatePr
 from shopping.application.use_cases.create_shopping_list import CreateShoppingList
 from shopping.application.use_cases.delete_shopping_list import DeleteShoppingList
 from shopping.application.use_cases.delete_shopping_list_item import DeleteShoppingListItem
+from shopping.application.use_cases.delete_shopping_list_items import DeleteShoppingListItems
 from shopping.application.use_cases.get_shopping_list_items import GetShoppingListItems
 from shopping.application.use_cases.interpret_shopping_item import InterpretShoppingItem
 from shopping.application.use_cases.list_shopping_lists import ListShoppingLists
@@ -56,6 +57,7 @@ class ShoppingModule:
     buy_shopping_items: BuyShoppingItems
     restore_shopping_item: RestoreShoppingItem
     delete_shopping_list_item: DeleteShoppingListItem
+    delete_shopping_list_items: DeleteShoppingListItems
     choose_shopping_item_product: ChooseShoppingItemProduct
     tag_shopping_item: TagShoppingItem
     interpret_shopping_item: InterpretShoppingItem
@@ -88,6 +90,7 @@ def build_shopping(
     buy_item = BuyShoppingItem(
         lists, inventory_writer, catalog, tagged_products, memberships, transactions
     )
+    delete_item = DeleteShoppingListItem(lists, memberships)
     add_missing = AddMissingRecipeItemsToShoppingList(
         lists, recipes, catalog, memberships, transactions
     )
@@ -110,7 +113,8 @@ def build_shopping(
         buy_shopping_item=buy_item,
         buy_shopping_items=BuyShoppingItems(lists, buy_item, transactions),
         restore_shopping_item=RestoreShoppingItem(lists, memberships, transactions),
-        delete_shopping_list_item=DeleteShoppingListItem(lists, memberships),
+        delete_shopping_list_item=delete_item,
+        delete_shopping_list_items=DeleteShoppingListItems(lists, delete_item, transactions),
         choose_shopping_item_product=ChooseShoppingItemProduct(
             lists, catalog, memberships, transactions
         ),

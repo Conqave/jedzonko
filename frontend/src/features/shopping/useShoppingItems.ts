@@ -5,6 +5,7 @@ import {
   buyShoppingItems,
   chooseShoppingItemProduct,
   deleteShoppingItem,
+  deleteShoppingItems,
   fetchShoppingItems,
   interpretShoppingItem,
   restoreShoppingItem,
@@ -120,6 +121,18 @@ export function useShoppingItems(listId: Ref<number | null>) {
     });
   }
 
+  function removeMany(removed: ShoppingItem[]): Promise<boolean> {
+    const id = listId.value;
+    if (id === null || removed.length === 0) {
+      return Promise.resolve(false);
+    }
+    const removedIds = new Set(removed.map((item) => item.id));
+    return run(async () => {
+      await deleteShoppingItems(id, [...removedIds]);
+      items.value = items.value.filter((entry) => !removedIds.has(entry.id));
+    });
+  }
+
   watch(listId, load, { immediate: true });
 
   return {
@@ -137,5 +150,6 @@ export function useShoppingItems(listId: Ref<number | null>) {
     tagItem,
     interpretItem,
     remove,
+    removeMany,
   };
 }

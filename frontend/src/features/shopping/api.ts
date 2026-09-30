@@ -167,6 +167,10 @@ export async function buyShoppingItems(
   await http.post(`/shopping/lists/${listId}/purchase/`, { items });
 }
 
+export async function deleteShoppingItems(listId: number, itemIds: number[]): Promise<void> {
+  await http.post(`/shopping/lists/${listId}/item-deletion/`, { item_ids: itemIds });
+}
+
 export async function chooseShoppingItemProduct(
   itemId: number,
   productId: number,

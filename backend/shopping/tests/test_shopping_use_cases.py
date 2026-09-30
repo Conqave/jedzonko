@@ -27,6 +27,8 @@ from shopping.application.use_cases.buy_shopping_item import BuyShoppingItem
 from shopping.application.use_cases.choose_shopping_item_product import ChooseShoppingItemProduct
 from shopping.application.use_cases.create_primary_shopping_list import CreatePrimaryShoppingList
 from shopping.application.use_cases.delete_shopping_list import DeleteShoppingList
+from shopping.application.use_cases.delete_shopping_list_item import DeleteShoppingListItem
+from shopping.application.use_cases.delete_shopping_list_items import DeleteShoppingListItems
 from shopping.application.use_cases.get_shopping_list_items import GetShoppingListItems
 from shopping.application.use_cases.interpret_shopping_item import InterpretShoppingItem
 from shopping.application.use_cases.list_shopping_lists import ListShoppingLists
@@ -57,6 +59,7 @@ from shopping.tests.fakes import (
 
 NOW = datetime(2026, 9, 28, 12, 0, tzinfo=UTC)
 ALA = 1
+OLA = 2
 HOME = 10
 OTHER_HOME = 20
 FLOUR = 100
@@ -102,6 +105,10 @@ class Shopping:
     def buy(self, item_id: int, chosen_product_id: int | None) -> None:
         purchase = ShoppingPurchase(item_id=item_id, chosen_product_id=chosen_product_id)
         self.buyer().execute(ALA, purchase, NOW)
+
+    def deleter(self) -> DeleteShoppingListItems:
+        delete_item = DeleteShoppingListItem(self.repository, self.memberships)
+        return DeleteShoppingListItems(self.repository, delete_item, self.transactions)
 
     def quantities(self) -> list[tuple[ShoppingSubject, Decimal, str | None]]:
         return [
@@ -325,6 +332,36 @@ def test_a_bought_item_can_be_put_back_unless_it_is_listed_again(shopping: Shopp
     assert restored.is_purchased is False
     with pytest.raises(ShoppingItemAlreadyPendingError):
         restore.execute(ALA, first)
+
+
+def test_ticked_items_are_deleted_in_one_transaction(shopping: Shopping) -> None:
+    flour = shopping.add(ShoppingSubject(product_id=FLOUR), "1", "kg")
+    bread = shopping.add(ShoppingSubject(free_text="chleb"), "1", None)
+    towels = shopping.add(ShoppingSubject(free_text="ręczniki"), "1", None)
+    opened_before = shopping.transactions.opened
+
+    shopping.deleter().execute(ALA, shopping.primary, (flour, bread))
+
+    assert list(shopping.repository.items) == [towels]
+    assert shopping.transactions.opened == opened_before + 1
+
+
+def test_deleted_items_must_belong_to_the_list(shopping: Shopping) -> None:
+    bread = shopping.add(ShoppingSubject(free_text="chleb"), "1", None)
+    other_list = shopping.primary + 1
+
+    with pytest.raises(ShoppingListItemNotFoundError):
+        shopping.deleter().execute(ALA, other_list, (bread,))
+    with pytest.raises(ShoppingListItemNotFoundError):
+        shopping.deleter().execute(ALA, shopping.primary, (bread + 1,))
+
+
+def test_only_members_delete_ticked_items(shopping: Shopping) -> None:
+    bread = shopping.add(ShoppingSubject(free_text="chleb"), "1", None)
+
+    with pytest.raises(NotAHouseholdMemberError):
+        shopping.deleter().execute(OLA, shopping.primary, (bread,))
+    assert list(shopping.repository.items) == [bread]
 
 
 def choose_product(shopping: Shopping, item_id: int, product_id: int) -> None:

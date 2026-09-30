@@ -219,6 +219,72 @@ def test_ticked_items_are_bought_together(
     assert {each["status"] for each in items.data} == {"purchased"}
 
 
+def test_ticked_items_are_deleted_together(
+    member_client: APIClient, home: Household, flour: Product
+) -> None:
+    list_id = _primary_list_id(member_client, home)
+    flour_item = _add(
+        member_client, list_id, {"product_id": flour.pk, "quantity": "500", "unit_code": "g"}
+    )
+    bread = _add(member_client, list_id, {"free_text": "chleb", "quantity": "1"})
+    milk = _add(member_client, list_id, {"free_text": "mleko", "quantity": "1"})
+    url = f"/api/shopping/lists/{list_id}/item-deletion/"
+
+    deleted = member_client.post(url, {"item_ids": [flour_item["id"], bread["id"]]}, format="json")
+    again = member_client.post(url, {"item_ids": [bread["id"]]}, format="json")
+    items = member_client.get(f"/api/shopping/lists/{list_id}/items/")
+
+    assert (deleted.status_code, again.status_code) == (204, 404)
+    assert [each["id"] for each in items.data] == [milk["id"]]
+
+
+def test_deleting_ticked_items_is_all_or_nothing(member_client: APIClient, home: Household) -> None:
+    list_id = _primary_list_id(member_client, home)
+    bread = _add(member_client, list_id, {"free_text": "chleb", "quantity": "1"})
+    other = member_client.post(
+        "/api/shopping/lists/", {"household_id": home.pk, "name": "Impreza"}, format="json"
+    )
+    foreign = _add(member_client, other.data["id"], {"free_text": "chipsy", "quantity": "1"})
+    url = f"/api/shopping/lists/{list_id}/item-deletion/"
+
+    mixed = member_client.post(url, {"item_ids": [bread["id"], foreign["id"]]}, format="json")
+
+    assert mixed.status_code == 404
+    assert mixed.data["code"] == "shopping_item_not_found"
+    assert ShoppingListItem.objects.filter(shopping_list__household=home).count() == 2
+
+
+@pytest.mark.parametrize(
+    "body", [{}, {"item_ids": []}, {"item_ids": [0]}, {"item_ids": [5, 5]}, {"item_ids": "5"}]
+)
+def test_an_ill_formed_deletion_is_rejected(
+    member_client: APIClient, home: Household, body: dict[str, object]
+) -> None:
+    list_id = _primary_list_id(member_client, home)
+
+    response = member_client.post(
+        f"/api/shopping/lists/{list_id}/item-deletion/", body, format="json"
+    )
+
+    assert response.status_code == 400
+
+
+def test_an_outsider_cannot_delete_ticked_items(
+    member_client: APIClient, outsider_client: APIClient, home: Household
+) -> None:
+    list_id = _primary_list_id(member_client, home)
+    bread = _add(member_client, list_id, {"free_text": "chleb", "quantity": "1"})
+
+    response = outsider_client.post(
+        f"/api/shopping/lists/{list_id}/item-deletion/", {"item_ids": [bread["id"]]}, format="json"
+    )
+
+    items = member_client.get(f"/api/shopping/lists/{list_id}/items/")
+
+    assert response.status_code == 403
+    assert [each["id"] for each in items.data] == [bread["id"]]
+
+
 def test_a_bought_tag_without_a_product_becomes_a_tagged_pantry_product(
     member_client: APIClient, home: Household
 ) -> None:

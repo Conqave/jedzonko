@@ -108,3 +108,15 @@ export function toPurchases(
 ): ShoppingPurchase[] {
   return items.map((item) => ({ itemId: item.id, productId: chosenProducts.get(item.id) ?? null }));
 }
+
+export function describeItemCount(count: number): string {
+  const lastDigit = count % 10;
+  const lastTwoDigits = count % 100;
+  if (count === 1) {
+    return '1 pozycję';
+  }
+  if (lastDigit >= 2 && lastDigit <= 4 && (lastTwoDigits < 12 || lastTwoDigits > 14)) {
+    return `${String(count)} pozycje`;
+  }
+  return `${String(count)} pozycji`;
+}

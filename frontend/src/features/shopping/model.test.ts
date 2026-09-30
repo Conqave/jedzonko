@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Product } from '@/features/catalog/model';
 import {
+  describeItemCount,
   findPurchaseProductQuestions,
   hasAmount,
   orderPrimaryFirst,
@@ -92,6 +93,26 @@ describe('toPurchases', () => {
     expect(purchases).toEqual([
       { itemId: ITEM.id, productId: 4 },
       { itemId: bread.id, productId: null },
+    ]);
+  });
+});
+
+describe('describeItemCount', () => {
+  it('counts items in the accusative Polish plural', () => {
+    const counts = [1, 2, 4, 5, 12, 14, 21, 22, 25, 112, 122];
+
+    expect(counts.map(describeItemCount)).toEqual([
+      '1 pozycję',
+      '2 pozycje',
+      '4 pozycje',
+      '5 pozycji',
+      '12 pozycji',
+      '14 pozycji',
+      '21 pozycji',
+      '22 pozycje',
+      '25 pozycji',
+      '112 pozycji',
+      '122 pozycje',
     ]);
   });
 });

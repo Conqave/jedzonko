@@ -3,6 +3,7 @@ import {
   addRecipeItems,
   addShoppingItem,
   buyShoppingItems,
+  deleteShoppingItems,
   fetchShoppingItems,
   interpretShoppingItem,
   tagShoppingItem,
@@ -146,5 +147,15 @@ describe('shopping api', () => {
         { item_id: 6, product_id: null },
       ],
     });
+  });
+});
+
+describe('deleteShoppingItems', () => {
+  it('posts the ids of every ticked item', async () => {
+    post.mockResolvedValue({ data: null });
+
+    await deleteShoppingItems(2, [5, 6]);
+
+    expect(post).toHaveBeenCalledWith('/shopping/lists/2/item-deletion/', { item_ids: [5, 6] });
   });
 });

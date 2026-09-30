@@ -18,7 +18,16 @@
       no-caps
       :label="`Kupiono (${selectedIds.length})`"
       :disable="selectedIds.length === 0"
-      @click="buySelected"
+      @click="emit('buy', findSelectedItems())"
+    />
+    <q-btn
+      outline
+      color="negative"
+      icon="delete"
+      no-caps
+      :label="`Usuń (${selectedIds.length})`"
+      :disable="selectedIds.length === 0"
+      @click="emit('remove-items', findSelectedItems())"
     />
   </div>
   <q-list v-if="pendingItems.length > 0 || purchasedItems.length > 0" bordered separator>
@@ -122,6 +131,7 @@ const emit = defineEmits<{
   'tag-item': [item: ShoppingItem];
   tag: [];
   remove: [item: ShoppingItem];
+  'remove-items': [items: ShoppingItem[]];
 }>();
 
 const selectedIds = ref<number[]>([]);
@@ -134,10 +144,9 @@ watch(
   },
 );
 
-function buySelected(): void {
+function findSelectedItems(): ShoppingItem[] {
   const selected = new Set(selectedIds.value);
-  const items = props.pendingItems.filter((item) => selected.has(item.id));
-  emit('buy', items);
+  return props.pendingItems.filter((item) => selected.has(item.id));
 }
 
 function findItemTags(item: ShoppingItem): string[] {

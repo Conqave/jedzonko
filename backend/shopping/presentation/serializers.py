@@ -81,6 +81,18 @@ class BuyItemsSerializer(serializers.Serializer[dict[str, list[dict[str, int | N
     items = serializers.ListField(child=PurchaseSerializer(), min_length=1, max_length=200)
 
 
+class DeleteItemsSerializer(serializers.Serializer[dict[str, list[int]]]):
+    item_ids = serializers.ListField(
+        child=serializers.IntegerField(min_value=1), min_length=1, max_length=200
+    )
+
+    def validate_item_ids(self, item_ids: list[int]) -> list[int]:
+        unique_ids = set(item_ids)
+        if len(unique_ids) != len(item_ids):
+            raise serializers.ValidationError("Each item is listed once.")
+        return item_ids
+
+
 class TagItemSerializer(serializers.Serializer[dict[str, object]]):
     ingredient_id = serializers.IntegerField(min_value=1)
     quantity = serializers.DecimalField(max_digits=12, decimal_places=3, min_value=Decimal("0.001"))

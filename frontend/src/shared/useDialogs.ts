@@ -32,6 +32,32 @@ export function useDialogs() {
     });
   }
 
+  function promptOptionalText(
+    prompt: TextPrompt,
+    isValid: (value: string) => boolean,
+  ): Promise<string | null> {
+    return new Promise((resolve) => {
+      quasar
+        .dialog({
+          title: prompt.title,
+          prompt: {
+            model: prompt.initial,
+            label: prompt.label,
+            outlined: true,
+            isValid: (value: string) => value.trim() === '' || isValid(value),
+          },
+          cancel: { flat: true, label: 'Anuluj', noCaps: true },
+          ok: { label: 'Zapisz', noCaps: true },
+        })
+        .onOk((value: string) => {
+          resolve(value.trim());
+        })
+        .onCancel(() => {
+          resolve(null);
+        });
+    });
+  }
+
   function confirm(title: string, message: string): Promise<boolean> {
     return new Promise((resolve) => {
       quasar
@@ -55,5 +81,5 @@ export function useDialogs() {
     quasar.notify({ type: 'positive', message });
   }
 
-  return { promptText, confirm, notifySuccess };
+  return { promptText, promptOptionalText, confirm, notifySuccess };
 }

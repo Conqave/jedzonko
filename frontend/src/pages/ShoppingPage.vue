@@ -42,6 +42,7 @@
         @choose-product="chooseItemProduct"
         @tag-item="tagItem"
         @remove="removeItem"
+        @remove-items="removeItems"
       />
     </template>
   </q-page>
@@ -65,6 +66,7 @@ import ShoppingListToolbar from '@/features/shopping/components/ShoppingListTool
 import TagItemDialog from '@/features/shopping/components/TagItemDialog.vue';
 import {
   COUNT_UNIT_CODE,
+  describeItemCount,
   findPurchaseProductQuestions,
   toPurchases,
   type PurchaseProductQuestion,
@@ -109,6 +111,7 @@ const {
   tagItem: tagShoppingItem,
   interpretItem,
   remove: removeShoppingItem,
+  removeMany: removeShoppingItems,
 } = useShoppingItems(selectedListId);
 
 const { shops: promotionShops, favouriteShops, load: loadPromotionShops } = useFavouriteShops();
@@ -258,6 +261,15 @@ async function removeItem(item: ShoppingItem): Promise<void> {
   const isConfirmed = await dialogs.confirm('Usunąć pozycję?', `Usunąć „${item.name}” z listy?`);
   if (isConfirmed) {
     await removeShoppingItem(item);
+  }
+}
+
+async function removeItems(items: ShoppingItem[]): Promise<void> {
+  const title = `Usunąć ${describeItemCount(items.length)}?`;
+  const names = items.map((item) => `„${item.name}”`).join(', ');
+  const isConfirmed = await dialogs.confirm(title, `Z listy znikną: ${names}.`);
+  if (isConfirmed) {
+    await removeShoppingItems(items);
   }
 }
 </script>

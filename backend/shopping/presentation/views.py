@@ -15,6 +15,7 @@ from shopping.presentation.serializers import (
     BuyItemsSerializer,
     ChooseItemProductSerializer,
     CreateShoppingListSerializer,
+    DeleteItemsSerializer,
     HouseholdQuerySerializer,
     RenameShoppingListSerializer,
     ShoppingItemInterpretationSerializer,
@@ -151,6 +152,16 @@ class ShoppingListPurchaseView(APIView):
             for entry in payload.validated_data["items"]
         )
         container().shopping.buy_shopping_items.execute(user_id, list_id, purchases, now)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class ShoppingListItemDeletionView(APIView):
+    def post(self, request: Request, list_id: int) -> Response:
+        user_id = current_user_id(request)
+        payload = DeleteItemsSerializer(data=request.data)
+        payload.is_valid(raise_exception=True)
+        item_ids = tuple(payload.validated_data["item_ids"])
+        container().shopping.delete_shopping_list_items.execute(user_id, list_id, item_ids)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
