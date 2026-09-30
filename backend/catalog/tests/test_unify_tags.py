@@ -105,7 +105,9 @@ def _unifier(content: str) -> OllamaTagUnifier:
     client = httpx.Client(
         transport=httpx.MockTransport(lambda request: httpx.Response(200, json=body))
     )
-    settings = OllamaSettings("http://192.0.2.1:11434", "gpt-oss:20b-128k", "high", 10, 256)
+    settings = OllamaSettings(
+        "http://192.0.2.1:11434", "gpt-oss:20b-128k", "high", 10, 256, 98304, 131072
+    )
     return OllamaTagUnifier(OllamaChat(client, settings))
 
 

@@ -24,7 +24,9 @@ def _interpreter(
     handler: Callable[[httpx.Request], httpx.Response],
 ) -> OllamaIngredientLineInterpreter:
     client = httpx.Client(transport=httpx.MockTransport(handler))
-    settings = OllamaSettings("http://192.0.2.1:11434", "gpt-oss:20b-128k", "medium", 10, 2048)
+    settings = OllamaSettings(
+        "http://192.0.2.1:11434", "gpt-oss:20b-128k", "medium", 10, 2048, 98304, 131072
+    )
     return OllamaIngredientLineInterpreter(OllamaChat(client, settings))
 
 
@@ -64,7 +66,7 @@ def test_the_request_is_structured_bounded_and_lists_every_line() -> None:
     body = seen[0]
     prompt = json.dumps(body["messages"], ensure_ascii=False)
     assert body["model"] == "gpt-oss:20b-128k"
-    assert body["options"] == {"num_predict": 2048}
+    assert body["options"] == {"num_predict": 2048, "num_ctx": 98304}
     assert isinstance(body["format"], dict)
     assert "1. jajko" in prompt and "3. szczypta soli" in prompt
 

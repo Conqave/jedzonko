@@ -75,6 +75,8 @@ def container() -> Container:
         think=settings.OLLAMA_REASONING_EFFORT,
         timeout_seconds=settings.OLLAMA_HTTP_TIMEOUT_SECONDS,
         max_output_tokens=settings.OLLAMA_MAX_OUTPUT_TOKENS,
+        context_tokens=settings.OLLAMA_CONTEXT_TOKENS,
+        max_context_tokens=settings.OLLAMA_MAX_CONTEXT_TOKENS,
     )
     catalog = build_catalog(memberships, ingredient_references, ollama_settings, transactions)
 

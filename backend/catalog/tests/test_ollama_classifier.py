@@ -17,7 +17,9 @@ INGREDIENTS = ("maślanka", "jajka", "skyr")
 def _classifier(handler: Callable[[httpx.Request], httpx.Response]) -> OllamaIngredientClassifier:
     transport = httpx.MockTransport(handler)
     client = httpx.Client(transport=transport)
-    settings = OllamaSettings("http://192.0.2.1:11434/", "gpt-oss:20b", "high", 10, 256)
+    settings = OllamaSettings(
+        "http://192.0.2.1:11434/", "gpt-oss:20b", "high", 10, 256, 98304, 131072
+    )
     return OllamaIngredientClassifier(OllamaChat(client, settings))
 
 
@@ -57,7 +59,7 @@ def test_the_request_numbers_every_ingredient_and_names_the_model() -> None:
     assert "Produkt: Jaja" in prompt
     assert "1. maślanka\n2. jajka\n3. skyr" in prompt
     assert isinstance(body["format"], dict)
-    assert body["options"] == {"num_predict": 256}
+    assert body["options"] == {"num_predict": 256, "num_ctx": 98304}
 
 
 @pytest.mark.parametrize(
