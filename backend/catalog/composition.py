@@ -58,12 +58,6 @@ from shared.transactions import TransactionManager
 
 
 @dataclass(frozen=True, slots=True)
-class ClassifierSettings:
-    ollama: OllamaSettings
-    question_limit: int
-
-
-@dataclass(frozen=True, slots=True)
 class CatalogModule:
     list_household_products: ListHouseholdProducts
     create_product: CreateProduct
@@ -90,13 +84,13 @@ class CatalogModule:
     accept_candidate_as_ingredient: AcceptCandidateAsIngredient
     accept_candidate_as_alias: AcceptCandidateAsAlias
     dismiss_candidate: DismissCandidate
-    classifier_settings: ClassifierSettings
+    ollama_settings: OllamaSettings
     memberships: HouseholdMembershipReader
     transactions: TransactionManager
 
     @contextmanager
     def open_product_analysis(self) -> Iterator[AnalyzeProductIngredient]:
-        with open_ollama_chat(self.classifier_settings.ollama) as chat:
+        with open_ollama_chat(self.ollama_settings) as chat:
             yield AnalyzeProductIngredient(
                 DjangoProductRepository(),
                 DjangoIngredientRepository(),
@@ -108,7 +102,7 @@ class CatalogModule:
 
     @contextmanager
     def open_line_interpretation(self) -> Iterator[InterpretIngredientLines]:
-        with open_ollama_chat(self.classifier_settings.ollama) as chat:
+        with open_ollama_chat(self.ollama_settings) as chat:
             yield InterpretIngredientLines(
                 DjangoIngredientLineRepository(),
                 OllamaIngredientLineInterpreter(chat),
@@ -117,7 +111,7 @@ class CatalogModule:
 
     @contextmanager
     def open_candidate_curation(self, batch_size: int) -> Iterator[CurateCandidates]:
-        with open_ollama_chat(self.classifier_settings.ollama) as chat:
+        with open_ollama_chat(self.ollama_settings) as chat:
             yield CurateCandidates(
                 DjangoCandidateRepository(),
                 self.list_tags,
@@ -130,13 +124,12 @@ class CatalogModule:
 
     @contextmanager
     def open_tag_unification(self) -> Iterator[UnifyTags]:
-        with open_ollama_chat(self.classifier_settings.ollama) as chat:
+        with open_ollama_chat(self.ollama_settings) as chat:
             yield UnifyTags(self.list_tags, OllamaTagUnifier(chat), self.merge_ingredients)
 
     @contextmanager
     def open_classification(self, question_limit: int) -> Iterator[ProposeIngredientsForProducts]:
-        settings = self.classifier_settings
-        with open_ollama_chat(settings.ollama) as chat:
+        with open_ollama_chat(self.ollama_settings) as chat:
             yield ProposeIngredientsForProducts(
                 DjangoProductRepository(),
                 DjangoIngredientRepository(),
@@ -150,7 +143,7 @@ class CatalogModule:
 def build_catalog(
     memberships: HouseholdMembershipReader,
     references: tuple[IngredientReferences, ...],
-    classifier_settings: ClassifierSettings,
+    ollama_settings: OllamaSettings,
     transactions: TransactionManager,
 ) -> CatalogModule:
     lines = DjangoIngredientLineRepository()
@@ -198,7 +191,7 @@ def build_catalog(
         ),
         accept_candidate_as_alias=AcceptCandidateAsAlias(candidates, ingredients, transactions),
         dismiss_candidate=DismissCandidate(candidates, ingredients, transactions),
-        classifier_settings=classifier_settings,
+        ollama_settings=ollama_settings,
         memberships=memberships,
         transactions=transactions,
     )

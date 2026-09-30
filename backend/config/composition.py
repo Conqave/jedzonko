@@ -5,7 +5,7 @@ from django.conf import settings
 
 from accounts.composition import AccountsModule, build_accounts
 from accounts.infrastructure.promotions_access import PromotionsAccess
-from catalog.composition import CatalogModule, ClassifierSettings, build_catalog
+from catalog.composition import CatalogModule, build_catalog
 from catalog.infrastructure.feature_ingredient_references import (
     RecipeIngredientReferences,
     ShoppingIngredientReferences,
@@ -76,11 +76,7 @@ def container() -> Container:
         timeout_seconds=settings.OLLAMA_HTTP_TIMEOUT_SECONDS,
         max_output_tokens=settings.OLLAMA_MAX_OUTPUT_TOKENS,
     )
-    classifier_settings = ClassifierSettings(
-        ollama=ollama_settings,
-        question_limit=settings.INGREDIENT_CLASSIFIER_QUESTION_LIMIT,
-    )
-    catalog = build_catalog(memberships, ingredient_references, classifier_settings, transactions)
+    catalog = build_catalog(memberships, ingredient_references, ollama_settings, transactions)
 
     product_directory = CatalogProductDirectory(catalog.find_household_product)
     inventory = build_inventory(memberships, product_directory, transactions)
