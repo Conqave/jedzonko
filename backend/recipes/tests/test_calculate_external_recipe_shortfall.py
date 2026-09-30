@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 from decimal import Decimal
 
 import pytest
@@ -11,10 +12,12 @@ from recipes.domain.external import (
     ExternalRecipeIngredient,
     ExternalRecipePage,
     ExternalRecipeSummary,
+    ImportedExternalRecipe,
 )
 from recipes.domain.external_line import LineInterpretation
 from recipes.tests.factories import EGGS, GRAM, MILK, make_stock
 from recipes.tests.fakes import (
+    FakeExternalRecipeCatalog,
     FakeHouseholdMembershipReader,
     FakeIngredientLines,
     FakeIngredientResolver,
@@ -25,6 +28,7 @@ from shared.household_membership import NotAHouseholdMemberError
 
 ALA = 5
 HOME = 7
+NOW = datetime(2026, 9, 30, 8, 0, tzinfo=UTC)
 EMPTY_PAGE = ExternalRecipePage(recipes=(), page=0, page_size=12, total_count=0, total_pages=0)
 
 
@@ -60,6 +64,7 @@ def _use_case(
 ) -> CalculateExternalRecipeShortfall:
     lines = FakeIngredientLines({} if interpretations is None else interpretations)
     return CalculateExternalRecipeShortfall(
+        FakeExternalRecipeCatalog(),
         FakeRecipeSource(EMPTY_PAGE, {"omlet": _omelette()}),
         FakeStockReader([make_stock(1, "jajka", "10", GRAM, EGGS)]),
         FakeIngredientResolver({"jajko": EGGS, "mleko": MILK}),
@@ -102,3 +107,28 @@ def test_an_unknown_recipe_is_reported_by_the_source() -> None:
 def test_a_non_member_is_rejected() -> None:
     with pytest.raises(NotAHouseholdMemberError):
         _use_case(set()).execute(ALA, HOME, "omlet")
+
+
+def test_stored_recipe_is_read_from_the_catalog_instead_of_the_site() -> None:
+    catalog = FakeExternalRecipeCatalog()
+    stored = ImportedExternalRecipe(
+        reference="omlet",
+        name="Omlet",
+        source_url="https://aniagotuje.pl/przepis/omlet",
+        image_source_url=None,
+        yield_label=None,
+        ingredients=(ExternalRecipeIngredient("sól", "sól", None, None),),
+    )
+    catalog.save_recipe(stored, None, NOW)
+    use_case = CalculateExternalRecipeShortfall(
+        catalog,
+        FakeRecipeSource(EMPTY_PAGE, {}),
+        FakeStockReader([]),
+        FakeIngredientResolver({}),
+        FakeIngredientLines({}),
+        FakeHouseholdMembershipReader({HOME}),
+    )
+
+    shortfall = use_case.execute(ALA, HOME, "omlet")
+
+    assert [item.name for item in shortfall.missing_items] == ["sól"]

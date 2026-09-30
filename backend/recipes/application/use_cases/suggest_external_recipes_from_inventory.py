@@ -1,9 +1,14 @@
 from dataclasses import dataclass
 
+from recipes.application.ports.external_recipe_catalog import ExternalRecipeCatalog
 from recipes.application.ports.household_stock_reader import HouseholdStockReader
 from recipes.application.ports.ingredient_resolver import IngredientResolver
 from recipes.application.ports.recipe_source import RecipeSource
-from recipes.domain.external import ExternalRecipePage, MatchedExternalRecipePage
+from recipes.domain.external import (
+    ExternalRecipePage,
+    MatchedExternalRecipePage,
+    with_local_images,
+)
 from recipes.domain.matching import match_external_recipes
 from shared.household_membership import HouseholdMembershipReader, require_membership
 
@@ -18,6 +23,7 @@ class ExternalRecipeSuggestions:
 class SuggestExternalRecipesFromInventory:
     def __init__(
         self,
+        catalog: ExternalRecipeCatalog,
         source: RecipeSource,
         stock: HouseholdStockReader,
         resolver: IngredientResolver,
@@ -26,6 +32,7 @@ class SuggestExternalRecipesFromInventory:
     ) -> None:
         if ingredient_limit < 1:
             raise ValueError("ingredient_limit must be at least 1")
+        self._catalog = catalog
         self._source = source
         self._stock = stock
         self._resolver = resolver
@@ -59,13 +66,16 @@ class SuggestExternalRecipesFromInventory:
         merged = sorted(summaries.values(), key=lambda summary: (summary.name, summary.reference))
         start = page * page_size
         page_recipes = tuple(merged[start : start + page_size])
-        found = ExternalRecipePage(
+        paged = ExternalRecipePage(
             recipes=page_recipes,
             page=page,
             page_size=page_size,
             total_count=len(merged),
             total_pages=(len(merged) + page_size - 1) // page_size,
         )
+        references = tuple(summary.reference for summary in page_recipes)
+        local_image_urls = self._catalog.find_image_urls(references)
+        found = with_local_images(paged, local_image_urls)
         tag_names = tuple({name for summary in found.recipes for name in summary.tag_names})
         ingredient_ids = self._resolver.find_ingredient_ids(tag_names)
         matched = match_external_recipes(found, inventory, ingredient_ids)

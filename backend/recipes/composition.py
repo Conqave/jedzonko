@@ -1,9 +1,11 @@
+import time
 from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
 
 import httpx
 
+from recipes.application.ports.external_recipe_catalog import ExternalRecipeCatalog
 from recipes.application.ports.household_stock_reader import HouseholdStockReader
 from recipes.application.ports.ingredient_lines import IngredientLines
 from recipes.application.ports.ingredient_resolver import IngredientResolver
@@ -20,6 +22,7 @@ from recipes.application.use_cases.delete_recipe import DeleteRecipe
 from recipes.application.use_cases.external_recipes import ExternalRecipes
 from recipes.application.use_cases.get_external_recipe import GetExternalRecipe
 from recipes.application.use_cases.get_recipe import GetRecipe
+from recipes.application.use_cases.import_external_recipes import ImportExternalRecipes
 from recipes.application.use_cases.list_recipe_categories import ListRecipeCategories
 from recipes.application.use_cases.list_recipes import ListRecipes
 from recipes.application.use_cases.match_external_recipe_ingredients import (
@@ -33,10 +36,14 @@ from recipes.application.use_cases.suggest_external_recipes_from_inventory impor
 from recipes.application.use_cases.suggest_recipes_from_inventory import (
     SuggestRecipesFromInventory,
 )
+from recipes.application.use_cases.tag_external_recipe_lines import TagExternalRecipeLines
 from recipes.application.use_cases.tag_recipe_ingredients import TagRecipeIngredients
 from recipes.application.use_cases.update_recipe import UpdateRecipe
+from recipes.infrastructure.django_external_recipe_catalog import DjangoExternalRecipeCatalog
 from recipes.infrastructure.django_recipe_repository import DjangoRecipeRepository
+from recipes.infrastructure.providers.ania_gotuje.mapper import SOURCE_NAME
 from recipes.infrastructure.providers.ania_gotuje.provider import AniaGotujeProvider
+from recipes.infrastructure.providers.ania_gotuje.site import AniaGotujeSite, CrawlPacing
 from shared.household_membership import HouseholdMembershipReader
 from shared.transactions import TransactionManager
 
@@ -61,42 +68,61 @@ class RecipesModule:
     confirm_recipe_preparation: ConfirmRecipePreparation
     reassign_recipe_ingredient: ReassignRecipeIngredient
     tag_recipe_ingredients: TagRecipeIngredients
+    tag_external_recipe_lines: TagExternalRecipeLines
+    external_catalog: ExternalRecipeCatalog
     stock: HouseholdStockReader
     resolver: IngredientResolver
     lines: IngredientLines
     memberships: HouseholdMembershipReader
     source_settings: RecipeSourceSettings
+    transactions: TransactionManager
 
     @contextmanager
     def open_line_matching(self) -> Iterator[MatchExternalRecipeIngredients]:
         with self._open_source() as source:
-            yield MatchExternalRecipeIngredients(source, self.lines)
+            yield MatchExternalRecipeIngredients(self.external_catalog, source, self.lines)
+
+    @contextmanager
+    def open_import(self, delay_seconds: float, attempts: int) -> Iterator[ImportExternalRecipes]:
+        pacing = CrawlPacing(delay_seconds=delay_seconds, attempts=attempts)
+        with self._open_client() as client:
+            site = AniaGotujeSite(client, pacing, time.sleep)
+            yield ImportExternalRecipes(site, self.external_catalog, self.transactions)
 
     @contextmanager
     def _open_source(self) -> Iterator[AniaGotujeProvider]:
+        with self._open_client() as client:
+            yield AniaGotujeProvider(client)
+
+    @contextmanager
+    def _open_client(self) -> Iterator[httpx.Client]:
         settings = self.source_settings
         with httpx.Client(
             timeout=httpx.Timeout(settings.timeout_seconds),
             headers={"User-Agent": settings.user_agent},
             follow_redirects=True,
         ) as client:
-            yield AniaGotujeProvider(client)
+            yield client
 
     @contextmanager
     def open_external(self) -> Iterator[ExternalRecipes]:
         settings = self.source_settings
         with self._open_source() as source:
             yield ExternalRecipes(
-                search=SearchExternalRecipes(source, self.stock, self.resolver, self.memberships),
+                search=SearchExternalRecipes(
+                    self.external_catalog, source, self.stock, self.resolver, self.memberships
+                ),
                 suggest_from_inventory=SuggestExternalRecipesFromInventory(
+                    self.external_catalog,
                     source,
                     self.stock,
                     self.resolver,
                     self.memberships,
                     settings.suggestion_ingredient_limit,
                 ),
-                get=GetExternalRecipe(source),
+                get=GetExternalRecipe(self.external_catalog, source),
                 calculate_shortfall=CalculateExternalRecipeShortfall(
+                    self.external_catalog,
                     source,
                     self.stock,
                     self.resolver,
@@ -121,6 +147,7 @@ def build_recipes(
     transactions: TransactionManager,
 ) -> RecipesModule:
     recipes = DjangoRecipeRepository()
+    external_catalog = DjangoExternalRecipeCatalog(SOURCE_NAME)
     return RecipesModule(
         list_recipes=ListRecipes(recipes),
         list_recipe_categories=ListRecipeCategories(recipes),
@@ -135,9 +162,12 @@ def build_recipes(
         ),
         reassign_recipe_ingredient=reassign_recipe_ingredient,
         tag_recipe_ingredients=TagRecipeIngredients(recipes, lines),
+        tag_external_recipe_lines=TagExternalRecipeLines(external_catalog, lines),
+        external_catalog=external_catalog,
         stock=stock,
         resolver=resolver,
         lines=lines,
         memberships=memberships,
         source_settings=source_settings,
+        transactions=transactions,
     )

@@ -3,14 +3,22 @@ from contextlib import AbstractContextManager, contextmanager
 from datetime import datetime
 
 from recipes.application.commands import RecipeInput, ResolvedIngredient
-from recipes.application.errors import RecipeNotFoundAtSourceError
+from recipes.application.errors import RecipeNotFoundAtSourceError, RecipeSourceError
+from recipes.application.ports.external_recipe_catalog import ExternalRecipeCatalog
 from recipes.application.ports.household_stock_reader import HouseholdStockReader
 from recipes.application.ports.ingredient_lines import IngredientLines
 from recipes.application.ports.ingredient_resolver import IngredientResolver
 from recipes.application.ports.inventory_consumer import HouseholdInventoryConsumer
 from recipes.application.ports.recipe_repository import RecipeRepository
+from recipes.application.ports.recipe_site import RecipeSite
 from recipes.application.ports.recipe_source import RecipeSource
-from recipes.domain.external import ExternalRecipeDetail, ExternalRecipePage
+from recipes.domain.external import (
+    ExternalRecipeDetail,
+    ExternalRecipeIngredient,
+    ExternalRecipePage,
+    ImportedExternalRecipe,
+    RecipeImage,
+)
 from recipes.domain.external_line import LineInterpretation
 from recipes.domain.models import RecipeCategory, RecipeDetail, RecipeRequirement, RecipeSummary
 from recipes.domain.stock import StockedProduct
@@ -164,3 +172,79 @@ class FakeIngredientLines(IngredientLines):
     def interpret(self, texts: tuple[str, ...], now: datetime) -> int:
         self.interpreted.append(texts)
         return len([text for text in texts if text not in self.interpretations])
+
+
+class FakeExternalRecipeCatalog(ExternalRecipeCatalog):
+    def __init__(self) -> None:
+        self.recipes: dict[str, ImportedExternalRecipe] = {}
+        self.images: dict[str, RecipeImage] = {}
+        self.fetched_at: dict[str, datetime] = {}
+
+    def list_references(self) -> frozenset[str]:
+        return frozenset(self.recipes)
+
+    def list_missing_images(self) -> dict[str, str]:
+        return {
+            reference: recipe.image_source_url
+            for reference, recipe in self.recipes.items()
+            if recipe.image_source_url is not None and reference not in self.images
+        }
+
+    def find_ingredients(self, reference: str) -> tuple[ExternalRecipeIngredient, ...] | None:
+        recipe = self.recipes.get(reference)
+        return None if recipe is None else recipe.ingredients
+
+    def find_image_urls(self, references: tuple[str, ...]) -> dict[str, str]:
+        return {
+            reference: f"media/external_recipes/{self.images[reference].filename}"
+            for reference in references
+            if reference in self.images
+        }
+
+    def list_ingredient_texts(self) -> tuple[str, ...]:
+        texts = {
+            line.source_text for recipe in self.recipes.values() for line in recipe.ingredients
+        }
+        return tuple(sorted(texts))
+
+    def save_recipe(
+        self, recipe: ImportedExternalRecipe, image: RecipeImage | None, fetched_at: datetime
+    ) -> None:
+        self.recipes[recipe.reference] = recipe
+        self.fetched_at[recipe.reference] = fetched_at
+        if image is not None:
+            self.images[recipe.reference] = image
+
+    def save_image(self, reference: str, image: RecipeImage) -> None:
+        self.images[reference] = image
+
+
+class FakeRecipeSite(RecipeSite):
+    def __init__(
+        self,
+        references: tuple[str, ...],
+        pages: dict[str, ImportedExternalRecipe | RecipeSourceError],
+        images: dict[str, RecipeImage | RecipeSourceError],
+    ) -> None:
+        self._references = references
+        self._pages = pages
+        self._images = images
+        self.fetched: list[str] = []
+        self.fetched_images: list[str] = []
+
+    def list_recipe_references(self) -> tuple[str, ...]:
+        return self._references
+
+    def fetch_recipe(self, reference: str) -> ImportedExternalRecipe:
+        self.fetched.append(reference)
+        page = self._pages[reference]
+        if isinstance(page, RecipeSourceError):
+            raise page
+        return page
+
+    def fetch_image(self, reference: str, url: str) -> RecipeImage:
+        self.fetched_images.append(url)
+        image = self._images[url]
+        if isinstance(image, RecipeSourceError):
+            raise image
+        return image

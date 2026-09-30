@@ -1,5 +1,7 @@
 from decimal import Decimal
 
+from recipes.application.external_ingredients import read_external_ingredients
+from recipes.application.ports.external_recipe_catalog import ExternalRecipeCatalog
 from recipes.application.ports.household_stock_reader import HouseholdStockReader
 from recipes.application.ports.ingredient_lines import IngredientLines
 from recipes.application.ports.ingredient_resolver import IngredientResolver
@@ -17,12 +19,14 @@ from shared.measurement_units import find_measurement_unit
 class CalculateExternalRecipeShortfall:
     def __init__(
         self,
+        catalog: ExternalRecipeCatalog,
         source: RecipeSource,
         stock: HouseholdStockReader,
         resolver: IngredientResolver,
         lines: IngredientLines,
         memberships: HouseholdMembershipReader,
     ) -> None:
+        self._catalog = catalog
         self._source = source
         self._stock = stock
         self._resolver = resolver
@@ -31,14 +35,14 @@ class CalculateExternalRecipeShortfall:
 
     def execute(self, user_id: int, household_id: int, reference: str) -> RecipeShortfall:
         require_membership(self._memberships, user_id, household_id)
-        recipe = self._source.get_recipe(reference)
-        names = tuple(line.name for line in recipe.ingredients)
+        ingredients = read_external_ingredients(self._catalog, self._source, reference)
+        names = tuple(line.name for line in ingredients)
         ingredient_ids = self._resolver.find_ingredient_ids(names)
-        texts = tuple(line.source_text for line in recipe.ingredients)
+        texts = tuple(line.source_text for line in ingredients)
         interpretations = self._lines.find_interpretations(texts)
         requirements = [
             _to_requirement(line, ingredient_ids.get(line.name), interpretations.get(text))
-            for line, text in zip(recipe.ingredients, texts, strict=True)
+            for line, text in zip(ingredients, texts, strict=True)
         ]
         stock = self._stock.get_stock(user_id, household_id)
         return calculate_shortfall(requirements, stock)

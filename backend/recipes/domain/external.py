@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from decimal import Decimal
 
 
@@ -54,3 +54,35 @@ class MatchedExternalRecipePage:
     page_size: int
     total_count: int
     total_pages: int
+
+
+@dataclass(frozen=True, slots=True)
+class ImportedExternalRecipe:
+    reference: str
+    name: str
+    source_url: str
+    image_source_url: str | None
+    yield_label: str | None
+    ingredients: tuple[ExternalRecipeIngredient, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class RecipeImage:
+    filename: str
+    content: bytes
+
+
+def with_local_image(
+    summary: ExternalRecipeSummary, local_image_urls: dict[str, str]
+) -> ExternalRecipeSummary:
+    local_url = local_image_urls.get(summary.reference)
+    if local_url is None:
+        return summary
+    return replace(summary, image_url=local_url)
+
+
+def with_local_images(
+    page: ExternalRecipePage, local_image_urls: dict[str, str]
+) -> ExternalRecipePage:
+    recipes = tuple(with_local_image(summary, local_image_urls) for summary in page.recipes)
+    return replace(page, recipes=recipes)

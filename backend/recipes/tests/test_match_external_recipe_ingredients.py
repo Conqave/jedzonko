@@ -9,7 +9,11 @@ from recipes.domain.external import (
     ExternalRecipePage,
     ExternalRecipeSummary,
 )
-from recipes.tests.fakes import FakeIngredientLines, FakeRecipeSource
+from recipes.tests.fakes import (
+    FakeExternalRecipeCatalog,
+    FakeIngredientLines,
+    FakeRecipeSource,
+)
 
 NOW = datetime(2026, 9, 29, 8, 0, tzinfo=UTC)
 EMPTY_PAGE = ExternalRecipePage(recipes=(), page=0, page_size=12, total_count=0, total_pages=0)
@@ -43,7 +47,7 @@ def _recipe() -> ExternalRecipeDetail:
 def test_every_line_of_the_recipe_is_sent_for_interpretation() -> None:
     lines = FakeIngredientLines({})
     use_case = MatchExternalRecipeIngredients(
-        FakeRecipeSource(EMPTY_PAGE, {"omlet": _recipe()}), lines
+        FakeExternalRecipeCatalog(), FakeRecipeSource(EMPTY_PAGE, {"omlet": _recipe()}), lines
     )
 
     count = use_case.execute("omlet", NOW)

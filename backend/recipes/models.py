@@ -141,3 +141,82 @@ class RecipeIngredient(models.Model):
 
     def __str__(self) -> str:
         return self.name
+
+
+class ExternalRecipe(models.Model):
+    source_name = models.CharField(max_length=60)
+    reference = models.CharField(max_length=200)
+    name = models.CharField(max_length=200)
+    source_url = models.URLField(max_length=500)
+    image_source_url = models.URLField(max_length=500, null=True, blank=True)
+    image = models.ImageField(upload_to="external_recipes/", null=True, blank=True)
+    yield_label = models.CharField(max_length=160, null=True, blank=True)
+    fetched_at = models.DateTimeField()
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["source_name", "reference"], name="unique_external_recipe_reference"
+            ),
+            models.CheckConstraint(
+                condition=~Q(source_name=""), name="external_recipe_source_name_not_empty"
+            ),
+            models.CheckConstraint(
+                condition=~Q(reference=""), name="external_recipe_reference_not_empty"
+            ),
+            models.CheckConstraint(condition=~Q(name=""), name="external_recipe_name_not_empty"),
+            models.CheckConstraint(
+                condition=~Q(source_url=""), name="external_recipe_source_url_not_empty"
+            ),
+            models.CheckConstraint(
+                condition=~Q(image_source_url=""),
+                name="external_recipe_image_source_url_not_empty",
+            ),
+            models.CheckConstraint(
+                condition=Q(image__isnull=True) | Q(image="") | Q(image_source_url__isnull=False),
+                name="external_recipe_image_has_source",
+            ),
+            models.CheckConstraint(
+                condition=~Q(yield_label=""), name="external_recipe_yield_label_not_empty"
+            ),
+        ]
+        ordering = ["source_name", "reference"]
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class ExternalRecipeLine(models.Model):
+    recipe = models.ForeignKey(ExternalRecipe, on_delete=models.DB_CASCADE, related_name="lines")
+    position = models.PositiveSmallIntegerField()
+    source_text = models.CharField(max_length=500)
+    name = models.CharField(max_length=500)
+    quantity = models.DecimalField(max_digits=12, decimal_places=3, null=True, blank=True)
+    unit_code = models.CharField(
+        max_length=16, null=True, blank=True, choices=MEASUREMENT_UNIT_CHOICES
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["recipe", "position"], name="unique_external_recipe_line_position"
+            ),
+            models.CheckConstraint(
+                condition=Q(position__gte=1), name="external_recipe_line_position_from_one"
+            ),
+            models.CheckConstraint(
+                condition=~Q(source_text=""), name="external_recipe_line_text_not_empty"
+            ),
+            models.CheckConstraint(
+                condition=~Q(name=""), name="external_recipe_line_name_not_empty"
+            ),
+            models.CheckConstraint(
+                condition=Q(quantity__isnull=True, unit_code__isnull=True)
+                | Q(quantity__gt=0, unit_code__in=MEASUREMENT_UNIT_CODES),
+                name="external_recipe_line_amount_complete",
+            ),
+        ]
+        ordering = ["recipe_id", "position"]
+
+    def __str__(self) -> str:
+        return self.source_text
