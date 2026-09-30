@@ -8,13 +8,11 @@ const currentUserSchema = z
   .object({
     id: z.number().int(),
     username: z.string(),
-    is_staff: z.boolean(),
     can_view_promotions: z.boolean(),
   })
   .transform((user): CurrentUser => ({
     id: user.id,
     username: user.username,
-    isStaff: user.is_staff,
     canViewPromotions: user.can_view_promotions,
   }));
 

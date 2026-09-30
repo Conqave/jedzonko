@@ -19,14 +19,14 @@ export function useHouseholdMembers(householdId: Ref<number | null>) {
     });
   }
 
-  async function add(id: number, username: string): Promise<boolean> {
+  function add(id: number, username: string): Promise<boolean> {
     return run(async () => {
       const member = await addMember(id, username);
       members.value = [...members.value, member];
     });
   }
 
-  async function remove(id: number, member: HouseholdMember): Promise<boolean> {
+  function remove(id: number, member: HouseholdMember): Promise<boolean> {
     return run(async () => {
       await removeMember(id, member.userId);
       members.value = members.value.filter((entry) => entry.userId !== member.userId);

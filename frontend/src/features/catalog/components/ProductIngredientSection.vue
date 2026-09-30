@@ -15,8 +15,7 @@
         label="Przeanalizuj ponownie"
         :loading="isAnalyzing"
         @click="analyzeAgain"
-      >
-      </q-btn>
+      />
     </div>
     <q-list separator>
       <q-item v-for="decision in decisions" :key="decision.ingredient.id">

@@ -22,7 +22,7 @@
             outlined
             inputmode="decimal"
             label="Ilość"
-            :rules="[(value: string) => isQuantity(value) || 'Podaj ilość']"
+            :rules="[(value: string) => isNonNegativeDecimal(value) || 'Podaj ilość']"
           />
           <q-select
             v-model="unitCode"
@@ -63,9 +63,14 @@ import { useDialogPluginComponent } from 'quasar';
 import { ref } from 'vue';
 import PackageFields from '@/features/catalog/components/PackageFields.vue';
 import ProductIngredientSection from '@/features/catalog/components/ProductIngredientSection.vue';
-import type { MeasurementUnit, Product, ProductPackage } from '@/features/catalog/model';
+import {
+  normalizePackage,
+  type MeasurementUnit,
+  type Product,
+  type ProductPackage,
+} from '@/features/catalog/model';
 import { formatQuantity } from '@/shared/formatQuantity';
-import { isPositiveDecimal, toDecimalText } from '@/shared/decimal';
+import { isNonNegativeDecimal, toDecimalText } from '@/shared/decimal';
 import type { InventoryItem, PantryItemEdit } from '../model';
 
 const props = defineProps<{ item: InventoryItem; product: Product; units: MeasurementUnit[] }>();
@@ -82,12 +87,8 @@ const minimumQuantity = ref<string | null>(
   initialMinimum === null ? null : formatQuantity(initialMinimum),
 );
 
-function isQuantity(value: string): boolean {
-  return value.trim() === '0' || isPositiveDecimal(value);
-}
-
 function isOptionalQuantity(value: string | null): boolean {
-  return value === null || value.trim() === '' || isQuantity(value);
+  return value === null || value.trim() === '' || isNonNegativeDecimal(value);
 }
 
 function readMinimum(): string | null {
@@ -101,14 +102,10 @@ function readMinimum(): string | null {
 }
 
 function submit(): void {
-  const packageValue = productPackage.value;
   const pantryEdit: PantryItemEdit = {
     product: {
       name: productName.value.trim(),
-      package:
-        packageValue === null
-          ? null
-          : { ...packageValue, quantity: toDecimalText(packageValue.quantity) },
+      package: normalizePackage(productPackage.value),
     },
     item: {
       changes: {

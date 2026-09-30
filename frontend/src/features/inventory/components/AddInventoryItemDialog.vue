@@ -17,7 +17,7 @@
             outlined
             inputmode="decimal"
             label="Ilość"
-            :rules="[(value: string) => isQuantity(value) || 'Podaj ilość']"
+            :rules="[(value: string) => isNonNegativeDecimal(value) || 'Podaj ilość']"
           />
           <q-select
             v-model="unitCode"
@@ -37,7 +37,10 @@
             outlined
             inputmode="decimal"
             label="Minimalna ilość (opcjonalnie)"
-            :rules="[(value: string) => value.trim() === '' || isQuantity(value) || 'Podaj liczbę']"
+            :rules="[
+              (value: string) =>
+                value.trim() === '' || isNonNegativeDecimal(value) || 'Podaj liczbę',
+            ]"
           />
           <q-file
             v-model="photo"
@@ -62,7 +65,7 @@ import { useDialogPluginComponent } from 'quasar';
 import { ref } from 'vue';
 import ProductPicker from '@/features/catalog/components/ProductPicker.vue';
 import type { MeasurementUnit, Product } from '@/features/catalog/model';
-import { isPositiveDecimal, toDecimalText } from '@/shared/decimal';
+import { isNonNegativeDecimal, toDecimalText } from '@/shared/decimal';
 import type { NewInventoryEntry } from '../model';
 
 const props = defineProps<{
@@ -78,10 +81,6 @@ const quantity = ref('');
 const unitCode = ref('');
 const minimumQuantity = ref('');
 const photo = ref<File | null>(null);
-
-function isQuantity(value: string): boolean {
-  return value.trim() === '0' || isPositiveDecimal(value);
-}
 
 function applyDefaultUnit(chosen: Product | null): void {
   if (chosen !== null) {

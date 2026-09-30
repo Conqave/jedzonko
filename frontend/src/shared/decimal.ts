@@ -5,6 +5,10 @@ export function isPositiveDecimal(value: string): boolean {
   return POSITIVE_DECIMAL.test(trimmed) && Number(toDecimalText(trimmed)) > 0;
 }
 
+export function isNonNegativeDecimal(value: string): boolean {
+  return value.trim() === '0' || isPositiveDecimal(value);
+}
+
 export function toDecimalText(value: string): string {
   return value.trim().replace(',', '.');
 }

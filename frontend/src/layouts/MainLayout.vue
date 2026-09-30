@@ -142,12 +142,14 @@ import { useAccountStore } from '@/features/accounts/store';
 import { HOUSEHOLD_ERROR_MESSAGES } from '@/features/households/errors';
 import { useHouseholdStore } from '@/features/households/store';
 import { useApiAction } from '@/shared/useApiAction';
+import { useDialogs } from '@/shared/useDialogs';
 
 const drawerOpen = ref(false);
 const accounts = useAccountStore();
 const households = useHouseholdStore();
 const router = useRouter();
 const quasar = useQuasar();
+const dialogs = useDialogs();
 const { run } = useApiAction(HOUSEHOLD_ERROR_MESSAGES);
 
 const householdOptions = computed(() =>
@@ -156,7 +158,7 @@ const householdOptions = computed(() =>
 
 function openChangePassword(): void {
   quasar.dialog({ component: ChangePasswordDialog }).onOk(() => {
-    quasar.notify({ type: 'positive', message: 'Hasło zostało zmienione.' });
+    dialogs.notifySuccess('Hasło zostało zmienione.');
   });
 }
 

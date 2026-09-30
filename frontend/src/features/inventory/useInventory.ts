@@ -34,15 +34,18 @@ export function useInventory(householdId: Ref<number | null>) {
     if (id === null) {
       return;
     }
-    await run(reload);
+    await run(async () => {
+      items.value = await fetchInventory(id);
+    });
   }
 
-  async function reload(): Promise<void> {
-    const id = householdId.value;
-    if (id === null) {
-      return;
+  async function runSaving(itemId: number, action: () => Promise<void>): Promise<boolean> {
+    savingItemId.value = itemId;
+    try {
+      return await run(action);
+    } finally {
+      savingItemId.value = null;
     }
-    items.value = await fetchInventory(id);
   }
 
   function add(entry: NewInventoryEntry): Promise<boolean> {
@@ -56,19 +59,15 @@ export function useInventory(householdId: Ref<number | null>) {
     });
   }
 
-  async function update(itemId: number, changes: Partial<InventoryItemChanges>): Promise<boolean> {
-    savingItemId.value = itemId;
-    const isUpdated = await run(async () => {
+  function update(itemId: number, changes: Partial<InventoryItemChanges>): Promise<boolean> {
+    return runSaving(itemId, async () => {
       const updated = await updateInventoryItem(itemId, changes);
       replaceItem(updated);
     });
-    savingItemId.value = null;
-    return isUpdated;
   }
 
-  async function edit(item: InventoryItem, itemEdit: InventoryItemEdit): Promise<boolean> {
-    savingItemId.value = item.id;
-    const isEdited = await run(async () => {
+  function edit(item: InventoryItem, itemEdit: InventoryItemEdit): Promise<boolean> {
+    return runSaving(item.id, async () => {
       const updated = await updateInventoryItem(item.id, itemEdit.changes);
       replaceItem(updated);
       if (itemEdit.minimumQuantity !== item.minimumQuantity) {
@@ -76,8 +75,6 @@ export function useInventory(householdId: Ref<number | null>) {
         replaceItem(withMinimum);
       }
     });
-    savingItemId.value = null;
-    return isEdited;
   }
 
   function remove(itemId: number): Promise<boolean> {

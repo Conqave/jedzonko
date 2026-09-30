@@ -1,3 +1,5 @@
+import { toDecimalText } from '@/shared/decimal';
+
 export const MEASUREMENT_DIMENSIONS = ['mass', 'volume', 'count'] as const;
 
 export type MeasurementDimension = (typeof MEASUREMENT_DIMENSIONS)[number];
@@ -62,4 +64,8 @@ export interface NewProduct {
 export interface ProductChanges {
   name: string;
   package: ProductPackage | null;
+}
+
+export function normalizePackage(value: ProductPackage | null): ProductPackage | null {
+  return value === null ? null : { ...value, quantity: toDecimalText(value.quantity) };
 }

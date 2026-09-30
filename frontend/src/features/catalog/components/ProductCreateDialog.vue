@@ -43,8 +43,7 @@
 <script setup lang="ts">
 import { useDialogPluginComponent } from 'quasar';
 import { ref } from 'vue';
-import { toDecimalText } from '@/shared/decimal';
-import type { MeasurementUnit, ProductPackage } from '../model';
+import { normalizePackage, type MeasurementUnit, type ProductPackage } from '../model';
 import { useProductCreation } from '../useProductCreation';
 import PackageFields from './PackageFields.vue';
 
@@ -60,16 +59,12 @@ const isFood = ref(true);
 const productPackage = ref<ProductPackage | null>(null);
 
 async function submit(): Promise<void> {
-  const packageValue = productPackage.value;
   const product = await create({
     householdId: props.householdId,
     name: name.value.trim(),
     defaultUnitCode: defaultUnitCode.value,
     isFood: isFood.value,
-    package:
-      packageValue === null
-        ? null
-        : { ...packageValue, quantity: toDecimalText(packageValue.quantity) },
+    package: normalizePackage(productPackage.value),
   });
   if (product !== null) {
     onDialogOK(product);

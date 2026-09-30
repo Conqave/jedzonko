@@ -34,13 +34,16 @@ export function useProductDecisions(productId: number) {
 
   async function analyze(): Promise<number> {
     isAnalyzing.value = true;
-    const proposedCount = ref(0);
-    await run(async () => {
-      proposedCount.value = await analyzeProductIngredient(productId);
-      await reload();
-    });
-    isAnalyzing.value = false;
-    return proposedCount.value;
+    let proposedCount = 0;
+    try {
+      await run(async () => {
+        proposedCount = await analyzeProductIngredient(productId);
+        await reload();
+      });
+    } finally {
+      isAnalyzing.value = false;
+    }
+    return proposedCount;
   }
 
   onMounted(() => {
